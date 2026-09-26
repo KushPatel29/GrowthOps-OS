@@ -18,7 +18,21 @@ Live synthetic dashboard: https://growthops-os.streamlit.app/ · GitHub: https:/
   binomial z for rates, robust z for volumes), practical-significance filter, exact shift-share root cause.
   Both detectable planted incidents are found with the correct root cause within three days.
 - **Morning brief** (`brief.py`) and **claim-validated narrative** (`narrator.py`) with a 30-case labelled eval
-  set; optional Claude writer used only when its output passes the validator.
+  set. The narrative is deterministic; the validator guards any other draft.
+- **Keyless ask-your-data** (`ask_data.py`, `retrieval.py`, `embeddings.py`): the Ask Your Data design, with
+  no language model or API key. Guard, then certified phrases, then hybrid BM25 + local MiniLM retrieval over
+  19 governed answers and the metric catalog, then a governed answer, a cited definition or a refusal. On the
+  83-question contract, hybrid scores 80 right, 0 wrong, 3 refused and keyword-only 74 right, 0 wrong, 9 refused.
+  The first scoring of the 30 holdout questions is kept in the file. Every question is audited in `ask_log`.
+- **Production runtime**: fail-fast settings (`config.py`); API keys; replay-safe signed webhooks; request IDs,
+  JSON logs and security headers; `/ready` and Prometheus `/metrics`; versioned migrations; verified backups and
+  restore (`ops.py`); per-source freshness.
+- **Automation services**: provider adapters (simulated by default, HubSpot batch upsert, signed idempotent
+  webhooks); a worker (`worker.py`) that retries due events, sends deduplicated alerts to a Slack-compatible
+  webhook and posts the daily update once a day; container heartbeat health check.
+- **Deployment**: a non-root, read-only, multi-stage image with the verified embedding model baked in;
+  `compose.yaml` with api, worker and dashboard; `.env.example`; runbook and security notes. CI gates coverage
+  at 80%, runs pip-audit, and smoke-tests the container in production mode.
 - **Lifecycle engine** (`workflow.py`): HMAC-signed webhooks, event and payment idempotency, per-step traces,
   exponential backoff retry worker, dead-letter queue, role-gated operator replay, operations health metrics.
   The last 30 days of payments are replayed through it with simulated provider faults.
@@ -33,22 +47,28 @@ Live synthetic dashboard: https://growthops-os.streamlit.app/ · GitHub: https:/
   pipeline, renewal-risk queue, migration audit with logged safe repairs, allowlisted ask-your-data.
 - **Warehouse**: SQLite reference marts and a DuckDB dbt project (staging → intermediate → marts, schema and
   singular tests, including bridge tie-out, email and link-hygiene marts) verified against the Python reference.
-- **BI**: ten-view Streamlit app (light and dark), FastAPI Executive Pulse page, Power BI PBIP/TMDL with 11
-  embedded marts, and a formula-driven Excel workbook with a zero-difference audit sheet, the last two rebuilt
-  by script and checked for drift in CI.
+- **BI**: ten-view Streamlit app (password gate and configured database in a deployment) (light and dark), FastAPI Executive Pulse page, Power BI PBIP/TMDL with 11
+  embedded marts plus a date dimension, relationships and 17 documented measures for paid, email and link data,
+  and a formula-driven Excel workbook: a Marketing KPIs sheet on named, validated date inputs, 10 zero-difference
+  audit checks, protected sheets and a definitions sheet. Both are rebuilt by script and checked for drift in CI;
+  the Excel formulas were evaluated independently and match Python.
 - **Quality gates**: Ruff, pytest (unit, invariant, ground-truth, API, BI and case-study drift tests), the
   guardrail eval, a Streamlit render test, dbt build and parity, and a Docker build in GitHub Actions.
 
 ## Not implemented yet
 
-- Real HubSpot, Stripe, GA4, ad-platform, email-platform, link-shortener and community integrations (adapters are
-  simulated; the HubSpot import files have not been loaded into a portal).
-- PostgreSQL operations store, BigQuery deployment, scheduled jobs and alert delivery.
+- Live provider accounts: the HubSpot and webhook adapters are tested against a fake HTTP transport, not a real
+  portal or bridge. There are no GA4, ad-platform, email-platform or link-shortener ingestion jobs (the data is
+  generated).
+- Hosting, TLS, a secret manager and off-host backups belong to the deployment owner (see the runbook).
+- The Power BI report pages do not yet use the new paid, email and link tables, and the regenerated model has
+  not been reopened in Power BI Desktop.
+- PostgreSQL, for several API hosts or point-in-time recovery (SQLite with WAL is the single-host choice).
 - Incrementality measurement (geo holdouts, conversion-lift studies); attribution here is descriptive.
 - A published Power BI Service report; the PBIP project was previously opened and queried in Power BI Desktop,
   and its visual layout after the data refresh has not been re-inspected in Desktop.
 
 ## Next increment
 
-Swap the simulated payment and CRM adapters for sandbox providers behind the same step interface, move
-operational state to PostgreSQL with Alembic migrations, and schedule the brief with source-freshness checks.
+Connect a HubSpot developer test account and a Stripe test-mode bridge through the existing adapters, add
+ingestion jobs for ad platforms and the email tool, and build Power BI pages on the new tables.

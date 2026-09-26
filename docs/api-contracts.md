@@ -1,10 +1,27 @@
-# API contracts v0.2
+# API contracts v0.3
 
-The implemented API is a **local Stripe-like simulator**. It is not Stripe's actual webhook schema and does not call HubSpot or a community provider.
+The payment webhook uses an internal, Stripe-like contract; a provider bridge translates the real provider's
+event into it. Side effects go through provider adapters (simulated by default; HubSpot and signed webhook
+bridges when configured; see `growthops/adapters.py`).
+
+## Authentication
+
+| Route group | Requirement |
+|---|---|
+| `/health`, `/ready` | Open (probes) |
+| `POST /webhooks/payments` | Signed request (below) |
+| `/metrics/*`, `/metrics` (Prometheus), `/ops/*`, `/crm/*`, `/ask`, `/campaign-links`, `/docs`, `/openapi.json` | `X-API-Key: <key>` or `Authorization: Bearer <key>`: always in production, and in development whenever `GROWTHOPS_API_KEYS` is set |
+| `POST /ops/events/{id}/replay` | API key plus `X-GrowthOps-Ops-Token` |
+
+Every response carries `X-Request-ID` (echoed from the request when supplied) and security headers. A 500
+returns `{"detail": "internal error", "request_id": ...}`; the traceback stays in the logs.
 
 ## `POST /webhooks/payments`
 
-Raw JSON body is signed with HMAC SHA-256 using `GROWTHOPS_WEBHOOK_SECRET` (default for local demonstration only: `local-demo-secret`). Send the hexadecimal digest in `X-GrowthOps-Signature`. A real Stripe adapter will verify Stripe's own signature scheme and translate its versioned event into this internal contract.
+Send `X-GrowthOps-Timestamp` (Unix seconds) and `X-GrowthOps-Signature`, the hex HMAC-SHA256 of
+`"{timestamp}.{raw body}"` with `GROWTHOPS_WEBHOOK_SECRET`. Requests outside `GROWTHOPS_WEBHOOK_TOLERANCE_SECONDS`
+(default 300) are rejected, so a captured request cannot be replayed. Development also accepts the legacy
+body-only signature when no timestamp is sent; production does not, and refuses to start with the demo secret.
 
 ```json
 {
@@ -27,7 +44,7 @@ Workflow by `payment_type`: `new` runs record payment → update CRM → grant a
 
 ## `GET /ops/customers/{customer_id}`
 
-Returns CRM state, recorded payments, access state, and recent workflow attempts for that customer. It is read-only. The local simulator has no authentication; it must not be exposed to a public network. The target console requires role-based access and audit logging before handling any real customer data.
+Returns CRM state, recorded payments, access state, and recent workflow attempts for that customer. It is read-only and needs an API key.
 
 ## `POST /campaign-links`
 
@@ -40,6 +57,15 @@ Accepts `campaign_id`, HTTPS `destination_url`, and snake-case `content`. Looks 
 `GET /metrics/executive` returns the **all-time synthetic scenario** metrics, quality measures, and deterministic observations. `GET /metrics/funnel` returns stage counts, conversion from previous stage, and median/p90 transition time. `GET /metrics/attribution/{model}` accepts `first_touch`, `lead_creation`, `last_non_direct`, `u_shaped`, or `linear` and returns net cash by campaign.
 
 `GET /metrics/daily?days=90` returns event-date spend, leads, and payment/refund cash from the local daily mart. `GET /metrics/brief?days=7` returns the Morning Brief: the latest week against the prior week plus prioritized findings, each with evidence, drivers, a recommended investigation, confidence and a source ID. `GET /metrics/content` returns first identified content influence through MQL, calls, customers, and net cash. `GET /metrics/experiments/{experiment_id}` returns variant-level visitor, lead, MQL, customer, and cash results with lead-rate, lead-quality and bootstrap cash intervals, a sample-ratio-mismatch check and a decision derived from those intervals. Assignment is simulated per visitor; it is not a live experiment.
+
+## Readiness, metrics and ask-your-data
+
+| Endpoint | Contract |
+|---|---|
+| `GET /ready` | 200 with `schema_version`, `stale_sources` and per-source freshness; 503 when the database is unreachable or the schema is not current |
+| `GET /metrics` | Prometheus text: `growthops_http_requests_total`, `growthops_http_request_seconds`, `growthops_webhook_{accepted,rejected}_total`, `growthops_workflow_events{status}`, `growthops_paid_without_access_customers`, `growthops_source_age_hours`, `growthops_source_stale` |
+| `GET /ask?q=` | Keyless answer: `answer`, `route` (`certified`, `metric`, `definition` or `refused`), `metric_id`, `citations`, `confidence`, `retrieval_mode`, `retrieved` and `latency_ms`. `q` is 1–300 characters |
+| `GET /ops/ask-usage?days=7` | Questions by route with average latency, from `ask_log` |
 
 ## Marketing operations endpoints
 
@@ -70,7 +96,6 @@ Accepts `campaign_id`, HTTPS `destination_url`, and snake-case `content`. Looks 
 
 | Endpoint | Contract |
 |---|---|
-| Scheduled executive brief | Delivery schedule, source freshness, and quality suppression |
 | `GET /ops/quality/issues` | Paginated data-quality queue with source links |
 | `POST /experiments` | Register hypothesis, variants, exposure unit, primary and guardrail metrics |
-| Real provider adapters | Stripe signature scheme, CRM and community-platform APIs behind the same step interface |
+| Provider bridge for Stripe | Verify Stripe's signature, translate its event to this contract, sign and forward |
