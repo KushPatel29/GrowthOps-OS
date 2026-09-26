@@ -22,6 +22,8 @@ from growthops.brief import daily_series, period_brief
 from growthops.warehouse import build as build_warehouse
 from growthops.migration import audit as migration_audit
 from growthops.experiments import analyze as experiment_analysis
+from growthops.renewals import monitor as renewal_monitor
+from growthops.ai_brief import generate as ai_brief
 from growthops.workflow import EventConflict, PaymentEvent, process_payment
 
 
@@ -125,6 +127,24 @@ def experiment_metrics(experiment_id: str) -> dict:
         return experiment_analysis(connection, experiment_id)
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
+    finally:
+        connection.close()
+
+
+@app.get("/ops/renewals")
+def renewal_risk() -> dict:
+    connection = connect(database_path())
+    try:
+        return renewal_monitor(connection)
+    finally:
+        connection.close()
+
+
+@app.get("/metrics/ai-brief")
+def evidence_brief() -> dict:
+    connection = connect(database_path())
+    try:
+        return ai_brief(connection)
     finally:
         connection.close()
 

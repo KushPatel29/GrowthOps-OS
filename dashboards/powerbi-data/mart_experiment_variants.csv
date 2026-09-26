@@ -1,0 +1,3 @@
+﻿experiment_id,variant_id,label,cta_text,visitors,leads,mqls,customers,net_cash_cents,lead_rate,mql_per_lead,net_cash_per_visitor_cents
+cta_growth_plan,cta_a,Book a strategy call,Book a strategy call,500,100,70,20,1260000,0.2,0.7,2520.0
+cta_growth_plan,cta_b,Get my growth plan,Get my growth plan,500,140,30,10,630000,0.28,0.2143,1260.0

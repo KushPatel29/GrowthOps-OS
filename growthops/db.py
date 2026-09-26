@@ -124,6 +124,21 @@ CREATE TABLE IF NOT EXISTS refunds (
   amount_cents INTEGER NOT NULL CHECK (amount_cents > 0),
   refunded_at TEXT NOT NULL
 );
+CREATE TABLE IF NOT EXISTS subscriptions (
+  subscription_id TEXT PRIMARY KEY,
+  customer_id TEXT NOT NULL REFERENCES contacts(contact_id),
+  plan_id TEXT NOT NULL,
+  started_at TEXT NOT NULL,
+  renewal_due_at TEXT NOT NULL,
+  status TEXT NOT NULL CHECK (status IN ('active','canceled'))
+);
+CREATE TABLE IF NOT EXISTS renewal_attempts (
+  attempt_id TEXT PRIMARY KEY,
+  subscription_id TEXT NOT NULL REFERENCES subscriptions(subscription_id),
+  attempted_at TEXT NOT NULL,
+  outcome TEXT NOT NULL CHECK (outcome IN ('failed','succeeded')),
+  failure_code TEXT
+);
 CREATE TABLE IF NOT EXISTS access_entitlements (
   customer_id TEXT PRIMARY KEY,
   status TEXT NOT NULL,

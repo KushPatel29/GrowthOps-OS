@@ -1,0 +1,10 @@
+﻿stage,ordinal,people,from_previous_rate
+lead,1,240,
+mql,2,100,0.4167
+call_booked,3,60,0.6
+call_attended,4,40,0.6667
+opportunity,5,37,0.925
+closed_won,6,30,0.7297
+paid,7,30,1.0
+activated,8,30,1.0
+renewed,9,6,0.2

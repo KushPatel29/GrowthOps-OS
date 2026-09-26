@@ -70,6 +70,26 @@ models:
               arguments:
                 to: ref('stg_contacts')
                 field: contact_id
+  - name: stg_subscriptions
+    columns:
+      - name: subscription_id
+        data_tests: [unique, not_null]
+      - name: customer_id
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('stg_contacts')
+                field: contact_id
+  - name: stg_renewal_attempts
+    columns:
+      - name: attempt_id
+        data_tests: [unique, not_null]
+      - name: subscription_id
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('stg_subscriptions')
+                field: subscription_id
   - name: stg_ad_spend_daily
     description: Daily paid media spend at campaign and date grain.
     columns:
@@ -171,4 +191,9 @@ models:
     description: Visitor-level CTA experiment outcomes with cash as the primary metric.
     columns:
       - name: variant_id
+        data_tests: [unique, not_null]
+  - name: mart_renewal_risk
+    description: Fixed synthetic as-of renewal queue; read-only, no provider retries.
+    columns:
+      - name: subscription_id
         data_tests: [unique, not_null]

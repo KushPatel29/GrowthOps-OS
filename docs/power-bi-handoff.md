@@ -7,7 +7,7 @@ python -m growthops.verify_dbt
 python -m growthops.export_bi
 ```
 
-Import the CSV files in `data/powerbi` with **Get data → Text/CSV**. The files are generated and excluded from Git because all records are synthetic and reproducible. Use the dbt mart names as table names. Parse `mart_growth_daily.day` as Date and all `_cents` fields as Whole Number before defining display measures.
+Import the versioned synthetic CSVs in `dashboards/powerbi-data` with **Get data → Text/CSV**. The same files can be regenerated in `data/powerbi` with the command above. Use the dbt mart names as table names. Parse `mart_growth_daily.day` as Date and all `_cents` fields as Whole Number before defining display measures. The [measure file](../dashboards/GrowthOps_PowerBI_Measures.dax) and [theme](../dashboards/GrowthOps_PowerBI_Theme.json) provide the report model and visual palette.
 
 | Page | Tables | Question |
 |---|---|---|
@@ -17,6 +17,7 @@ Import the CSV files in `data/powerbi` with **Get data → Text/CSV**. The files
 | Content Intelligence | `mart_content_performance` | Which first identified content generated qualified pipeline and cash? |
 | Migration Audit | `mart_migration_summary` | Which legacy contacts or properties failed to reconcile? |
 | Experiments | `mart_experiment_variants` | Did lead lift translate into cash per visitor? |
+| Renewal Risk | `mart_renewal_risk` | Which synthetic subscriptions are due soon or have a failed attempt? |
 
 Measures should use the existing columns, with explicit grain and denominator:
 
@@ -27,4 +28,4 @@ Paid Leads = CALCULATE(SUM(mart_campaign_performance[leads]), mart_campaign_perf
 Cost per Paid Lead USD = DIVIDE([Paid Spend USD], [Paid Leads])
 ```
 
-The daily mart uses event dates: refunds reduce cash on the refund date, while campaign ROAS uses the modeled lead-creation attribution. The campaign mart and measures above are all-time and should not respond to a daily date slicer. Do not sum `mart_revenue` or `mart_measurement_health` across unrelated tables; each is a single-row snapshot. Experiment confidence intervals and the cautious decision are computed by `/metrics/experiments/cta_growth_plan`, not by the mart. A native `.pbix` report has not yet been authored; the HTML Executive Pulse is the interactive report in this repository.
+The daily mart uses event dates: refunds reduce cash on the refund date, while campaign ROAS uses the modeled lead-creation attribution. The campaign mart and measures above are all-time and should not respond to a daily date slicer. Do not sum `mart_revenue` or `mart_measurement_health` across unrelated tables; each is a single-row snapshot. Experiment confidence intervals and the cautious decision are computed by `/metrics/experiments/cta_growth_plan`, not by the mart. A native `.pbix` report has not yet been authored. The Streamlit app and Excel workbook are interactive reports in this repository. Power BI Desktop or a signed-in Power BI workspace is required to save and verify a native report. For the first report page, use four cards (booked, gross cash, refunds, net cash), a line chart of daily spend and net cash, a campaign bar chart, then a measurement-quality table. Label all pages **Synthetic ScaleLab case**.
