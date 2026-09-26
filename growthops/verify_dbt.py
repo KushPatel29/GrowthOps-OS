@@ -14,6 +14,8 @@ from growthops.renewals import monitor as renewal_monitor
 from growthops.reconciliation import crm_bridge, platform_comparison
 from growthops.email_analytics import email_performance
 from growthops.campaign_links import audit_short_links
+from growthops.performance import paid_efficiency
+from growthops.scenario import AS_OF, START
 
 
 def verify(sqlite_database: str, duckdb_database: str) -> None:
@@ -143,6 +145,14 @@ def verify(sqlite_database: str, duckdb_database: str) -> None:
         for link in links["links"]:
             assert hygiene[link["link_id"]] == (bool(link["issues"]), link["recent_clicks"], link["clicks"]), \
                 f"link hygiene {link['link_id']}"
+
+        fields = ("spend_cents", "impressions", "clicks", "leads", "mqls", "calls_booked", "closed_won_deals")
+        daily = {row[0]: row[1:] for row in warehouse.execute(
+            f"select campaign_id, {', '.join(f'sum({f})' for f in fields)} from mart_paid_efficiency_daily "
+            "group by campaign_id").fetchall()}
+        for row in paid_efficiency(source, START, AS_OF)[:-1]:
+            actual = tuple(int(value) for value in daily[row["segment"]])
+            assert actual == tuple(row[f] for f in fields), f"paid efficiency daily {row['segment']}"
     finally:
         warehouse.close()
         source.close()

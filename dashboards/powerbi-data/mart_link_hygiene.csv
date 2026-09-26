@@ -1,0 +1,10 @@
+﻿link_id,channel,utm_source,utm_medium,utm_campaign,missing_utm,unregistered_campaign,off_taxonomy,clicks,recent_clicks
+ig-bio,instagram,,,,True,False,False,3568,910
+li-launch,linkedin,linkedin,social,linkedin_ceo_abm,False,False,True,139,139
+nl-deadline,newsletter,newsletter,owned_email,newsletter_weekly,False,False,False,271,271
+nl-guide,newsletter,newsletter,owned_email,newsletter_weekly,False,False,False,6362,438
+pod-apply,podcast,partner,referral,partner_podcast,False,False,False,1207,100
+pod-ep41,podcast,Podcast,referral,partner_podcast,False,False,True,245,202
+web-invite,email,webinar,event,webinar_growth_os,False,False,False,4001,290
+yt-guide,youtube,youtube,organic_video,youtube_founder_guide,False,False,False,9977,694
+yt-q3-guide,youtube,youtube,organic_video,youtube_q3_guide,False,True,False,892,374
