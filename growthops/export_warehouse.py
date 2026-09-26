@@ -11,7 +11,8 @@ from growthops.db import connect, initialize
 TABLES = (
     "campaigns", "ad_spend_daily", "content_items", "contacts", "legacy_contacts",
     "touches", "content_engagements", "lifecycle_events", "deals", "payments", "refunds",
-    "experiments", "experiment_variants", "experiment_exposures"
+    "experiments", "experiment_variants", "experiment_exposures",
+    "subscriptions", "renewal_attempts"
 )
 
 

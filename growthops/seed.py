@@ -162,6 +162,20 @@ def seed(database: str, people: int = 240, seed_value: int = 29) -> None:
                     "INSERT OR IGNORE INTO payments VALUES (?, ?, ?, ?, 'succeeded', ?)",
                     (f"p-{index:05d}", payment_deal, contact_id, amount, paid_at),
                 )
+                if index % 16 == 0:
+                    renewal_due = datetime.fromisoformat(paid_at) + timedelta(days=75)
+                    subscription_id = f"sub-{index:05d}"
+                    connection.execute(
+                        """INSERT INTO subscriptions VALUES (?, ?, 'founder_community', ?, ?, 'active')
+                           ON CONFLICT(subscription_id) DO UPDATE SET renewal_due_at=excluded.renewal_due_at""",
+                        (subscription_id, contact_id, paid_at, renewal_due.isoformat()),
+                    )
+                    if renewal_due < datetime(2026, 9, 26, tzinfo=timezone.utc) and index % 3 == 0:
+                        connection.execute(
+                            "INSERT OR IGNORE INTO renewal_attempts VALUES (?, ?, ?, 'failed', 'card_declined')",
+                            (f"attempt-{index:05d}", subscription_id,
+                             (renewal_due + timedelta(days=1)).isoformat()),
+                        )
                 if index % 40 == 0:
                     connection.execute(
                         "INSERT OR IGNORE INTO refunds VALUES (?, ?, ?, ?)",

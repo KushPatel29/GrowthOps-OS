@@ -1,0 +1,16 @@
+﻿subscription_id,customer_id,plan_id,due_date,failed_attempts,risk_level
+sub-00176,c-00176,founder_community,2026-09-16,0,high
+sub-00000,c-00000,founder_community,2026-09-17,1,high
+sub-00064,c-00064,founder_community,2026-09-27,0,medium
+sub-00208,c-00208,founder_community,2026-09-27,0,medium
+sub-00096,c-00096,founder_community,2026-09-30,0,medium
+sub-00048,c-00048,founder_community,2026-10-07,0,not_due
+sub-00144,c-00144,founder_community,2026-10-08,0,not_due
+sub-00192,c-00192,founder_community,2026-10-17,0,not_due
+sub-00080,c-00080,founder_community,2026-10-19,0,not_due
+sub-00224,c-00224,founder_community,2026-10-21,0,not_due
+sub-00016,c-00016,founder_community,2026-10-28,0,not_due
+sub-00112,c-00112,founder_community,2026-10-28,0,not_due
+sub-00160,c-00160,founder_community,2026-10-28,0,not_due
+sub-00032,c-00032,founder_community,2026-10-31,0,not_due
+sub-00128,c-00128,founder_community,2026-11-18,0,not_due

@@ -10,6 +10,7 @@ from growthops.funnel import funnel
 from growthops.report import campaign_performance, measurement_health, metrics
 from growthops.migration import audit as migration_audit
 from growthops.experiments import analyze as experiment_analysis
+from growthops.renewals import monitor as renewal_monitor
 
 
 def verify(sqlite_database: str, duckdb_database: str) -> None:
@@ -97,6 +98,14 @@ def verify(sqlite_database: str, duckdb_database: str) -> None:
         for actual, expected in zip(experiment_rows, expected_experiment["variants"]):
             for field in expected:
                 assert actual[field] == expected[field], f"experiment {actual['variant_id']} {field}"
+
+        renewal_counts = dict(warehouse.execute(
+            "select risk_level, count(*) from mart_renewal_risk group by risk_level"
+        ).fetchall())
+        expected_renewals = renewal_monitor(source)
+        assert sum(renewal_counts.values()) == expected_renewals["active_subscriptions"]
+        assert renewal_counts.get("high", 0) == expected_renewals["high_risk"]
+        assert renewal_counts.get("medium", 0) == expected_renewals["due_soon"]
     finally:
         warehouse.close()
         source.close()

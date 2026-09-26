@@ -11,17 +11,19 @@
 - Read-only operations customer lookup and analytics endpoints with deterministic all-time executive findings.
 - Responsive Executive Pulse page with cash ledger, funnel, attribution model selector, and quality findings. Desktop and mobile browser renders were inspected.
 - Docker/Compose configuration and GitHub Actions checks. Docker execution is unverified because Docker is unavailable on this host.
-- Eight Python tests and Ruff passing. DuckDB/dbt seeds, build, data tests, and cross-engine parity checks passing. Power BI-ready CSV marts export successfully.
+- Eleven Python tests and Ruff passing. DuckDB/dbt seeds, build, data tests, and cross-engine parity checks passing. Power BI-ready CSV marts export successfully.
 - 270 daily spend records, 8 content items, 60 identified engagements, 243 legacy contacts, and 1,000 CTA experiment exposures extend the synthetic scenario.
 - CRM migration audit and logged, idempotent repairs for unambiguous null owner/source fields; content-to-pipeline and experiment marts; recent-week brief and corresponding dashboard sections.
+- Six-view Streamlit dashboard with approved-question ask-your-data interface, deterministic evidence brief, and read-only renewal risk monitor.
+- Formula-backed Excel dashboard with two native charts, source marts, and a reconciliation audit.
 
 ## Not implemented yet
 
 - Real HubSpot, Stripe, GA4, ad-platform, and community integrations.
-- PostgreSQL operations store, BigQuery deployment, and native Power BI `.pbix` report. The interactive dashboard is local HTML; Power BI-ready data is exported as CSV.
-- Scheduled renewal/retry worker, alerting, RBAC, and deployed operations console.
-- AI analyst/classifier/RAG evaluation pipeline.
+- PostgreSQL operations store, BigQuery deployment, and native Power BI `.pbix` report. Power BI-ready data is exported as CSV.
+- Scheduled renewal/retry worker, alerting, RBAC, and deployed operations console. The renewal monitor is read-only.
+- Production AI analyst/classifier/RAG evaluation pipeline. The local brief uses constrained evidence selection, not an autonomous agent.
 
 ## Next engineering increment
 
-Implement a real ingestion contract and persistent PostgreSQL operational store, then wire provider sandboxes and scheduled freshness checks. A native Power BI report should use the verified marts and the definitions in the metric catalog. The current brief is a deterministic on-demand period comparison, not a scheduled production report.
+Implement a real ingestion contract and persistent PostgreSQL operational store, then wire provider sandboxes and scheduled freshness checks. A native Power BI report should use the verified marts and the definitions in the metric catalog. The current brief is a deterministic on-demand period comparison, not a scheduled production report. The public Streamlit app uses synthetic data only.

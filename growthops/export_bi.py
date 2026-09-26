@@ -9,8 +9,16 @@ from pathlib import Path
 MARTS = (
     "mart_growth_daily", "mart_campaign_performance", "mart_funnel", "mart_revenue",
     "mart_content_performance", "mart_measurement_health", "mart_migration_summary",
-    "mart_experiment_variants",
+    "mart_experiment_variants", "mart_renewal_risk",
 )
+ORDER_BY = {
+    "mart_growth_daily": "day",
+    "mart_campaign_performance": "net_cash_cents DESC, campaign_id",
+    "mart_funnel": "ordinal",
+    "mart_content_performance": "influenced_net_cash_cents DESC, content_id",
+    "mart_experiment_variants": "variant_id",
+    "mart_renewal_risk": "due_date, subscription_id",
+}
 
 
 def export(warehouse_database: str, output: str = "data/powerbi") -> dict[str, int]:
@@ -22,7 +30,8 @@ def export(warehouse_database: str, output: str = "data/powerbi") -> dict[str, i
     try:
         counts = {}
         for mart in MARTS:
-            result = connection.execute(f"SELECT * FROM {mart}")
+            ordering = f" ORDER BY {ORDER_BY[mart]}" if mart in ORDER_BY else ""
+            result = connection.execute(f"SELECT * FROM {mart}{ordering}")
             columns = [item[0] for item in result.description]
             rows = result.fetchall()
             with (destination / f"{mart}.csv").open("w", encoding="utf-8-sig", newline="") as file:

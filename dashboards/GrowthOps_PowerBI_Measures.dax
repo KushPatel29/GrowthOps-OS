@@ -1,0 +1,15 @@
+// Add these as explicit measures after importing the nine CSV marts.
+// The CSVs in dashboards/powerbi-data are synthetic and versioned with this case.
+
+Booked Value USD = DIVIDE(SUM(mart_revenue[booked_cents]), 100)
+Gross Collected USD = DIVIDE(SUM(mart_revenue[gross_collected_cents]), 100)
+Refunds USD = DIVIDE(SUM(mart_revenue[refunds_cents]), 100)
+Net Collected USD = [Gross Collected USD] - [Refunds USD]
+Daily Net Cash USD = DIVIDE(SUM(mart_growth_daily[net_cash_cents]), 100)
+Daily Paid Spend USD = DIVIDE(SUM(mart_growth_daily[spend_cents]), 100)
+Paid Spend USD = DIVIDE(CALCULATE(SUM(mart_campaign_performance[spend_cents]), mart_campaign_performance[medium] IN {"paid_search", "paid_social"}), 100)
+Paid Leads = CALCULATE(SUM(mart_campaign_performance[leads]), mart_campaign_performance[medium] IN {"paid_search", "paid_social"})
+Cost per Paid Lead USD = DIVIDE([Paid Spend USD], [Paid Leads])
+Paid Attributed Cash USD = DIVIDE(CALCULATE(SUM(mart_campaign_performance[net_cash_cents]), mart_campaign_performance[medium] IN {"paid_search", "paid_social"}), 100)
+Paid Net Cash ROAS = DIVIDE([Paid Attributed Cash USD], [Paid Spend USD])
+Campaign Net Cash USD = DIVIDE(SUM(mart_campaign_performance[net_cash_cents]), 100)
