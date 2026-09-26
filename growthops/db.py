@@ -279,19 +279,17 @@ MIGRATIONS: tuple[tuple[int, str], ...] = (
       detail TEXT,
       PRIMARY KEY (job, run_key)
     );
-    CREATE TABLE IF NOT EXISTS ai_calls (
-      call_id TEXT PRIMARY KEY,
-      called_at TEXT NOT NULL,
-      purpose TEXT NOT NULL,
-      model TEXT NOT NULL,
-      evidence_sha256 TEXT NOT NULL,
-      status TEXT NOT NULL,
-      input_tokens INTEGER,
-      output_tokens INTEGER,
-      latency_ms INTEGER,
-      result_json TEXT
+    CREATE TABLE IF NOT EXISTS ask_log (
+      ask_id TEXT PRIMARY KEY,
+      asked_at TEXT NOT NULL,
+      question TEXT NOT NULL,
+      route TEXT NOT NULL CHECK (route IN ('certified','metric','definition','refused')),
+      target TEXT,
+      score REAL,
+      retrieval_mode TEXT NOT NULL,
+      latency_ms INTEGER NOT NULL
     );
-    CREATE INDEX IF NOT EXISTS idx_ai_calls_evidence ON ai_calls(purpose, evidence_sha256, status);
+    CREATE INDEX IF NOT EXISTS idx_ask_log_time ON ask_log(asked_at);
     """),
 )
 SCHEMA_VERSION = MIGRATIONS[-1][0]

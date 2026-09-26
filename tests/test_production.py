@@ -132,3 +132,18 @@ def test_freshness_flags_sources_past_their_sla(connection, monkeypatch):
     monkeypatch.setenv("GROWTHOPS_FRESHNESS_SLA_HOURS", "1")
     stale = {item["source"] for item in freshness_check(connection) if item["status"] == "stale"}
     assert "payments" in stale and "email_sends" not in stale  # email keeps its weekly SLA
+
+
+def test_ask_endpoint_is_keyless_protected_and_audited(monkeypatch, db_path):
+    _production(monkeypatch, db_path)
+    with TestClient(app) as client:
+        assert client.get("/ask", params={"q": "What does a lead cost on Google?"}).status_code == 401
+        headers = {"X-API-Key": KEY}
+        answered = client.get("/ask", params={"q": "What does a lead cost on Google?"}, headers=headers).json()
+        assert answered["route"] == "metric" and answered["metric_id"] == "paid_efficiency"
+        assert "Google: CPL $" in answered["answer"]
+        refused = client.get("/ask", params={"q": "select * from payments"}, headers=headers).json()
+        assert refused["route"] == "refused"
+        assert client.get("/ask", params={"q": "x" * 301}, headers=headers).status_code == 422
+        usage = client.get("/ops/ask-usage", headers=headers).json()
+        assert {row["route"] for row in usage["by_route"]} == {"metric", "refused"}

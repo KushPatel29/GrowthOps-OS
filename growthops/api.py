@@ -19,6 +19,7 @@ from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse, Red
 from pydantic import ValidationError
 
 from growthops.adapters import build_adapters
+from growthops.ask_data import answer as ask_data, usage as ask_usage_summary
 from growthops.config import get_settings
 from growthops.db import SCHEMA_VERSION, connect, initialize, schema_version
 from growthops.freshness import check as freshness_check
@@ -47,7 +48,7 @@ from growthops.performance import daily_update, paid_efficiency
 
 
 logger = logging.getLogger("growthops.api")
-PROTECTED_PREFIXES = ("/metrics", "/ops", "/crm", "/campaign-links", "/docs", "/redoc", "/openapi.json")
+PROTECTED_PREFIXES = ("/metrics", "/ops", "/crm", "/campaign-links", "/ask", "/docs", "/redoc", "/openapi.json")
 SECURITY_HEADERS = {"X-Content-Type-Options": "nosniff", "X-Frame-Options": "DENY",
                     "Referrer-Policy": "no-referrer", "Cache-Control": "no-store"}
 
@@ -384,6 +385,18 @@ def anomalies() -> dict:
 def narrative() -> dict:
     """Validated executive narrative (deterministic unless an LLM candidate passes the guardrail)."""
     return narrate(_read(brief_findings))
+
+
+@app.get("/ask")
+def ask(q: str = Query(min_length=1, max_length=300)) -> dict:
+    """Keyless, retrieval-grounded question answering over the governed metrics (see growthops.ask_data)."""
+    return _read(ask_data, q)
+
+
+@app.get("/ops/ask-usage")
+def ask_usage(days: int = Query(default=7, ge=1, le=90)) -> dict:
+    """Questions asked by route (answered, defined, refused) and latency, from the audit log."""
+    return _read(ask_usage_summary, days)
 
 
 @app.get("/metrics/daily-update")

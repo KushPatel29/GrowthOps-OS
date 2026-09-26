@@ -1,9 +1,9 @@
 """Evidence-bound executive narrative with a claim validator.
 
-The brief's findings are the only facts a narrative may use. Whoever writes the
-prose (the deterministic template or, optionally, Claude) must return
-structured JSON whose every point cites evidence IDs, and the validator rejects
-the narrative outright if it:
+The brief's findings are the only facts a narrative may use. The prose is
+written deterministically from those findings; any other draft (for example one
+edited by a person) must be structured JSON whose every point cites evidence
+IDs, and the validator rejects it outright if it:
 
 * contains a number or date that does not appear in the cited evidence,
 * cites an evidence ID that does not exist, or leaves a point uncited,
@@ -11,7 +11,7 @@ the narrative outright if it:
 * promises an outcome ("will increase", "guarantees"), or
 * contains an email address.
 
-A rejected narrative is never shown: the deterministic narrative is used instead.
+A rejected draft is never shown: the deterministic narrative is used instead.
 The rules are held to a labelled eval set in ``evals/narrative_guardrail_cases.json``.
 """
 
@@ -19,12 +19,10 @@ from __future__ import annotations
 
 import argparse
 import json
-import os
 import re
 import sqlite3
 from pathlib import Path
 
-MODEL = "claude-opus-5"
 MAX_POINTS = 5
 NARRATIVE_SCHEMA = {
     "type": "object",
@@ -46,15 +44,6 @@ NARRATIVE_SCHEMA = {
     "required": ["headline", "points"],
     "additionalProperties": False,
 }
-SYSTEM_PROMPT = (
-    "You write the morning growth brief for a marketing leader. You receive findings as JSON; "
-    "they are the only facts you may use. Return at most five points, most important first. "
-    "Each point cites the IDs of the findings it uses. Copy every number and date exactly as it "
-    "appears in the cited findings; do not round, convert or compute new numbers. Describe drivers "
-    "as shares of a change, never as causes, and phrase next steps as checks to run rather than "
-    "predicted outcomes. The headline states the single most important thing and cites nothing new."
-)
-
 DATE = re.compile(r"\b\d{4}-\d{2}-\d{2}\b")
 NUMBER = re.compile(r"(?<![\w.])[-+−]?\$?\d[\d,]*(?:\.\d+)?(?:%|\s?pp|x|×)?(?![\w])")
 CAUSAL = re.compile(
@@ -145,49 +134,16 @@ def _compact(findings: list[dict]) -> list[dict]:
     return [{key: item[key] for key in keys if key in item} for item in findings[:8]]
 
 
-def write_with_claude(findings: list[dict]) -> dict | None:
-    """Ask Claude for a narrative; returns None when unavailable, refused or unparsable.
+def narrate(findings: list[dict], *, candidate: dict | None = None) -> dict:
+    """Pick the narrative to show and report why.
 
-    Requires the optional ``anthropic`` package (``pip install -e ".[ai]"``) and credentials
-    (``ANTHROPIC_API_KEY`` or an ``ant auth login`` profile). Nothing here runs in CI.
+    The deterministic narrative is the default. A ``candidate`` (for example a
+    human-edited draft pasted into a tool) is shown only if the validator passes it.
     """
-    try:
-        import anthropic
-    except ImportError:
-        return None
-    client = anthropic.Anthropic()
-    try:
-        response = client.beta.messages.create(
-            model=MODEL,
-            max_tokens=4000,
-            system=SYSTEM_PROMPT,
-            messages=[{"role": "user", "content": json.dumps(_compact(findings))}],
-            output_config={"effort": "medium", "format": {"type": "json_schema", "schema": NARRATIVE_SCHEMA}},
-            betas=["server-side-fallback-2026-07-01"],
-            extra_body={"fallbacks": "default"},
-        )
-    except (anthropic.APIConnectionError, anthropic.RateLimitError, anthropic.APIStatusError):
-        return None
-    if response.stop_reason != "end_turn":  # refusal, max_tokens, ...: never show partial output
-        return None
-    text = next((block.text for block in response.content if block.type == "text"), None)
-    try:
-        return json.loads(text) if text else None
-    except json.JSONDecodeError:
-        return None
-
-
-def narrate(findings: list[dict], *, candidate: dict | None = None, use_claude: bool = False) -> dict:
-    """Pick the narrative to show and report why."""
-    if candidate is None and use_claude:
-        candidate = write_with_claude(findings)
-        if candidate is None:
-            return {"mode": "deterministic_provider_unavailable", "narrative": deterministic(findings),
-                    "violations": []}
     if candidate is not None:
         violations = validate(candidate, findings)
         if not violations:
-            return {"mode": "llm_validated", "narrative": candidate, "violations": []}
+            return {"mode": "candidate_validated", "narrative": candidate, "violations": []}
         return {"mode": "deterministic_fallback", "narrative": deterministic(findings), "violations": violations}
     return {"mode": "deterministic", "narrative": deterministic(findings), "violations": []}
 
@@ -212,7 +168,6 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--database", default="data/growthops-sample.db")
     parser.add_argument("--eval", action="store_true", help="score the guardrail eval set")
-    parser.add_argument("--claude", action="store_true", help="ask Claude for the narrative (needs credentials)")
     args = parser.parse_args()
     if args.eval:
         report = run_evals()
@@ -222,12 +177,12 @@ def main() -> None:
         print(f"{report['passed']}/{report['cases']} guardrail cases passed")
         raise SystemExit(0 if report["passed"] == report["cases"] else 1)
     from growthops.brief import findings as brief_findings
-    from growthops.db import connect
+    from growthops.db import connect, initialize
 
     connection: sqlite3.Connection = connect(args.database)
+    initialize(connection)
     try:
-        print(json.dumps(narrate(brief_findings(connection), use_claude=args.claude or bool(os.getenv("GROWTHOPS_USE_CLAUDE"))),
-                         indent=2))
+        print(json.dumps(narrate(brief_findings(connection)), indent=2))
     finally:
         connection.close()
 
