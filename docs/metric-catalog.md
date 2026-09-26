@@ -16,8 +16,8 @@ All timestamps are UTC. A report must show its time range, cohort basis, data-as
 | Refunds | Sum successful refund amounts | Refund event date; tied to original payment |
 | Net collected | Gross collected minus refunds | Cash basis; excludes tax/fees until modeled explicitly |
 | Booked revenue | Sum value of closed-won deals | Deal close date; separate from cash |
-| CPL | Spend / leads | Same period and acquisition cohort; null for zero leads |
-| Cost/MQL | Spend / MQLs | Same period and acquisition cohort; null for zero MQLs |
+| CPL | Paid spend / leads attributed to paid campaigns | Same period and acquisition cohort; null for zero paid leads |
+| Cost/MQL | Paid spend / MQLs attributed to paid campaigns | Same period and acquisition cohort; null for zero paid MQLs |
 | Lead-to-MQL rate | MQL people / lead people | Cohort-based with maturity window; current local slice uses all-time records |
 | MQL-to-call rate | Booked-call people / MQL people | Same MQL cohort and maturity window |
 | Show rate | Attended calls / booked calls | Meeting date basis |

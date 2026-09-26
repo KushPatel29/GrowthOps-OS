@@ -26,6 +26,10 @@ def metrics(connection: sqlite3.Connection) -> dict:
     paid_campaigns = {row[0] for row in connection.execute(
         "SELECT campaign_id FROM campaigns WHERE medium IN ('paid_social','paid_search')"
     )}
+    paid_performance = [row for row in campaign_performance(connection)
+                        if row["campaign_id"] in paid_campaigns]
+    paid_leads = sum(row["leads"] for row in paid_performance)
+    paid_mqls = sum(row["mqls"] for row in paid_performance)
     paid_cash = sum(row["net_cash_cents"] for row in attribution_summary(connection, "lead_creation")
                     if row["campaign_id"] in paid_campaigns)
     return {
@@ -33,11 +37,14 @@ def metrics(connection: sqlite3.Connection) -> dict:
         "mqls": mqls,
         "closed_won_deals": closed_won,
         "spend_cents": spend,
+        "paid_leads": paid_leads,
+        "paid_mqls": paid_mqls,
         "gross_collected_cents": gross,
         "refunds_cents": refunds,
         "net_collected_cents": net,
         "lead_to_mql_rate": round(mqls / leads, 4) if leads else None,
-        "cost_per_lead_cents": round(spend / leads) if leads else None,
+        "cost_per_lead_cents": round(spend / paid_leads) if paid_leads else None,
+        "cost_per_mql_cents": round(spend / paid_mqls) if paid_mqls else None,
         "net_cash_roas": round(paid_cash / spend, 4) if spend else None,
     }
 

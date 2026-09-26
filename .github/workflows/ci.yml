@@ -16,4 +16,5 @@ jobs:
       - run: python -m ruff check growthops tests
       - run: python -m pytest -q
       - run: python -m growthops.seed --database data/growthops-sample.db
+      - run: python -m growthops.warehouse --database data/growthops-sample.db
       - run: python -m growthops.report --database data/growthops-sample.db

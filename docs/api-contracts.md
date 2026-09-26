@@ -30,11 +30,15 @@ Returns CRM state, recorded payments, access state, and recent workflow attempts
 
 Accepts `campaign_id`, HTTPS `destination_url`, and snake-case `content`. Looks up the campaign registry and rejects invalid names or mismatched source/medium taxonomy. Existing UTM parameters are replaced; unrelated query parameters and URL fragments remain. Returns the canonical URL and its UTM fields. This local endpoint does not create campaigns; a registry management UI is planned.
 
+## Read-only analytics endpoints
+
+`GET /metrics/executive` returns the **all-time synthetic scenario** metrics, quality measures, and deterministic observations. `GET /metrics/funnel` returns stage counts, conversion from previous stage, and median/p90 transition time. `GET /metrics/attribution/{model}` accepts `first_touch`, `lead_creation`, `last_non_direct`, or `u_shaped` and returns net cash by campaign. Date windows, freshness metadata, and daily comparisons are planned; these endpoints do not yet constitute a scheduled morning brief.
+
 ## Target endpoints (not implemented)
 
 | Endpoint | Contract |
 |---|---|
-| `GET /metrics/executive` | Governed metric IDs, values, period, comparison, quality flags, data-as-of |
+| Daily executive brief | Governed metric IDs, period comparison, freshness, and quality suppression |
 | `GET /ops/workflows/{event_id}` | Trace of adapter steps, retries, timestamps, and errors |
 | `POST /ops/workflows/{event_id}/retry` | Authorized, audited manual retry of a failed event |
 | `GET /ops/quality/issues` | Paginated data-quality queue with source links |
