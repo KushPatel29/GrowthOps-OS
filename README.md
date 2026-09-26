@@ -54,7 +54,9 @@ if it ever stops doing so.
 | SQL modelling and analytics engineering: dbt staging → intermediate → marts with data tests | [`warehouse/dbt`](warehouse/dbt), verified against the Python reference in CI |
 | BI delivery: Streamlit, Power BI (PBIP/TMDL) and a formula-driven Excel workbook, all rebuilt from the same marts | [`dashboards/`](dashboards), [`export_bi.py`](growthops/export_bi.py), [`export_excel.py`](growthops/export_excel.py) |
 | Lifecycle automation: payment → CRM → access, idempotency, retries, dead letters, operator replay | [`workflow.py`](growthops/workflow.py), [`api.py`](growthops/api.py) |
-| Responsible AI: an LLM may only rewrite evidence it is given, and a validator rejects invented numbers, dates or causal claims; 30-case eval set | [`narrator.py`](growthops/narrator.py), [`evals/`](evals/narrative_guardrail_cases.json) |
+| Keyless, local AI: ask-your-data answers from governed metrics or cited definitions via hybrid retrieval (BM25 + local MiniLM, the same design as Ask Your Data), refuses the rest, and is held to an 83-question contract with zero wrong answers; no language model, no API key | [`ask_data.py`](growthops/ask_data.py), [`retrieval.py`](growthops/retrieval.py), [`evals/ask_questions.json`](evals/ask_questions.json) |
+| Evidence-bound narrative: a validator rejects invented numbers, dates or causal claims in any draft; 30-case eval set | [`narrator.py`](growthops/narrator.py), [`evals/`](evals/narrative_guardrail_cases.json) |
+| Production operation: fail-fast config, API keys, replay-safe signed webhooks, readiness and Prometheus metrics, migrations, verified backups, a worker for retries, alerts and the daily update, provider adapters (HubSpot, signed webhooks), non-root read-only containers | [runbook](docs/production-runbook.md), [security](docs/security.md), [`worker.py`](growthops/worker.py), [`adapters.py`](growthops/adapters.py) |
 
 ![Email and links](docs/images/email-links.png)
 
@@ -78,12 +80,18 @@ flowchart LR
   db --> analytics[Attribution · reconciliation<br/>diagnostics · experiments]
   analytics --> brief[Morning brief<br/>+ claim-validated narrative]
   analytics & brief --> ui[Streamlit · FastAPI]
+  docs[(Metric catalog<br/>tracking plan)] --> rag[Ask your data<br/>BM25 + local MiniLM<br/>answer · cite · refuse]
+  analytics --> rag --> ui
+  db --> worker[Worker<br/>retries · alerts · daily update] --> engine
+  engine -. adapters .-> providers[HubSpot · access bridge<br/>messaging bridge]
+  worker --> slack[Slack-compatible webhook]
   dbt --> bi[Power BI PBIP · Excel]
 ```
 
-The local build uses SQLite for operational state and DuckDB for the warehouse so it runs anywhere with no
-credentials. The [implementation blueprint](docs/implementation-blueprint.md) describes the production
-target (PostgreSQL, BigQuery or Postgres + dbt, real provider adapters).
+SQLite (WAL, versioned migrations, verified backups) holds operational state and DuckDB runs the dbt
+warehouse, so everything runs with no credentials. `compose.yaml` runs the API, worker and dashboard as
+non-root, read-only containers; the [production runbook](docs/production-runbook.md) covers configuration,
+service levels, alerts, backups and incidents, and names when to move to PostgreSQL.
 
 ## Run it
 
@@ -106,14 +114,18 @@ python -m growthops.narrator --eval                                # 30/30 guard
 python -m growthops.case_study                                     # regenerate docs/case-study.md
 python -m growthops.performance                                    # the written daily update
 python -m growthops.hubspot --output build/hubspot                 # HubSpot import files + CRM audit
+python -m growthops.ask_data --eval                                # question contract, keyword + hybrid
+python -m growthops.ask_data "What does a lead cost on Google?"    # ask from the command line
+python -m growthops.worker --once                                  # retries, alerts, daily update
 python -m uvicorn growthops.api:app --reload                       # API + /dashboard
 ```
 
 Useful endpoints: `/metrics/brief`, `/metrics/daily-update`, `/metrics/paid-efficiency`, `/metrics/email`,
 `/metrics/link-hygiene`, `/crm/hubspot/audit`, `/metrics/revenue-truth`, `/metrics/anomalies`, `/metrics/narrative`,
-`/ops/workflows`, `/ops/paid-without-access`, `/ops/events/{id}`. Docker: `docker compose --profile tools run
---rm seed && docker compose up api`. An optional Claude-written narrative (`pip install -e ".[ai]"`,
-`python -m growthops.narrator --claude`) is shown only if it passes the claim validator.
+`/ask?q=`, `/ops/workflows`, `/ops/paid-without-access`, `/ops/events/{id}`, `/ready`, `/metrics` (Prometheus).
+Production: `cp .env.example .env`, fill in the secrets, then `docker compose up -d` (see the
+[runbook](docs/production-runbook.md)). Local embeddings need `pip install -e ".[rag]"`; without them ask-your-data
+runs keyword-only and says so.
 
 ![Automation](docs/images/automation.png)
 
@@ -125,9 +137,12 @@ Useful endpoints: `/metrics/brief`, `/metrics/daily-update`, `/metrics/paid-effi
   the Excel audit sheet's checks all equal zero; dbt marts match the Python reference.
 - **Ground truth.** The generator records the incidents it plants (`incidents` table); tests assert the
   detector finds each one with the right root cause.
+- **No model in the loop.** Ask-your-data retrieves; it never generates. Numbers come from governed functions,
+  definitions from the committed metric catalog, and the question contract fails CI on any wrong answer.
 - **No causal overreach.** Drivers are arithmetic shares of a change; recommendations are phrased as checks.
   Attribution is descriptive, not incremental.
 
 **Data provenance:** every person, transaction and campaign is synthetic. No real company's
-data or systems are used, and no provider (HubSpot, Stripe, ad platforms, community platform) is connected.
+data or systems are used. The HubSpot and webhook adapters are tested against a fake HTTP transport; no
+provider account (HubSpot, Stripe, ad platforms, community platform) is connected.
 Current state and limits: [PROJECT_STATUS.md](PROJECT_STATUS.md).
