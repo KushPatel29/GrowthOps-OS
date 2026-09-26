@@ -1,0 +1,12 @@
+relationship 2c69b932-b226-5d62-8eb4-30f00982ae0c
+	fromColumn: mart_growth_daily.day
+	toColumn: dim_date.Date
+
+relationship b18e55bb-712a-5acf-ba80-99c1047f46e5
+	fromColumn: mart_paid_efficiency_daily.day
+	toColumn: dim_date.Date
+
+relationship e5ae4d7f-4c46-52be-9681-80cf671dc9a5
+	fromColumn: mart_email_performance.sent_date
+	toColumn: dim_date.Date
+

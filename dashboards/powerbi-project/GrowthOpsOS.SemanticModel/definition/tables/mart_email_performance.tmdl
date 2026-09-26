@@ -1,0 +1,167 @@
+table mart_email_performance
+	lineageTag: c76b62c2-98a1-558f-970b-005b7502fb37
+
+	column email_id
+		dataType: string
+		lineageTag: ae789bb5-9b80-57ce-8029-a21fb5a91996
+		summarizeBy: none
+		sourceColumn: email_id
+
+	column sent_date
+		dataType: dateTime
+		lineageTag: 81385a6d-7096-5b06-a734-32fc9738cebf
+		summarizeBy: none
+		sourceColumn: sent_date
+
+	column email_type
+		dataType: string
+		lineageTag: 5c0fdc48-cde1-5244-a5b5-486b452102c0
+		summarizeBy: none
+		sourceColumn: email_type
+
+	column subject
+		dataType: string
+		lineageTag: d0c2b106-7b4c-5206-aecb-aae28ad41c56
+		summarizeBy: none
+		sourceColumn: subject
+
+	column sending_domain
+		dataType: string
+		lineageTag: d6633c8e-2fcf-51aa-89f5-a11c50c085e2
+		summarizeBy: none
+		sourceColumn: sending_domain
+
+	column sends
+		dataType: int64
+		lineageTag: 78571f28-514c-5c0b-95f7-f9e4fb01586a
+		summarizeBy: none
+		sourceColumn: sends
+
+	column delivered
+		dataType: int64
+		lineageTag: fea63992-8118-59e4-9e85-538ecd728322
+		summarizeBy: none
+		sourceColumn: delivered
+
+	column bounces
+		dataType: int64
+		lineageTag: 9de71f14-990f-56eb-b9c9-5f70118aeb1d
+		summarizeBy: none
+		sourceColumn: bounces
+
+	column opens
+		dataType: int64
+		lineageTag: 49a86e48-2177-5418-8f4e-2df48b3f1221
+		summarizeBy: none
+		sourceColumn: opens
+
+	column machine_opens
+		dataType: int64
+		lineageTag: cbb43733-65c7-5ea3-a0f6-73fa64a21cc2
+		summarizeBy: none
+		sourceColumn: machine_opens
+
+	column human_opens
+		dataType: int64
+		lineageTag: 59dcd9cc-da42-587e-afe6-b8e6c8f7a2be
+		summarizeBy: none
+		sourceColumn: human_opens
+
+	column clicks
+		dataType: int64
+		lineageTag: 591ce696-b82e-59a4-94cd-89c83ac77491
+		summarizeBy: none
+		sourceColumn: clicks
+
+	column unsubscribes
+		dataType: int64
+		lineageTag: 7c4af4fd-c2f2-5647-a1f6-6f6cdac85f93
+		summarizeBy: none
+		sourceColumn: unsubscribes
+
+	column spam_complaints
+		dataType: int64
+		lineageTag: 7181eff8-dab5-5511-9511-5a5e912e4192
+		summarizeBy: none
+		sourceColumn: spam_complaints
+
+	column bounce_rate
+		dataType: double
+		lineageTag: 51eee2bd-3556-55d8-b4c8-8229b975dbdf
+		summarizeBy: none
+		sourceColumn: bounce_rate
+
+	column human_open_rate
+		dataType: double
+		lineageTag: 22b5f5d1-d4f8-5447-9e0b-b66d3cf74d00
+		summarizeBy: none
+		sourceColumn: human_open_rate
+
+	column click_rate
+		dataType: double
+		lineageTag: 24c22ba1-caf3-536c-bed7-9371692cf90b
+		summarizeBy: none
+		sourceColumn: click_rate
+
+	column click_to_open_rate
+		dataType: double
+		lineageTag: ddf13425-712e-5c2b-930a-fcedd5841597
+		summarizeBy: none
+		sourceColumn: click_to_open_rate
+
+	column complaint_rate
+		dataType: double
+		lineageTag: 1fbd9acb-01c3-5f3f-998b-ca717261b6c2
+		summarizeBy: none
+		sourceColumn: complaint_rate
+
+	/// Delivered sends.
+	measure 'Emails delivered' = SUM('mart_email_performance'[delivered])
+		formatString: #,0
+		displayFolder: Email
+		lineageTag: 5927c7a7-e81a-57e3-b086-5fe179ca99a9
+
+	/// Opens excluding privacy-proxy machine opens / delivered.
+	measure 'Human open rate' = DIVIDE(SUM('mart_email_performance'[human_opens]), [Emails delivered])
+		formatString: 0.0%
+		displayFolder: Email
+		lineageTag: 9fda25cd-5110-52bd-bb98-da7f254524f8
+
+	/// All opens / delivered; inflated by machine opens, shown only for comparison.
+	measure 'Reported open rate' = DIVIDE(SUM('mart_email_performance'[opens]), [Emails delivered])
+		formatString: 0.0%
+		displayFolder: Email
+		lineageTag: 5493fae1-cff0-561a-8f2a-773dee20a6da
+
+	/// Clicks / delivered (email CTR).
+	measure 'Email click rate' = DIVIDE(SUM('mart_email_performance'[clicks]), [Emails delivered])
+		formatString: 0.00%
+		displayFolder: Email
+		lineageTag: a660f156-0444-5bc3-8103-cca17982077e
+
+	/// Clicks / human opens.
+	measure 'Click-to-open rate' = DIVIDE(SUM('mart_email_performance'[clicks]), SUM('mart_email_performance'[human_opens]))
+		formatString: 0.0%
+		displayFolder: Email
+		lineageTag: ad881d07-c8ab-5270-8e1e-d1e52011d44b
+
+	/// Bounces / sends; above 2% flags the sending domain.
+	measure 'Bounce rate' = DIVIDE(SUM('mart_email_performance'[bounces]), SUM('mart_email_performance'[sends]))
+		formatString: 0.00%
+		displayFolder: Email
+		lineageTag: d323a570-8812-519d-930a-0ea7f41193a0
+
+	/// Spam complaints / delivered; limit 0.1%.
+	measure 'Complaint rate' = DIVIDE(SUM('mart_email_performance'[spam_complaints]), [Emails delivered])
+		formatString: 0.000%
+		displayFolder: Email
+		lineageTag: a0d16d8c-2ba5-5ece-b2b2-a7a700f0d0ab
+
+	partition mart_email_performance = m
+		mode: import
+		source =
+				let
+				  Source = Table.FromRows(Json.Document(Binary.Decompress(Binary.FromText("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", BinaryEncoding.Base64), Compression.Deflate)), let _t = ((type nullable text) meta [Serialized.Text = true]) in type table [email_id = nullable text, sent_date = nullable text, email_type = nullable text, subject = nullable text, sending_domain = nullable text, sends = nullable text, delivered = nullable text, bounces = nullable text, opens = nullable text, machine_opens = nullable text, human_opens = nullable text, clicks = nullable text, unsubscribes = nullable text, spam_complaints = nullable text, bounce_rate = nullable text, human_open_rate = nullable text, click_rate = nullable text, click_to_open_rate = nullable text, complaint_rate = nullable text]),
+				  #"Changed column type" = Table.TransformColumnTypes(Source, {{"email_id", type text}, {"sent_date", type date}, {"email_type", type text}, {"subject", type text}, {"sending_domain", type text}, {"sends", Int64.Type}, {"delivered", Int64.Type}, {"bounces", Int64.Type}, {"opens", Int64.Type}, {"machine_opens", Int64.Type}, {"human_opens", Int64.Type}, {"clicks", Int64.Type}, {"unsubscribes", Int64.Type}, {"spam_complaints", Int64.Type}, {"bounce_rate", type number}, {"human_open_rate", type number}, {"click_rate", type number}, {"click_to_open_rate", type number}, {"complaint_rate", type number}})
+				in
+				  #"Changed column type"

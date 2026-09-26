@@ -18,8 +18,10 @@ from pathlib import Path
 from openpyxl import Workbook
 from openpyxl.chart import BarChart, LineChart, Reference
 from openpyxl.formatting.rule import CellIsRule
-from openpyxl.styles import Alignment, Font, PatternFill
+from openpyxl.styles import Alignment, Font, PatternFill, Protection
 from openpyxl.utils import get_column_letter
+from openpyxl.workbook.defined_name import DefinedName
+from openpyxl.worksheet.datavalidation import DataValidation
 
 SOURCE = Path("dashboards/powerbi-data")
 OUTPUT = Path("dashboards/GrowthOps_OS_Excel_Dashboard.xlsx")
@@ -32,8 +34,11 @@ DATA_SHEETS = (
     ("Revenue", "mart_revenue"), ("Bridge", "mart_revenue_bridge"), ("Platforms", "mart_platform_comparison"),
     ("Content", "mart_content_performance"), ("Quality", "mart_measurement_health"),
     ("Migration", "mart_migration_summary"), ("Experiment", "mart_experiment_variants"),
-    ("Renewals", "mart_renewal_risk"),
+    ("Renewals", "mart_renewal_risk"), ("Paid daily", "mart_paid_efficiency_daily"),
+    ("Email", "mart_email_performance"), ("Links", "mart_link_hygiene"),
 )
+DATE_COLUMNS = ("day", "due_date", "sent_date")
+CATALOG = Path("docs/metric-catalog.md")
 BRIDGE_LABELS = {
     "crm_booked": "CRM closed-won deal value", "duplicate_deals": "Duplicate deals from migration",
     "not_yet_collected": "Booked but not yet collected", "unlinked_payments": "Payments with lost deal link",
@@ -45,7 +50,7 @@ BRIDGE_LABELS = {
 def _typed(value: str, column: str):
     if value == "":
         return None
-    if column in ("day", "due_date"):
+    if column in DATE_COLUMNS:
         return date.fromisoformat(value[:10])
     try:
         return int(value)
@@ -73,10 +78,11 @@ def _data_sheet(workbook: Workbook, title: str, mart: str) -> tuple[list[str], i
         cell = sheet.cell(1, index)
         cell.font, cell.fill = Font(bold=True, color=INK), HEADER
         sheet.column_dimensions[get_column_letter(index)].width = max(12, len(column) + 2)
-        if column in ("day", "due_date"):
+        if column in DATE_COLUMNS:
             for row in range(2, len(rows) + 2):
                 sheet.cell(row, index).number_format = "yyyy-mm-dd"
     sheet.freeze_panes = "A2"
+    sheet.auto_filter.ref = f"A1:{get_column_letter(len(header))}{len(rows) + 1}"
     return header, len(rows) + 1
 
 
@@ -89,8 +95,10 @@ def build(output: Path = OUTPUT) -> Path:
     dashboard = workbook.active
     dashboard.title = "Dashboard"
     analysis = workbook.create_sheet("Period analysis")
+    marketing = workbook.create_sheet("Marketing KPIs")
     layout = {title: _data_sheet(workbook, title, mart) for title, mart in DATA_SHEETS}
     audit = workbook.create_sheet("Audit")
+    definitions = workbook.create_sheet("Definitions")
 
     daily_h, daily_n = layout["Daily"]
     camp_h, camp_n = layout["Campaigns"]
@@ -102,6 +110,9 @@ def build(output: Path = OUTPUT) -> Path:
     dashboard["A1"].font = Font(size=18, bold=True, color=INK)
     dashboard["A2"] = "Synthetic portfolio case · USD · all records from the verified dbt marts · formulas only"
     dashboard["A2"].font = Font(italic=True, color=MUTED)
+    dashboard["G1"], dashboard["H1"] = "Data through", f"=MAX(Daily!$A$2:$A${layout['Daily'][1]})"
+    dashboard["G1"].font = Font(bold=True, color=MUTED)
+    dashboard["H1"].number_format = "yyyy-mm-dd"
     kpis = [
         ("Net collected cash", "=Revenue!D2/100", MONEY),
         ("Gross collected", "=Revenue!B2/100", MONEY),
@@ -214,6 +225,32 @@ def build(output: Path = OUTPUT) -> Path:
         audit.cell(offset, 1, label)
         audit.cell(offset, 2, formula)
         audit.cell(offset, 3, f'=IF(B{offset}=0,"✓ Reconciled","✗ Investigate")')
+    paid_h, paid_n = layout["Paid daily"]
+    email_h, email_n = layout["Email"]
+    links_h, links_n = layout["Links"]
+    extra = [
+        ("Paid daily spend − campaign paid spend",
+         f"=SUM('Paid daily'!{_col(paid_h, 'spend_cents')}2:{_col(paid_h, 'spend_cents')}{paid_n})-("
+         + paid.replace("{}", rng("Campaigns", camp_h, "spend_cents", camp_n)) + ")"),
+        ("Email delivered + bounces − sends",
+         f"=SUM(Email!{_col(email_h, 'delivered')}2:{_col(email_h, 'delivered')}{email_n})"
+         f"+SUM(Email!{_col(email_h, 'bounces')}2:{_col(email_h, 'bounces')}{email_n})"
+         f"-SUM(Email!{_col(email_h, 'sends')}2:{_col(email_h, 'sends')}{email_n})"),
+        ("Paid daily leads − campaign paid leads",
+         f"=SUM('Paid daily'!{_col(paid_h, 'leads')}2:{_col(paid_h, 'leads')}{paid_n})-("
+         + paid.replace("{}", rng("Campaigns", camp_h, "leads", camp_n)) + ")"),
+    ]
+    first_extra = len(checks) + 3
+    for offset, (label, formula) in enumerate(extra, start=first_extra):
+        audit.cell(offset, 1, label)
+        audit.cell(offset, 2, formula)
+        audit.cell(offset, 3, f'=IF(B{offset}=0,"✓ Reconciled","✗ Investigate")')
+    audit.cell(first_extra + len(extra) + 1, 1, "All checks reconciled").font = Font(bold=True)
+    audit.cell(first_extra + len(extra) + 1, 2, f"=SUMPRODUCT(ABS(B3:B{first_extra + len(extra) - 1}))=0")
+
+    _marketing_sheet(marketing, paid_h, paid_n, email_h, email_n, links_h, links_n)
+    _definitions_sheet(definitions)
+    _protect(workbook, analysis, daily_n)
     audit.column_dimensions["A"].width = 44
     audit.column_dimensions["B"].width = 20
     audit.column_dimensions["C"].width = 16
@@ -227,6 +264,111 @@ def build(output: Path = OUTPUT) -> Path:
     workbook.save(output)
     _normalize_zip(output)
     return output
+
+
+def _marketing_sheet(sheet, paid_h, paid_n, email_h, email_n, links_h, links_n) -> None:
+    """Paid, email and link KPIs for the window chosen on the Period analysis sheet, and the window before it."""
+    sheet["A1"] = "Marketing KPIs for the selected window"
+    sheet["A1"].font = Font(size=16, bold=True)
+    sheet["A2"] = ("Window dates come from the yellow cells on Period analysis. Activity basis: events are dated "
+                   "when they happened and credited to the campaign that created the lead.")
+    sheet["A2"].font = Font(italic=True, color=MUTED)
+    for column, title in zip("ABCD", ("Metric", "Selected window", "Prior window", "Change")):
+        sheet[f"{column}4"] = title
+        sheet[f"{column}4"].font, sheet[f"{column}4"].fill = Font(bold=True), HEADER
+    start, end, days = "StartDate", "EndDate", "(EndDate-StartDate+1)"
+    windows = {"B": (start, end), "C": (f"({start}-{days})", f"({start}-1)")}
+
+    def paid_sum(column: str, col: str) -> str:
+        values = f"'Paid daily'!${_col(paid_h, column)}$2:${_col(paid_h, column)}${paid_n}"
+        dates = f"'Paid daily'!$A$2:$A${paid_n}"
+        lo, hi = windows[col]
+        return f'SUMIFS({values},{dates},">="&{lo},{dates},"<="&{hi})'
+
+    def email_sum(column: str, col: str) -> str:
+        values = f"Email!${_col(email_h, column)}$2:${_col(email_h, column)}${email_n}"
+        dates = f"Email!${_col(email_h, 'sent_date')}$2:${_col(email_h, 'sent_date')}${email_n}"
+        lo, hi = windows[col]
+        return f'SUMIFS({values},{dates},">="&{lo},{dates},"<="&{hi})'
+
+    rows = [
+        ("Paid spend (USD)", lambda c: f"={paid_sum('spend_cents', c)}/100", MONEY),
+        ("Paid leads", lambda c: f"={paid_sum('leads', c)}", "#,##0"),
+        ("CPL (USD)", lambda c: f"=IFERROR({c}5/{c}6,\"n.a.\")", '"$"#,##0.00'),
+        ("Paid MQLs", lambda c: f"={paid_sum('mqls', c)}", "#,##0"),
+        ("Cost per MQL (USD)", lambda c: f"=IFERROR({c}5/{c}8,\"n.a.\")", '"$"#,##0.00'),
+        ("Calls booked (paid)", lambda c: f"={paid_sum('calls_booked', c)}", "#,##0"),
+        ("Cost per booked call (USD)", lambda c: f"=IFERROR({c}5/{c}10,\"n.a.\")", '"$"#,##0.00'),
+        ("Impressions", lambda c: f"={paid_sum('impressions', c)}", "#,##0"),
+        ("CPM (USD)", lambda c: f"=IFERROR({c}5*1000/{c}12,\"n.a.\")", '"$"#,##0.00'),
+        ("Ad clicks", lambda c: f"={paid_sum('clicks', c)}", "#,##0"),
+        ("CTR", lambda c: f"=IFERROR({c}14/{c}12,\"n.a.\")", "0.00%"),
+        ("CPC (USD)", lambda c: f"=IFERROR({c}5/{c}14,\"n.a.\")", '"$"#,##0.00'),
+        ("Emails delivered", lambda c: f"={email_sum('delivered', c)}", "#,##0"),
+        ("Human open rate", lambda c: f"=IFERROR({email_sum('human_opens', c)}/{c}17,\"n.a.\")", "0.0%"),
+        ("Email click rate", lambda c: f"=IFERROR({email_sum('clicks', c)}/{c}17,\"n.a.\")", "0.00%"),
+        ("Bounce rate", lambda c: f"=IFERROR({email_sum('bounces', c)}/{email_sum('sends', c)},\"n.a.\")", "0.00%"),
+        ("Complaint rate", lambda c: f"=IFERROR({email_sum('spam_complaints', c)}/{c}17,\"n.a.\")", "0.000%"),
+    ]
+    for offset, (label, formula, fmt) in enumerate(rows, start=5):
+        sheet.cell(offset, 1, label)
+        for col in "BC":
+            sheet[f"{col}{offset}"] = formula(col)
+            sheet[f"{col}{offset}"].number_format = fmt
+        sheet[f"D{offset}"] = f'=IFERROR(B{offset}/C{offset}-1,"n.a.")'
+        sheet[f"D{offset}"].number_format = "+0%;-0%;0%"
+    sheet.conditional_formatting.add("B20", CellIsRule(operator="greaterThan", formula=["0.02"], font=Font(color=RED)))
+    sheet.conditional_formatting.add("B21", CellIsRule(operator="greaterThan", formula=["0.001"], font=Font(color=RED)))
+    flags = [f"Links!${_col(links_h, name)}$2:${_col(links_h, name)}${links_n}"
+             for name in ("missing_utm", "unregistered_campaign", "off_taxonomy")]
+    recent = f"Links!${_col(links_h, 'recent_clicks')}$2:${_col(links_h, 'recent_clicks')}${links_n}"
+    defective = f"(({flags[0]}=TRUE)+({flags[1]}=TRUE)+({flags[2]}=TRUE)>0)"
+    sheet["A23"], sheet["B23"] = "Short links with UTM defects (all time)", f"=SUMPRODUCT({defective}*1)"
+    sheet["A24"], sheet["B24"] = "Share of last-30-day link clicks on defective links", \
+        f"=IFERROR(SUMPRODUCT({defective}*{recent})/SUM({recent}),\"n.a.\")"
+    sheet["B24"].number_format = "0%"
+    sheet["A26"] = "Email bounce above 2% or complaints above 0.1% turn red. Cash lags leads, so no window ROAS here."
+    sheet["A26"].font = Font(italic=True, color=MUTED)
+    sheet.column_dimensions["A"].width = 44
+    for column in "BCD":
+        sheet.column_dimensions[column].width = 17
+
+
+def _definitions_sheet(sheet) -> None:
+    """The governed metric catalog, copied from docs/metric-catalog.md at build time."""
+    sheet["A1"] = "Metric definitions (from docs/metric-catalog.md)"
+    sheet["A1"].font = Font(size=14, bold=True)
+    sheet.append([])
+    sheet.append(["Metric", "Definition", "Grain / caveat"])
+    for cell in sheet[3]:
+        cell.font, cell.fill = Font(bold=True), HEADER
+    for line in CATALOG.read_text(encoding="utf-8").splitlines():
+        cells = [cell.strip() for cell in line.strip().strip("|").split("|")]
+        if line.startswith("| ") and len(cells) == 3 and cells[0] != "Metric" and not cells[0].startswith("---"):
+            sheet.append([cell.replace("`", "") for cell in cells])
+    for column, width in zip("ABC", (30, 70, 70)):
+        sheet.column_dimensions[column].width = width
+    for row in sheet.iter_rows(min_row=4):
+        for cell in row:
+            cell.alignment = Alignment(wrap_text=True, vertical="top")
+
+
+def _protect(workbook: Workbook, analysis, daily_n: int) -> None:
+    """Named, validated date inputs; every other cell locked against accidental edits (no password)."""
+    workbook.defined_names["StartDate"] = DefinedName("StartDate", attr_text="'Period analysis'!$B$4")
+    workbook.defined_names["EndDate"] = DefinedName("EndDate", attr_text="'Period analysis'!$B$5")
+    validation = DataValidation(type="date", operator="between", formula1=f"MIN(Daily!$A$2:$A${daily_n})",
+                                formula2=f"MAX(Daily!$A$2:$A${daily_n})", showErrorMessage=True,
+                                errorTitle="Date outside the data",
+                                error="Pick a date inside the data range shown on the Daily sheet.")
+    analysis.add_data_validation(validation)
+    validation.add("B4:B5")
+    for cell in (analysis["B4"], analysis["B5"]):
+        cell.protection = Protection(locked=False)
+    for sheet in workbook.worksheets:
+        sheet.protection.sheet = True
+        sheet.protection.autoFilter = False  # filters stay usable on protected data sheets
+        sheet.protection.sort = False
 
 
 def _normalize_zip(path: Path) -> None:
