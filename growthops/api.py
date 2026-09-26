@@ -18,6 +18,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse, RedirectResponse
 from pydantic import ValidationError
 
+from growthops.adapters import build_adapters
 from growthops.config import get_settings
 from growthops.db import SCHEMA_VERSION, connect, initialize, schema_version
 from growthops.freshness import check as freshness_check
@@ -311,7 +312,7 @@ async def payment_webhook(request: Request, x_growthops_signature: str = Header(
     connection = connect(database_path())
     try:
         initialize(connection)
-        result = process_payment(connection, event)
+        result = process_payment(connection, event, adapters=build_adapters(settings))
     except EventConflict as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
     finally:
@@ -450,7 +451,7 @@ def replay_event(event_id: str, x_growthops_ops_token: str = Header(default=""))
         raise HTTPException(status_code=403, detail="ops role required")
     connection = connect(database_path())
     try:
-        return replay_dead_letter(connection, event_id)
+        return replay_dead_letter(connection, event_id, adapters=build_adapters(get_settings()))
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except ValueError as exc:
