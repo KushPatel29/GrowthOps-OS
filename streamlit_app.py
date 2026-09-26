@@ -203,7 +203,7 @@ with tabs[5]:
             response = ask_data(connection, question)
         finally:
             connection.close()
-        st.write(response["answer"])
+        st.markdown(response["answer"].replace("$", r"\$"))
         st.caption(f"Metric: {response['metric_id'] or 'none'} · Evidence: {response['source']}")
 
 st.divider()
