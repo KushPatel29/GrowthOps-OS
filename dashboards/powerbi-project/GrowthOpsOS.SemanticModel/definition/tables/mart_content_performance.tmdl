@@ -1,0 +1,71 @@
+table mart_content_performance
+	lineageTag: c3e7179c-9de0-463a-9b5d-19a8ddfe3d52
+
+	column content_id
+		dataType: string
+		lineageTag: 63d9e34a-27eb-44a8-8128-3afcd2b21aef
+		summarizeBy: none
+		sourceColumn: content_id
+
+	column title
+		dataType: string
+		lineageTag: fb280f29-57dc-4516-824f-e578f891ff44
+		summarizeBy: none
+		sourceColumn: title
+
+	column platform
+		dataType: string
+		lineageTag: 8a229ba3-140f-4083-8124-db1ddd39e74b
+		summarizeBy: none
+		sourceColumn: platform
+
+	column views
+		dataType: int64
+		lineageTag: 7611c07d-ec8e-43b5-8249-4a9777334fd8
+		summarizeBy: none
+		sourceColumn: views
+
+	column clicks
+		dataType: int64
+		lineageTag: b32f8b2a-11e2-4407-a82d-6afa05f845eb
+		summarizeBy: none
+		sourceColumn: clicks
+
+	column engaged_leads
+		dataType: int64
+		lineageTag: 9fe52412-4ce3-4c72-a86b-0f67312ceaf8
+		summarizeBy: none
+		sourceColumn: engaged_leads
+
+	column mqls
+		dataType: int64
+		lineageTag: b0f21c5d-0684-4d67-b0c0-571d42e22dad
+		summarizeBy: none
+		sourceColumn: mqls
+
+	column calls_booked
+		dataType: int64
+		lineageTag: 364f5c8d-7f5f-4224-8cc5-823a80f41353
+		summarizeBy: none
+		sourceColumn: calls_booked
+
+	column customers
+		dataType: int64
+		lineageTag: 06be1784-382a-45fc-9e64-56b490b3c90a
+		summarizeBy: none
+		sourceColumn: customers
+
+	column influenced_net_cash_cents
+		dataType: int64
+		lineageTag: c7022cb2-2f37-46bf-8857-7c1258202d74
+		summarizeBy: none
+		sourceColumn: influenced_net_cash_cents
+
+	partition mart_content_performance = m
+		mode: import
+		source =
+				let
+				  Source = Table.FromRows(Json.Document(Binary.Decompress(Binary.FromText("hdBLCsMgEAbgqwTXLeg8orlALxGyKXFRaCPUpJDbN2oo1UYq/DKgfMxM34vXbbTuLKU4iYtbptE+G7/62T58c7feu6lR29Pqlnm52q0CGf924TJFWIYjhtOHhTqLGUscWaXpwKWudNu6qzO3Sy5S6EQXIebCpbrLmavTGoDNkUulq+ouZC4Cxz0g7LPjHhnzRWKdpIxkHUlQ7T+S62SbkSZ1iXEHYWLY80PqOmkyUsnUJho6Noc3", BinaryEncoding.Base64), Compression.Deflate)), let _t = ((type nullable text) meta [Serialized.Text = true]) in type table [content_id = nullable text, title = nullable text, platform = nullable text, views = nullable text, clicks = nullable text, engaged_leads = nullable text, mqls = nullable text, calls_booked = nullable text, customers = nullable text, influenced_net_cash_cents = nullable text]),
+				  #"Changed column type" = Table.TransformColumnTypes(Source, {{"views", Int64.Type}, {"clicks", Int64.Type}, {"engaged_leads", Int64.Type}, {"mqls", Int64.Type}, {"calls_booked", Int64.Type}, {"customers", Int64.Type}, {"influenced_net_cash_cents", Int64.Type}})
+				in
+				  #"Changed column type"

@@ -1,0 +1,101 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.7.0/schema.json",
+  "name": "aed36b6a28824092878d",
+  "position": {
+    "x": 25,
+    "y": 350,
+    "z": 2000,
+    "width": 600,
+    "height": 300,
+    "tabOrder": 2000
+  },
+  "visual": {
+    "visualType": "tableEx",
+    "query": {
+      "queryState": {
+        "Values": {
+          "projections": [
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "mart_renewal_risk"
+                    }
+                  },
+                  "Property": "subscription_id"
+                }
+              },
+              "queryRef": "mart_renewal_risk.subscription_id",
+              "nativeQueryRef": "subscription_id"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "mart_renewal_risk"
+                    }
+                  },
+                  "Property": "due_date"
+                }
+              },
+              "queryRef": "mart_renewal_risk.due_date",
+              "nativeQueryRef": "due_date"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "mart_renewal_risk"
+                    }
+                  },
+                  "Property": "failed_attempts"
+                }
+              },
+              "queryRef": "mart_renewal_risk.failed_attempts",
+              "nativeQueryRef": "failed_attempts"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "mart_renewal_risk"
+                    }
+                  },
+                  "Property": "risk_level"
+                }
+              },
+              "queryRef": "mart_renewal_risk.risk_level",
+              "nativeQueryRef": "risk_level"
+            }
+          ]
+        }
+      }
+    },
+    "visualContainerObjects": {
+      "title": [
+        {
+          "properties": {
+            "text": {
+              "expr": {
+                "Literal": {
+                  "Value": "'Renewal risk monitor'"
+                }
+              }
+            },
+            "show": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

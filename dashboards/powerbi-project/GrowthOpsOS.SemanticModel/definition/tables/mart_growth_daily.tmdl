@@ -1,0 +1,71 @@
+table mart_growth_daily
+	lineageTag: 00fdbcaa-5527-4ad0-b974-2884a3da3fc2
+
+	column day
+		dataType: dateTime
+		lineageTag: 5c0d3eb6-2914-4bcf-8109-eb6411e8f400
+		summarizeBy: none
+		sourceColumn: day
+
+	column spend_cents
+		dataType: int64
+		lineageTag: 8eadc0a6-24d6-4e55-9e8d-1da9e0d746f0
+		summarizeBy: none
+		sourceColumn: spend_cents
+
+	column leads
+		dataType: int64
+		lineageTag: fe14f4ec-b106-4984-a8da-2c8bc4b807a6
+		summarizeBy: none
+		sourceColumn: leads
+
+	column mqls
+		dataType: int64
+		lineageTag: bb299807-3316-4af2-a72f-ff4ec86560f6
+		summarizeBy: none
+		sourceColumn: mqls
+
+	column calls_booked
+		dataType: int64
+		lineageTag: 784b65cd-41c7-417f-97e5-3aa5940c254b
+		summarizeBy: none
+		sourceColumn: calls_booked
+
+	column booked_cents
+		dataType: int64
+		lineageTag: f128ba25-15f7-4700-8d9f-4ae185b25f09
+		summarizeBy: none
+		sourceColumn: booked_cents
+
+	column gross_collected_cents
+		dataType: int64
+		lineageTag: 311b61ce-2e4a-48f5-bd57-3b7c8c583c2e
+		summarizeBy: none
+		sourceColumn: gross_collected_cents
+
+	column refunds_cents
+		dataType: int64
+		lineageTag: f78e9503-b825-4e37-afa0-ad639353fa13
+		summarizeBy: none
+		sourceColumn: refunds_cents
+
+	column net_cash_cents
+		dataType: int64
+		lineageTag: 096b67b9-ea74-45d0-bbe6-53ddb9d46679
+		summarizeBy: none
+		sourceColumn: net_cash_cents
+
+	measure 'Daily Cash USD' = DIVIDE(SUM('mart_growth_daily'[net_cash_cents]), 100)
+		formatString: "$"#,0
+
+	measure 'Daily Spend USD' = DIVIDE(SUM('mart_growth_daily'[spend_cents]), 100)
+		formatString: "$"#,0
+
+	partition mart_growth_daily = m
+		mode: import
+		source =
+				let
+				  Source = Table.FromRows(Json.Document(Binary.Decompress(Binary.FromText("lVhbcsQgDLvLfjcz2ITXWTq9/zVKNqYVhARtp5lkO1ZsZGGx/f5+qdO4ufqbX18vV6/d7tfr5wvCi/05UuHiIFzW4S3E3xbUhSvU7tfhGCJTSBe+QzFE7eEIU40C4fIMebOiPglkWUDSEZJTKrcZLpCjw5JUjwxq1wJyvF18fheoVKfVwfIdlUVlsvzzNa7+4AN86N6gwMZOcf5mobEhVudxT+FM1e7/zx18B2aEkp2iMJQrEoURbgntIKMwiJahMDiRKwqDy+JHYayypM2hMJi5VCGoBM9BZko4woIpIIASwqCECt+HPdKy7gbbAb5f4agKT7S4QuKElgUEVcHs/XQaQqMlcv1CVQRijqXTGHBT6Boyjov1WgRVMdOf2HzZxI0NEj/sDv2ov4Ly6IZbbMMt4nCL1wJQITu3XlSI4xqRhhHaauV2gYwzZL3vOnPxVJGdueyUJnWcIcK3/mIrRIWoFhIyDhDpXOfZiVJvKwGyZINlgOcr/NOzR7paDNGFfOO2D5AmjwCnTKFp+bMbLPDIGg0WAR6vcJNNHNfIZM/mXJWiRA7PbM5VKTpCM3E8yOZclSI8oTpyjdmcSzU0ecd1kQFowazMMMzmXEZLsIaE54wJaME1MvLO5mJG0f3Bt4MUoIU5dOXmYictnoOMCtEl+YIKEWLGZjOvYfnU9MvmXMYD4rQY5X8P8KF7Q5jQ8ixpmSlkAUGFoJi4XSCoEIGLE5iUgaV1HxXVIhQtimphpnQ28zJaZqf69p1q00vrFWWjXIXjMFk3Tkd5ENShPMgsKA+l9qbeDQ3mLJTNuYwKT+1Tj5JQqr8eJSEEe8VcCWbpir1irgQWI+ss3pafh3+zMOyV5ko+jnDGeYs5VKWF/WZazJUqLY6HJKPF85A8oWUBKRMqWO8r5kofUSFyQwUzS4s51IQW5nhQtscGjE718ws=", BinaryEncoding.Base64), Compression.Deflate)), let _t = ((type nullable text) meta [Serialized.Text = true]) in type table [day = nullable text, spend_cents = nullable text, leads = nullable text, mqls = nullable text, calls_booked = nullable text, booked_cents = nullable text, gross_collected_cents = nullable text, refunds_cents = nullable text, net_cash_cents = nullable text]),
+				  #"Changed column type" = Table.TransformColumnTypes(Source, {{"day", type date}, {"spend_cents", Int64.Type}, {"leads", Int64.Type}, {"mqls", Int64.Type}, {"calls_booked", Int64.Type}, {"booked_cents", Int64.Type}, {"gross_collected_cents", Int64.Type}, {"refunds_cents", Int64.Type}, {"net_cash_cents", Int64.Type}})
+				in
+				  #"Changed column type"

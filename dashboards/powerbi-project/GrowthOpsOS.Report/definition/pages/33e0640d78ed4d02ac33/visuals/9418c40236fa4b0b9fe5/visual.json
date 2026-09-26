@@ -1,0 +1,77 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.7.0/schema.json",
+  "name": "9418c40236fa4b0b9fe5",
+  "position": {
+    "x": 25,
+    "y": 25,
+    "z": 1000,
+    "width": 600,
+    "height": 610,
+    "tabOrder": 1000
+  },
+  "visual": {
+    "visualType": "clusteredBarChart",
+    "query": {
+      "queryState": {
+        "Category": {
+          "projections": [
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "mart_campaign_performance"
+                    }
+                  },
+                  "Property": "campaign_id"
+                }
+              },
+              "queryRef": "mart_campaign_performance.campaign_id",
+              "nativeQueryRef": "campaign_id"
+            }
+          ]
+        },
+        "Y": {
+          "projections": [
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "mart_campaign_performance"
+                    }
+                  },
+                  "Property": "Campaign Cash USD"
+                }
+              },
+              "queryRef": "mart_campaign_performance.Campaign Cash USD",
+              "nativeQueryRef": "Campaign Cash USD"
+            }
+          ]
+        }
+      }
+    },
+    "visualContainerObjects": {
+      "title": [
+        {
+          "properties": {
+            "text": {
+              "expr": {
+                "Literal": {
+                  "Value": "'Campaign net cash (USD)'"
+                }
+              }
+            },
+            "show": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

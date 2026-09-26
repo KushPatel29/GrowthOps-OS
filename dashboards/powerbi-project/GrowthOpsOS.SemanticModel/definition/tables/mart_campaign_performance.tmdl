@@ -1,0 +1,56 @@
+table mart_campaign_performance
+	lineageTag: 1918ebad-1a83-426e-97b3-f90924ab54ef
+
+	column campaign_id
+		dataType: string
+		lineageTag: c28e3d0b-99d5-4ca4-817e-4f3b93644a40
+		summarizeBy: none
+		sourceColumn: campaign_id
+
+	column source
+		dataType: string
+		lineageTag: 48cde02d-97f2-4912-b329-6215c5598ade
+		summarizeBy: none
+		sourceColumn: source
+
+	column medium
+		dataType: string
+		lineageTag: cf3a8216-8a6f-4915-bfc6-2d54c8310040
+		summarizeBy: none
+		sourceColumn: medium
+
+	column spend_cents
+		dataType: int64
+		lineageTag: 75006e8d-1f12-4352-a714-91ef6a9c1f9c
+		summarizeBy: none
+		sourceColumn: spend_cents
+
+	column leads
+		dataType: int64
+		lineageTag: 57705dad-2c67-43ea-8412-f86a634acf05
+		summarizeBy: none
+		sourceColumn: leads
+
+	column mqls
+		dataType: int64
+		lineageTag: 3c276623-266e-476b-9f65-5dbd28dac503
+		summarizeBy: none
+		sourceColumn: mqls
+
+	column net_cash_cents
+		dataType: int64
+		lineageTag: 318fc966-3343-48be-846a-f93de0a62de1
+		summarizeBy: none
+		sourceColumn: net_cash_cents
+
+	measure 'Campaign Cash USD' = DIVIDE(SUM('mart_campaign_performance'[net_cash_cents]), 100)
+		formatString: "$"#,0
+
+	partition mart_campaign_performance = m
+		mode: import
+		source =
+				let
+				  Source = Table.FromRows(Json.Document(Binary.Decompress(Binary.FromText("ZZDRCoMwDEX/xWeFaXXMVx/2EyLStVlX0GbUdrK/X+qkIi003HsDhyR9n927orPIZZaTpPLmWo4LCs0ncmV7oUeivlGpgmrKLRryPjOwLhM4B5byk8HVgBxh5jpQzoC6iYAveucfUCivJVBr9wFgFTdajB9qYIJgbUQoRDURweLqXtT6+7gIcCtC3LBkEcYiZAbHiyd6I7fpg01Oca0SQnWcQmoLwlEWhUED++DHH4Yf", BinaryEncoding.Base64), Compression.Deflate)), let _t = ((type nullable text) meta [Serialized.Text = true]) in type table [campaign_id = nullable text, source = nullable text, medium = nullable text, spend_cents = nullable text, leads = nullable text, mqls = nullable text, net_cash_cents = nullable text]),
+				  #"Changed column type" = Table.TransformColumnTypes(Source, {{"spend_cents", Int64.Type}, {"leads", Int64.Type}, {"mqls", Int64.Type}, {"net_cash_cents", Int64.Type}})
+				in
+				  #"Changed column type"

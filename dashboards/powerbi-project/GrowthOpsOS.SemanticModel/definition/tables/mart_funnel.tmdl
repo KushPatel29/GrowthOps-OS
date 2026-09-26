@@ -1,0 +1,35 @@
+table mart_funnel
+	lineageTag: 8230744c-7288-4bc2-bf39-01ec1bfe8784
+
+	column stage
+		dataType: string
+		lineageTag: 01b84c17-ab07-41e0-91c0-a57c7a12593f
+		summarizeBy: none
+		sourceColumn: stage
+
+	column ordinal
+		dataType: int64
+		lineageTag: cc0bec01-cca8-4b01-a190-bed1a08fa7ee
+		summarizeBy: none
+		sourceColumn: ordinal
+
+	column people
+		dataType: int64
+		lineageTag: 86631a89-2653-44d4-905f-f710dbf2bf1e
+		summarizeBy: none
+		sourceColumn: people
+
+	column from_previous_rate
+		dataType: double
+		lineageTag: 7e49017f-cd34-47fc-bcbc-60f86f0d0f01
+		summarizeBy: none
+		sourceColumn: from_previous_rate
+
+	partition mart_funnel = m
+		mode: import
+		source =
+				let
+				  Source = Table.FromRows(Json.Document(Binary.Decompress(Binary.FromText("XY1BDoMgEEXvMmtCkCrUsxhiqLIwnYK1qOntywBNky7+5r8/b4YB0NkZGDQpshXA/I5o2ACPJ1JFSKQaBG8bpYHQZBHHWwh3R5eXFFUW6odtjM7PedBS6kBVRVjXsMXdL/GdQEcanRe97IoEw8vN4xk86YkXg5Z9Max2Ibn+ooaL3NspLoeN+fP1H27OuzOjvmoFl2DMBw==", BinaryEncoding.Base64), Compression.Deflate)), let _t = ((type nullable text) meta [Serialized.Text = true]) in type table [stage = nullable text, ordinal = nullable text, people = nullable text, from_previous_rate = nullable text]),
+				  #"Changed column type" = Table.TransformColumnTypes(Source, {{"ordinal", Int64.Type}, {"people", Int64.Type}, {"from_previous_rate", type number}})
+				in
+				  #"Changed column type"

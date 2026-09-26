@@ -1,0 +1,143 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.7.0/schema.json",
+  "name": "cc8b53f1b6264de5813d",
+  "position": {
+    "x": 650,
+    "y": 25,
+    "z": 2000,
+    "width": 600,
+    "height": 610,
+    "tabOrder": 2000
+  },
+  "visual": {
+    "visualType": "tableEx",
+    "query": {
+      "queryState": {
+        "Values": {
+          "projections": [
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "mart_campaign_performance"
+                    }
+                  },
+                  "Property": "campaign_id"
+                }
+              },
+              "queryRef": "mart_campaign_performance.campaign_id",
+              "nativeQueryRef": "campaign_id"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "mart_campaign_performance"
+                    }
+                  },
+                  "Property": "source"
+                }
+              },
+              "queryRef": "mart_campaign_performance.source",
+              "nativeQueryRef": "source"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "mart_campaign_performance"
+                    }
+                  },
+                  "Property": "medium"
+                }
+              },
+              "queryRef": "mart_campaign_performance.medium",
+              "nativeQueryRef": "medium"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "mart_campaign_performance"
+                    }
+                  },
+                  "Property": "spend_cents"
+                }
+              },
+              "queryRef": "mart_campaign_performance.spend_cents",
+              "nativeQueryRef": "spend_cents"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "mart_campaign_performance"
+                    }
+                  },
+                  "Property": "leads"
+                }
+              },
+              "queryRef": "mart_campaign_performance.leads",
+              "nativeQueryRef": "leads"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "mart_campaign_performance"
+                    }
+                  },
+                  "Property": "mqls"
+                }
+              },
+              "queryRef": "mart_campaign_performance.mqls",
+              "nativeQueryRef": "mqls"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "mart_campaign_performance"
+                    }
+                  },
+                  "Property": "net_cash_cents"
+                }
+              },
+              "queryRef": "mart_campaign_performance.net_cash_cents",
+              "nativeQueryRef": "net_cash_cents"
+            }
+          ]
+        }
+      }
+    },
+    "visualContainerObjects": {
+      "title": [
+        {
+          "properties": {
+            "text": {
+              "expr": {
+                "Literal": {
+                  "Value": "'Campaign spend, leads and cash'"
+                }
+              }
+            },
+            "show": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,47 @@
+table mart_renewal_risk
+	lineageTag: 9d6f47d8-1c3d-4ba3-9259-fbd4d0508ade
+
+	column subscription_id
+		dataType: string
+		lineageTag: b9c5a1ba-76ae-4ef1-a5ac-5f7d1130b27f
+		summarizeBy: none
+		sourceColumn: subscription_id
+
+	column customer_id
+		dataType: string
+		lineageTag: eda98508-a32e-43db-8150-e744bf755a52
+		summarizeBy: none
+		sourceColumn: customer_id
+
+	column plan_id
+		dataType: string
+		lineageTag: e4a3913a-2514-4ed4-bcf4-f58c5d245a4a
+		summarizeBy: none
+		sourceColumn: plan_id
+
+	column due_date
+		dataType: dateTime
+		lineageTag: 812a3b51-597f-4642-a7a7-e10ebafa91cf
+		summarizeBy: none
+		sourceColumn: due_date
+
+	column failed_attempts
+		dataType: int64
+		lineageTag: 96b7d77e-363b-4d42-83ee-50c746a9b4d8
+		summarizeBy: none
+		sourceColumn: failed_attempts
+
+	column risk_level
+		dataType: string
+		lineageTag: 5ba5d8a6-377e-464c-8de2-b096d0c006a5
+		summarizeBy: none
+		sourceColumn: risk_level
+
+	partition mart_renewal_risk = m
+		mode: import
+		source =
+				let
+				  Source = Table.FromRows(Json.Document(Binary.Decompress(Binary.FromText("pdJBCoMwEAXQu7g2MDNK1LOIFKq2uohCaxa9fVPHCUKbCFYQviKP79e6Tp72qgCw0EmatD7dZjt1/ePSzsbYaVxe7h4BaQWVws8D4M5hvA9Jk4rhjs3gFDUKd4E/DJ2LsaaYQcXWw/TdaM1OISg3hdM5BSrZhFNMySCo5NKFU1BBUCBdpnm5dLbfMZjLMJyiTBlmKhJmTTEGw22g9J+6hCOmCjJE8lKcYgxhuA36D4X6iIlsg34bpD8YLdtwOslAJm04xZgsvA2S/H6cwgwq/GrTvAE=", BinaryEncoding.Base64), Compression.Deflate)), let _t = ((type nullable text) meta [Serialized.Text = true]) in type table [subscription_id = nullable text, customer_id = nullable text, plan_id = nullable text, due_date = nullable text, failed_attempts = nullable text, risk_level = nullable text]),
+				  #"Changed column type" = Table.TransformColumnTypes(Source, {{"due_date", type date}, {"failed_attempts", Int64.Type}})
+				in
+				  #"Changed column type"

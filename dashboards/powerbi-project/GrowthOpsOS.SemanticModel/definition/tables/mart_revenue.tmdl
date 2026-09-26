@@ -1,0 +1,47 @@
+table mart_revenue
+	lineageTag: 07ae9755-4c9b-4898-a989-f3eb2b020065
+
+	column booked_cents
+		dataType: int64
+		lineageTag: 37af98fa-bf7f-450f-9ba7-718a0847e1cd
+		summarizeBy: none
+		sourceColumn: booked_cents
+
+	column gross_collected_cents
+		dataType: int64
+		lineageTag: 64a90dc5-1480-4213-9aac-026cff46ab1b
+		summarizeBy: none
+		sourceColumn: gross_collected_cents
+
+	column refunds_cents
+		dataType: int64
+		lineageTag: b8deb2c0-e143-4829-9303-321faa432992
+		summarizeBy: none
+		sourceColumn: refunds_cents
+
+	column net_collected_cents
+		dataType: int64
+		lineageTag: 8b982553-cc41-4c69-a3d2-6681afcb6e62
+		summarizeBy: none
+		sourceColumn: net_collected_cents
+
+	measure 'Booked USD' = DIVIDE(SUM('mart_revenue'[booked_cents]), 100)
+		formatString: "$"#,0
+
+	measure 'Gross USD' = DIVIDE(SUM('mart_revenue'[gross_collected_cents]), 100)
+		formatString: "$"#,0
+
+	measure 'Refunds USD' = DIVIDE(SUM('mart_revenue'[refunds_cents]), 100)
+		formatString: "$"#,0
+
+	measure 'Net USD' = DIVIDE(SUM('mart_revenue'[net_collected_cents]), 100)
+		formatString: "$"#,0
+
+	partition mart_revenue = m
+		mode: import
+		source =
+				let
+				  Source = Table.FromRows(Json.Document(Binary.Decompress(Binary.FromText("i45WMrQ0NQACJR0klhlMxMISzIqNBQA=", BinaryEncoding.Base64), Compression.Deflate)), let _t = ((type nullable text) meta [Serialized.Text = true]) in type table [booked_cents = nullable text, gross_collected_cents = nullable text, refunds_cents = nullable text, net_collected_cents = nullable text]),
+				  #"Changed column type" = Table.TransformColumnTypes(Source, {{"booked_cents", Int64.Type}, {"gross_collected_cents", Int64.Type}, {"refunds_cents", Int64.Type}, {"net_collected_cents", Int64.Type}})
+				in
+				  #"Changed column type"

@@ -1,0 +1,77 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.7.0/schema.json",
+  "name": "c7c4a359aa1142519aea",
+  "position": {
+    "x": 800,
+    "y": 180,
+    "z": 6000,
+    "width": 455,
+    "height": 480,
+    "tabOrder": 6000
+  },
+  "visual": {
+    "visualType": "clusteredBarChart",
+    "query": {
+      "queryState": {
+        "Category": {
+          "projections": [
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "mart_campaign_performance"
+                    }
+                  },
+                  "Property": "campaign_id"
+                }
+              },
+              "queryRef": "mart_campaign_performance.campaign_id",
+              "nativeQueryRef": "campaign_id"
+            }
+          ]
+        },
+        "Y": {
+          "projections": [
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "mart_campaign_performance"
+                    }
+                  },
+                  "Property": "Campaign Cash USD"
+                }
+              },
+              "queryRef": "mart_campaign_performance.Campaign Cash USD",
+              "nativeQueryRef": "Campaign Cash USD"
+            }
+          ]
+        }
+      }
+    },
+    "visualContainerObjects": {
+      "title": [
+        {
+          "properties": {
+            "text": {
+              "expr": {
+                "Literal": {
+                  "Value": "'Campaign attributed cash (USD)'"
+                }
+              }
+            },
+            "show": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}
