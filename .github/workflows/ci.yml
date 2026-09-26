@@ -4,25 +4,65 @@ on:
   push:
   pull_request:
 
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   test:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - run: python -m pip install -e ".[dev,warehouse]"
-      - run: python -m pip install -r requirements.txt
-      - run: python -m ruff check --isolated growthops tests streamlit_app.py
-      - run: python -m pytest -q
-      - run: python -c "from streamlit.testing.v1 import AppTest; a = AppTest.from_file('streamlit_app.py').run(timeout=90); assert not a.exception; assert len(a.tabs) == 6"
-      - run: python -m growthops.seed --database data/growthops-sample.db
-      - run: python -m growthops.warehouse --database data/growthops-sample.db
-      - run: python -m growthops.report --database data/growthops-sample.db
-      - run: python -m growthops.export_warehouse --database data/growthops-sample.db
-      - run: dbt seed --profiles-dir . --quiet
+          cache: pip
+      - run: python -m pip install -e ".[dev,warehouse]" -r requirements.txt
+      - name: Lint
+        run: python -m ruff check --isolated growthops tests streamlit_app.py
+      - name: Unit, invariant and ground-truth tests
+        run: python -m pytest -q
+      - name: Narrative guardrail eval (30 labelled cases)
+        run: python -m growthops.narrator --eval
+      - name: Streamlit app renders every view without an exception
+        run: |
+          python - <<'PY'
+          from streamlit.testing.v1 import AppTest
+          app = AppTest.from_file("streamlit_app.py").run(timeout=180)
+          assert not app.exception, app.exception
+          assert len(app.tabs) == 10
+          app.text_input[0].input("Which revenue number is right?").run(timeout=60)
+          assert not app.exception, app.exception
+          PY
+      - name: Seed, build SQL marts and report
+        run: |
+          python -m growthops.seed --database data/growthops-sample.db
+          python -m growthops.warehouse --database data/growthops-sample.db
+          python -m growthops.report --database data/growthops-sample.db > /dev/null
+          python -m growthops.export_warehouse --database data/growthops-sample.db
+      - name: dbt seed and build (models + data tests)
         working-directory: warehouse/dbt
-      - run: dbt build --profiles-dir . --select path:models path:tests --quiet
-        working-directory: warehouse/dbt
-      - run: python -m growthops.verify_dbt
+        run: |
+          dbt seed --profiles-dir . --quiet --full-refresh
+          dbt build --profiles-dir . --select path:models path:tests --quiet
+      - name: DuckDB/dbt parity with the Python reference
+        run: python -m growthops.verify_dbt
+      - name: Committed Power BI and Excel artifacts are current
+        run: |
+          python -m growthops.export_bi --refresh-pbip
+          python -m growthops.export_excel
+          git diff --exit-code -- dashboards/ || (echo "::error::BI artifacts are stale. Run export_bi --refresh-pbip and export_excel." && exit 1)
+
+  docker:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build the API image and smoke-test it
+        run: |
+          docker build -t growthops-os .
+          docker run --rm growthops-os python -c "from growthops.seed import seed; from growthops.warehouse import build; seed('/tmp/s.db', scale=0.2); build('/tmp/s.db'); print('ok')"

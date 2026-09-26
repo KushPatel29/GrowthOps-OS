@@ -3,7 +3,7 @@ model Model
 	defaultPowerBIDataSourceVersion: powerBI_V3
 	sourceQueryCulture: en-US
 
-annotation PBI_QueryOrder = ["mart_campaign_performance", "mart_content_performance", "mart_experiment_variants", "mart_funnel", "mart_growth_daily", "mart_measurement_health", "mart_migration_summary", "mart_renewal_risk", "mart_revenue"]
+annotation PBI_QueryOrder = ["mart_campaign_performance", "mart_content_performance", "mart_experiment_variants", "mart_funnel", "mart_growth_daily", "mart_measurement_health", "mart_migration_summary", "mart_platform_comparison", "mart_renewal_risk", "mart_revenue", "mart_revenue_bridge"]
 
 ref table mart_campaign_performance
 ref table mart_content_performance
@@ -12,5 +12,7 @@ ref table mart_funnel
 ref table mart_growth_daily
 ref table mart_measurement_health
 ref table mart_migration_summary
+ref table mart_platform_comparison
 ref table mart_renewal_risk
 ref table mart_revenue
+ref table mart_revenue_bridge

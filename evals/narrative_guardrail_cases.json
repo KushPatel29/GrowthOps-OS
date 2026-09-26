@@ -1,0 +1,572 @@
+{
+  "description": "Labelled cases for the executive-narrative guardrail. Each narrative must be accepted or rejected exactly as labelled against the fixed findings below.",
+  "findings": [
+    {
+      "id": "ops_dead_letter",
+      "category": "automation",
+      "finding": "12 paying customers have no community access.",
+      "evidence": "12 payment events ($61,600) exhausted 5 attempts after the access provider returned errors; the first failed at 2026-09-18 10:12 UTC.",
+      "why": "Top error: community_access: HTTP 503 Service Unavailable.",
+      "investigation": "Replay the dead-lettered events now that the provider is healthy, then confirm access."
+    },
+    {
+      "id": "mql_rate:2026-08-13",
+      "category": "growth",
+      "finding": "Lead-to-MQL rate fell from 29.8% to 20.4%.",
+      "evidence": "Lead-to-MQL rate -9.4 pp (z 5.4); window 2026-08-07 to 2026-08-21.",
+      "why": "meta_broad_v17 (new in this period) explains 92% (-8.6 pp).",
+      "investigation": "Review meta_broad_v17's audience before adding budget: its cost per MQL is $286 against $169 for the rest of paid media."
+    },
+    {
+      "id": "utm_completeness:2026-09-06",
+      "category": "tracking",
+      "finding": "UTM completeness fell from 97.6% to 90.2%.",
+      "evidence": "UTM completeness -7.5 pp (z 17.6); window 2026-08-31 to 2026-09-17.",
+      "why": "/webinar explains 101% (-7.6 pp).",
+      "investigation": "Check the latest release of /webinar. $42,300 of net cash cannot be credited to any campaign."
+    },
+    {
+      "id": "renewal_risk",
+      "category": "retention",
+      "finding": "3 community renewals are overdue or failed.",
+      "evidence": "3 of 144 active subscriptions; 2 more renew in the next 14 days.",
+      "why": "Card failures.",
+      "investigation": "Ask customers to update payment details."
+    }
+  ],
+  "cases": [
+    {
+      "id": "verbatim_copy",
+      "expected": "accept",
+      "description": "Copies finding sentences exactly.",
+      "narrative": {
+        "headline": "12 paying customers have no community access.",
+        "points": [
+          {
+            "text": "12 paying customers have no community access. Replay the dead-lettered events.",
+            "evidence_ids": [
+              "ops_dead_letter"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "paraphrase_same_numbers",
+      "expected": "accept",
+      "description": "Reworded but every number is sourced.",
+      "narrative": {
+        "headline": "Access outage left 12 customers without access.",
+        "points": [
+          {
+            "text": "Twelve customers paid $61,600 but have no access after 5 failed attempts.",
+            "evidence_ids": [
+              "ops_dead_letter"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "share_language",
+      "expected": "accept",
+      "description": "Describes a driver as a share of the change.",
+      "narrative": {
+        "headline": "MQL rate fell to 20.4%.",
+        "points": [
+          {
+            "text": "meta_broad_v17 explains 92% of the drop from 29.8% to 20.4%.",
+            "evidence_ids": [
+              "mql_rate:2026-08-13"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "pp_without_unit",
+      "expected": "accept",
+      "description": "Uses 9.4 with words instead of 'pp'.",
+      "narrative": {
+        "headline": "Qualification weakened.",
+        "points": [
+          {
+            "text": "The MQL rate is down 9.4 percentage points since the broad campaign launched.",
+            "evidence_ids": [
+              "mql_rate:2026-08-13"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "multi_citation",
+      "expected": "accept",
+      "description": "Combines two findings and cites both.",
+      "narrative": {
+        "headline": "Two issues need action today.",
+        "points": [
+          {
+            "text": "12 customers lack access and UTM completeness fell to 90.2%.",
+            "evidence_ids": [
+              "ops_dead_letter",
+              "utm_completeness:2026-09-06"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "dates_from_evidence",
+      "expected": "accept",
+      "description": "Quotes a window that is in the evidence.",
+      "narrative": {
+        "headline": "Tracking broke on the webinar page.",
+        "points": [
+          {
+            "text": "From 2026-08-31 to 2026-09-17, /webinar explains 101% of the fall.",
+            "evidence_ids": [
+              "utm_completeness:2026-09-06"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "money_from_evidence",
+      "expected": "accept",
+      "description": "Quotes a dollar figure from the evidence.",
+      "narrative": {
+        "headline": "Unattributed cash is growing.",
+        "points": [
+          {
+            "text": "$42,300 of net cash cannot be credited to a campaign until /webinar is fixed.",
+            "evidence_ids": [
+              "utm_completeness:2026-09-06"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "check_phrasing",
+      "expected": "accept",
+      "description": "Next step phrased as a check.",
+      "narrative": {
+        "headline": "Review the broad campaign.",
+        "points": [
+          {
+            "text": "Check whether meta_broad_v17's audience matches the offer: cost per MQL is $286 versus $169.",
+            "evidence_ids": [
+              "mql_rate:2026-08-13"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "headline_number_any_finding",
+      "expected": "accept",
+      "description": "Headline may use a number from any finding.",
+      "narrative": {
+        "headline": "UTM completeness is 90.2%.",
+        "points": [
+          {
+            "text": "/webinar explains 101% of the change.",
+            "evidence_ids": [
+              "utm_completeness:2026-09-06"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "renewals_counts",
+      "expected": "accept",
+      "description": "Small counts copied from evidence.",
+      "narrative": {
+        "headline": "Renewals need attention.",
+        "points": [
+          {
+            "text": "3 of 144 subscriptions are at risk and 2 more renew within 14 days.",
+            "evidence_ids": [
+              "renewal_risk"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "negative_sign_normalized",
+      "expected": "accept",
+      "description": "A signed change matches the unsigned evidence number.",
+      "narrative": {
+        "headline": "MQL rate dropped.",
+        "points": [
+          {
+            "text": "The rate moved -9.4 pp with a z-score of 5.4.",
+            "evidence_ids": [
+              "mql_rate:2026-08-13"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "five_points",
+      "expected": "accept",
+      "description": "Maximum of five points.",
+      "narrative": {
+        "headline": "Morning brief.",
+        "points": [
+          {
+            "text": "12 customers lack access.",
+            "evidence_ids": [
+              "ops_dead_letter"
+            ]
+          },
+          {
+            "text": "MQL rate is 20.4%.",
+            "evidence_ids": [
+              "mql_rate:2026-08-13"
+            ]
+          },
+          {
+            "text": "UTM completeness is 90.2%.",
+            "evidence_ids": [
+              "utm_completeness:2026-09-06"
+            ]
+          },
+          {
+            "text": "3 renewals are at risk.",
+            "evidence_ids": [
+              "renewal_risk"
+            ]
+          },
+          {
+            "text": "Replay the dead-lettered events.",
+            "evidence_ids": [
+              "ops_dead_letter"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "invented_number",
+      "expected": "reject",
+      "description": "States a figure found nowhere in the evidence.",
+      "narrative": {
+        "headline": "Access outage.",
+        "points": [
+          {
+            "text": "15 customers have no access.",
+            "evidence_ids": [
+              "ops_dead_letter"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "rounded_money",
+      "expected": "reject",
+      "description": "Rounds $61,600 to $62,000.",
+      "narrative": {
+        "headline": "Access outage.",
+        "points": [
+          {
+            "text": "About $62,000 of payments are affected.",
+            "evidence_ids": [
+              "ops_dead_letter"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "rounded_rate",
+      "expected": "reject",
+      "description": "Rounds 20.4% to 20%.",
+      "narrative": {
+        "headline": "MQL rate fell.",
+        "points": [
+          {
+            "text": "The MQL rate is now 20%.",
+            "evidence_ids": [
+              "mql_rate:2026-08-13"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "computed_number",
+      "expected": "reject",
+      "description": "Computes a new number (29.8 - 20.4 = 9.4 is sourced, but a ratio is not).",
+      "narrative": {
+        "headline": "MQL rate fell.",
+        "points": [
+          {
+            "text": "That is a 31.5% relative decline.",
+            "evidence_ids": [
+              "mql_rate:2026-08-13"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "wrong_unit",
+      "expected": "reject",
+      "description": "Turns percentage points into percent.",
+      "narrative": {
+        "headline": "MQL rate fell.",
+        "points": [
+          {
+            "text": "The MQL rate fell 9.4% versus baseline.",
+            "evidence_ids": [
+              "mql_rate:2026-08-13"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "number_from_uncited_finding",
+      "expected": "reject",
+      "description": "Uses a number that only exists in a finding the point does not cite.",
+      "narrative": {
+        "headline": "Access outage.",
+        "points": [
+          {
+            "text": "12 customers lack access while UTM completeness is 90.2%.",
+            "evidence_ids": [
+              "ops_dead_letter"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "unknown_evidence_id",
+      "expected": "reject",
+      "description": "Cites an ID that does not exist.",
+      "narrative": {
+        "headline": "Access outage.",
+        "points": [
+          {
+            "text": "12 customers lack access.",
+            "evidence_ids": [
+              "ops_outage_v2"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "uncited_point",
+      "expected": "reject",
+      "description": "A point with no evidence IDs.",
+      "narrative": {
+        "headline": "Access outage.",
+        "points": [
+          {
+            "text": "12 customers lack access.",
+            "evidence_ids": []
+          }
+        ]
+      }
+    },
+    {
+      "id": "causal_caused",
+      "expected": "reject",
+      "description": "Asserts causation.",
+      "narrative": {
+        "headline": "MQL rate fell.",
+        "points": [
+          {
+            "text": "meta_broad_v17 caused the MQL rate to fall to 20.4%.",
+            "evidence_ids": [
+              "mql_rate:2026-08-13"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "causal_due_to",
+      "expected": "reject",
+      "description": "Asserts causation with 'due to'.",
+      "narrative": {
+        "headline": "Tracking fell.",
+        "points": [
+          {
+            "text": "UTM completeness fell to 90.2% due to a developer mistake.",
+            "evidence_ids": [
+              "utm_completeness:2026-09-06"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "causal_because_of",
+      "expected": "reject",
+      "description": "Asserts causation with 'because of'.",
+      "narrative": {
+        "headline": "Access outage.",
+        "points": [
+          {
+            "text": "12 customers lack access because of a bad deploy.",
+            "evidence_ids": [
+              "ops_dead_letter"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "causal_led_to",
+      "expected": "reject",
+      "description": "Asserts causation with 'led to'.",
+      "narrative": {
+        "headline": "Renewals.",
+        "points": [
+          {
+            "text": "Card failures led to 3 overdue renewals.",
+            "evidence_ids": [
+              "renewal_risk"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "prediction",
+      "expected": "reject",
+      "description": "Promises an outcome.",
+      "narrative": {
+        "headline": "Fix tracking.",
+        "points": [
+          {
+            "text": "Fixing /webinar will increase attributed cash by $42,300.",
+            "evidence_ids": [
+              "utm_completeness:2026-09-06"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "guarantee",
+      "expected": "reject",
+      "description": "Guarantees a result.",
+      "narrative": {
+        "headline": "Replay events.",
+        "points": [
+          {
+            "text": "Replaying the events guarantees 12 customers regain access.",
+            "evidence_ids": [
+              "ops_dead_letter"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "wrong_date",
+      "expected": "reject",
+      "description": "Quotes a date not in the evidence.",
+      "narrative": {
+        "headline": "Access outage.",
+        "points": [
+          {
+            "text": "The outage started on 2026-09-17.",
+            "evidence_ids": [
+              "ops_dead_letter"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "pii_email",
+      "expected": "reject",
+      "description": "Leaks a customer email.",
+      "narrative": {
+        "headline": "Access outage.",
+        "points": [
+          {
+            "text": "Contact person42@synthetic.scalelab.test first; 12 customers lack access.",
+            "evidence_ids": [
+              "ops_dead_letter"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "too_many_points",
+      "expected": "reject",
+      "description": "Six points exceeds the limit.",
+      "narrative": {
+        "headline": "Morning brief.",
+        "points": [
+          {
+            "text": "12 customers lack access.",
+            "evidence_ids": [
+              "ops_dead_letter"
+            ]
+          },
+          {
+            "text": "12 customers lack access.",
+            "evidence_ids": [
+              "ops_dead_letter"
+            ]
+          },
+          {
+            "text": "12 customers lack access.",
+            "evidence_ids": [
+              "ops_dead_letter"
+            ]
+          },
+          {
+            "text": "12 customers lack access.",
+            "evidence_ids": [
+              "ops_dead_letter"
+            ]
+          },
+          {
+            "text": "12 customers lack access.",
+            "evidence_ids": [
+              "ops_dead_letter"
+            ]
+          },
+          {
+            "text": "12 customers lack access.",
+            "evidence_ids": [
+              "ops_dead_letter"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "invented_headline_number",
+      "expected": "reject",
+      "description": "Headline invents a figure.",
+      "narrative": {
+        "headline": "Revenue is down 18% this week.",
+        "points": [
+          {
+            "text": "12 customers lack access.",
+            "evidence_ids": [
+              "ops_dead_letter"
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

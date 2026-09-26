@@ -41,7 +41,7 @@ table mart_revenue
 		mode: import
 		source =
 				let
-				  Source = Table.FromRows(Json.Document(Binary.Decompress(Binary.FromText("i45WMrQ0NQACJR0klhlMxMISzIqNBQA=", BinaryEncoding.Base64), Compression.Deflate)), let _t = ((type nullable text) meta [Serialized.Text = true]) in type table [booked_cents = nullable text, gross_collected_cents = nullable text, refunds_cents = nullable text, net_collected_cents = nullable text]),
+				  Source = Table.FromRows(Json.Document(Binary.Decompress(Binary.FromText("i45WMjY2MjYxAAIlHSVjQ0sDCyjb0NjYxBQqbGBqbgxmx8YCAA==", BinaryEncoding.Base64), Compression.Deflate)), let _t = ((type nullable text) meta [Serialized.Text = true]) in type table [booked_cents = nullable text, gross_collected_cents = nullable text, refunds_cents = nullable text, net_collected_cents = nullable text]),
 				  #"Changed column type" = Table.TransformColumnTypes(Source, {{"booked_cents", Int64.Type}, {"gross_collected_cents", Int64.Type}, {"refunds_cents", Int64.Type}, {"net_collected_cents", Int64.Type}})
 				in
 				  #"Changed column type"

@@ -6,9 +6,12 @@ select
   l.legacy_id,
   c.contact_id,
   c.contact_id is null as missing_contact,
-  c.owner_id = l.owner_id as owner_match,
-  c.original_source = l.original_source as source_match,
-  c.current_stage = l.lifecycle_stage as stage_match,
+  c.owner_id is not distinct from l.owner_id as owner_match,
+  c.original_source is not distinct from l.original_source as source_match,
+  -- Contacts keep progressing after cut-over; only a stage regression is a defect.
+  case c.current_stage when 'lead' then 0 when 'mql' then 1 when 'opportunity' then 2 when 'customer' then 3 else 0 end
+    >= case l.lifecycle_stage when 'lead' then 0 when 'mql' then 1 when 'opportunity' then 2 when 'customer' then 3 else 0 end
+    as stage_match,
   c.email_normalized = l.email_normalized as email_match,
   coalesce(d.crm_rows,0) > 1 as duplicate_crm_email
 from {{ ref('stg_legacy_contacts') }} l

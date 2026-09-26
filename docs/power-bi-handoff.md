@@ -2,7 +2,7 @@
 
 ## Editable project
 
-Open [GrowthOpsOS.pbip](../dashboards/powerbi-project/GrowthOpsOS.pbip) in Power BI Desktop. The project contains four PBIR pages: Executive Pulse (four cards and two charts), Acquisition (four KPI cards, campaign bar, and detail table), Funnel and Content (two charts and two tables), and Quality and Lifecycle (four KPI cards and four tables). Its TMDL semantic model embeds the nine versioned synthetic marts, so it has no local CSV path or credentials to configure. All 31 report JSON files, `.pbip`, `.pbir`, and `.platform` files passed Microsoft's published JSON schemas. The project opened in Power BI Desktop and its 18 DAX measures across nine tables loaded; acquisition, quality, renewal, funnel, and content measures returned expected values in live Desktop DAX queries. Visual layout has not been manually inspected in Desktop because this environment cannot capture its native window. The base theme comes from the [Microsoft Fabric CLI blank report template](https://github.com/microsoft/fabric-cli/tree/main/src/fabric_cli/commands/fs/payloads/Blank.Report).
+Open [GrowthOpsOS.pbip](../dashboards/powerbi-project/GrowthOpsOS.pbip) in Power BI Desktop. The project contains four PBIR pages: Executive Pulse (four cards and two charts), Acquisition (four KPI cards, campaign bar, and detail table), Funnel and Content (two charts and two tables), and Quality and Lifecycle (four KPI cards and four tables). Its TMDL semantic model embeds the eleven versioned synthetic marts (including `mart_revenue_bridge` and `mart_platform_comparison`), so it has no local CSV path or credentials to configure. The embedded data is regenerated from the verified dbt marts by `python -m growthops.export_bi --refresh-pbip`, which keeps every hand-authored measure; CI fails if the committed project or the Excel workbook is stale. All 31 report JSON files, `.pbip`, `.pbir`, and `.platform` files passed Microsoft's published JSON schemas. The project opened in Power BI Desktop and its 18 DAX measures across nine tables loaded; acquisition, quality, renewal, funnel, and content measures returned expected values in live Desktop DAX queries. Visual layout has not been manually inspected in Desktop because this environment cannot capture its native window. The base theme comes from the [Microsoft Fabric CLI blank report template](https://github.com/microsoft/fabric-cli/tree/main/src/fabric_cli/commands/fs/payloads/Blank.Report).
 
 The DAX measures and theme alongside the project are also available for a manual import workflow.
 
@@ -10,7 +10,8 @@ The dbt marts are the governed source for the Power BI import. After the seed an
 
 ```powershell
 python -m growthops.verify_dbt
-python -m growthops.export_bi
+python -m growthops.export_bi --refresh-pbip   # versioned CSVs + embedded PBIP partitions
+python -m growthops.export_excel               # formula-driven Excel dashboard
 ```
 
 Import the versioned synthetic CSVs in `dashboards/powerbi-data` with **Get data → Text/CSV**. The same files can be regenerated in `data/powerbi` with the command above. Use the dbt mart names as table names. Parse `mart_growth_daily.day` as Date and all `_cents` fields as Whole Number before defining display measures. The [measure file](../dashboards/GrowthOps_PowerBI_Measures.dax) and [theme](../dashboards/GrowthOps_PowerBI_Theme.json) provide the report model and visual palette.
@@ -24,6 +25,7 @@ Import the versioned synthetic CSVs in `dashboards/powerbi-data` with **Get data
 | Migration Audit | `mart_migration_summary` | Which legacy contacts or properties failed to reconcile? |
 | Experiments | `mart_experiment_variants` | Did lead lift translate into cash per visitor? |
 | Renewal Risk | `mart_renewal_risk` | Which synthetic subscriptions are due soon or have a failed attempt? |
+| Revenue Truth | `mart_revenue_bridge`, `mart_platform_comparison` | Why do CRM bookings, ad-platform claims and cash disagree? |
 
 Measures should use the existing columns, with explicit grain and denominator:
 

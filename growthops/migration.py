@@ -9,6 +9,9 @@ from datetime import datetime, timezone
 
 from growthops.db import connect, initialize
 
+# Contacts keep progressing after cut-over, so only a stage *regression* is a defect.
+STAGE_RANK = {"lead": 0, "mql": 1, "opportunity": 2, "customer": 3}
+
 
 def audit(connection: sqlite3.Connection) -> dict:
     rows = connection.execute(
@@ -35,16 +38,16 @@ def audit(connection: sqlite3.Connection) -> dict:
             source_match += 1
         else:
             flags.append("source_mismatch")
-        if row["crm_stage"] == row["legacy_stage"]:
+        if STAGE_RANK.get(row["crm_stage"], 0) >= STAGE_RANK.get(row["legacy_stage"], 0):
             stage_match += 1
         else:
-            flags.append("stage_mismatch")
-        if row["crm_email"].lower() != row["legacy_email"].lower():
+            flags.append("stage_regressed")
+        if row["crm_email"].strip().lower() != row["legacy_email"].strip().lower():
             flags.append("email_mismatch")
         if flags:
             issues.append({"legacy_id": row["legacy_id"], "contact_id": row["contact_id"], "issues": flags})
     duplicate_rows = connection.execute(
-        "SELECT COALESCE(SUM(n-1),0) FROM (SELECT COUNT(*) n FROM contacts GROUP BY LOWER(email) HAVING COUNT(*)>1)"
+        "SELECT COALESCE(SUM(n-1),0) FROM (SELECT COUNT(*) n FROM contacts GROUP BY LOWER(TRIM(email)) HAVING COUNT(*)>1)"
     ).fetchone()[0]
     return {
         "legacy_contacts": len(rows),
@@ -59,17 +62,24 @@ def audit(connection: sqlite3.Connection) -> dict:
     }
 
 
+PLACEHOLDER_SOURCES = ("offline_import",)
+
+
 def apply_safe_repairs(connection: sqlite3.Connection) -> int:
-    """Fill null owner/source only when a matching legacy row supplies a value."""
+    """Restore owner/source from the matching legacy row when the CRM value is empty or a
+    known import placeholder. Never touches duplicates, stages or anything ambiguous."""
+    placeholders = ",".join("?" * len(PLACEHOLDER_SOURCES))
     connection.execute("BEGIN IMMEDIATE")
     try:
         candidates = connection.execute(
-            """SELECT c.contact_id, c.legacy_id, c.owner_id crm_owner,
-                      c.original_source crm_source, l.owner_id legacy_owner,
-                      l.original_source legacy_source
-               FROM contacts c JOIN legacy_contacts l ON l.legacy_id=c.legacy_id
-               WHERE (c.owner_id IS NULL AND l.owner_id IS NOT NULL)
-                  OR (c.original_source IS NULL AND l.original_source IS NOT NULL)"""
+            f"""SELECT c.contact_id, c.legacy_id, c.owner_id crm_owner,
+                       c.original_source crm_source, l.owner_id legacy_owner,
+                       l.original_source legacy_source
+                FROM contacts c JOIN legacy_contacts l ON l.legacy_id=c.legacy_id
+                WHERE (c.owner_id IS NULL AND l.owner_id IS NOT NULL)
+                   OR ((c.original_source IS NULL OR c.original_source IN ({placeholders}))
+                       AND l.original_source IS NOT NULL)""",
+            PLACEHOLDER_SOURCES,
         ).fetchall()
         count = 0
         for row in candidates:
@@ -77,17 +87,18 @@ def apply_safe_repairs(connection: sqlite3.Connection) -> int:
                 ("owner_id", row["crm_owner"], row["legacy_owner"]),
                 ("original_source", row["crm_source"], row["legacy_source"]),
             ):
-                if current is not None or legacy is None:
+                repairable = current is None or (field == "original_source" and current in PLACEHOLDER_SOURCES)
+                if not repairable or legacy is None or legacy == current:
                     continue
                 changed = connection.execute(
-                    f"UPDATE contacts SET {field}=? WHERE contact_id=? AND {field} IS NULL",
-                    (legacy, row["contact_id"]),
+                    f"UPDATE contacts SET {field}=? WHERE contact_id=? AND {field} IS ?",
+                    (legacy, row["contact_id"], current),
                 ).rowcount
                 if changed:
                     connection.execute(
-                        "INSERT INTO migration_repairs VALUES (?, ?, ?, ?, NULL, ?, ?)",
+                        "INSERT INTO migration_repairs VALUES (?, ?, ?, ?, ?, ?, ?)",
                         (f"{row['contact_id']}:{field}", row["contact_id"], row["legacy_id"],
-                         field, legacy, datetime.now(timezone.utc).isoformat()),
+                         field, current, legacy, datetime.now(timezone.utc).isoformat()),
                     )
                     count += 1
         connection.commit()

@@ -48,3 +48,55 @@ def build_link(connection: sqlite3.Connection, request: LinkRequest) -> dict:
     url = urlunsplit((parts.scheme, parts.netloc, parts.path,
                       urlencode([*existing, *params.items()]), parts.fragment))
     return {"campaign_id": campaign["campaign_id"], "url": url, "utm": params}
+
+
+def audit_short_links(connection: sqlite3.Connection, recent_days: int = 30) -> dict:
+    """Check every short link's destination against the campaign registry.
+
+    A clean link carries utm_source, utm_medium and utm_campaign, the campaign is
+    registered and valid, and source and medium match the registry exactly
+    (case included: 'Podcast' and 'partner' land in different CRM buckets).
+    """
+    registry = {row["campaign_name"]: dict(row) for row in connection.execute(
+        "SELECT campaign_id, campaign_name, source, medium, registry_valid FROM campaigns")}
+    latest = connection.execute("SELECT MAX(click_date) FROM short_link_clicks").fetchone()[0]
+    rows = connection.execute(
+        """SELECT l.link_id, l.channel, l.destination_url, l.created_at, l.owner,
+                  COALESCE(SUM(k.clicks),0) clicks,
+                  COALESCE(SUM(CASE WHEN k.click_date > DATE(?, ?) THEN k.clicks END),0) recent_clicks
+           FROM short_links l LEFT JOIN short_link_clicks k ON k.link_id=l.link_id
+           GROUP BY l.link_id ORDER BY l.link_id""",
+        (latest, f"-{recent_days} days"),
+    ).fetchall()
+    links = []
+    for row in rows:
+        parts = urlsplit(row["destination_url"])
+        utm = {key[4:]: value for key, value in parse_qsl(parts.query) if key.startswith("utm_")}
+        issues = []
+        missing = [key for key in ("source", "medium", "campaign") if not utm.get(key)]
+        if missing:
+            issues.append("missing utm_" + ", utm_".join(missing))
+        campaign = registry.get(utm.get("campaign", ""))
+        if utm.get("campaign") and campaign is None:
+            issues.append(f"campaign '{utm['campaign']}' is not registered")
+        elif campaign and not campaign["registry_valid"]:
+            issues.append(f"campaign '{utm['campaign']}' is invalid in the registry")
+        if campaign:
+            for key in ("source", "medium"):
+                if utm.get(key) and utm[key] != campaign[key]:
+                    issues.append(f"utm_{key} '{utm[key]}' should be '{campaign[key]}'")
+        links.append({**dict(row), "path": parts.path, "utm_source": utm.get("source"),
+                      "utm_medium": utm.get("medium"), "utm_campaign": utm.get("campaign"),
+                      "issues": issues, "status": "fix" if issues else "ok"})
+    broken = [link for link in links if link["issues"]]
+    recent_total = sum(link["recent_clicks"] for link in links)
+    return {
+        "as_of": latest,
+        "recent_days": recent_days,
+        "links": links,
+        "links_with_issues": len(broken),
+        "recent_clicks": recent_total,
+        "recent_clicks_on_broken_links": sum(link["recent_clicks"] for link in broken),
+        "share_of_recent_clicks_broken": round(sum(link["recent_clicks"] for link in broken) / recent_total, 4)
+        if recent_total else None,
+    }

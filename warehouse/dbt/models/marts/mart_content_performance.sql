@@ -13,7 +13,7 @@ with first_content as (
   from {{ ref('int_payment_cash') }} group by customer_id
 )
 select
-  ci.content_id, ci.title, ci.platform, ci.views, ci.clicks,
+  ci.content_id, ci.title, ci.platform, ci.topic, ci.views, ci.clicks,
   count(e.contact_id) as engaged_leads,
   count(m.contact_id) as mqls,
   count(b.contact_id) as calls_booked,
@@ -24,4 +24,4 @@ left join first_content e on e.content_id=ci.content_id
 left join mql_people m on m.contact_id=e.contact_id
 left join booked_people b on b.contact_id=e.contact_id
 left join cash_by_contact cash on cash.customer_id=e.contact_id
-group by ci.content_id, ci.title, ci.platform, ci.views, ci.clicks
+group by ci.content_id, ci.title, ci.platform, ci.topic, ci.views, ci.clicks

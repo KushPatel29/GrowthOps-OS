@@ -8,8 +8,8 @@ from datetime import datetime
 from fractions import Fraction
 from typing import Literal
 
-AttributionModel = Literal["first_touch", "lead_creation", "last_non_direct", "u_shaped"]
-MODELS = ("first_touch", "lead_creation", "last_non_direct", "u_shaped")
+AttributionModel = Literal["first_touch", "lead_creation", "last_non_direct", "u_shaped", "linear"]
+MODELS = ("first_touch", "lead_creation", "last_non_direct", "u_shaped", "linear")
 
 
 def _split_cents(amount: int, weights: dict[str, Fraction]) -> dict[str, int]:
@@ -24,9 +24,12 @@ def _split_cents(amount: int, weights: dict[str, Fraction]) -> dict[str, int]:
     return base
 
 
-def _weights(touches: list[sqlite3.Row], model: AttributionModel) -> dict[str, Fraction]:
+def _weights(touches: list[dict], model: AttributionModel) -> dict[str, Fraction]:
     if not touches:
         return {}
+    if model == "linear":
+        share = Fraction(1, len(touches))
+        return {touch["touch_id"]: share for touch in touches}
     first = touches[0]
     lead = next((touch for touch in reversed(touches) if touch["touch_type"] == "lead_creation"), None)
     non_direct = [touch for touch in touches if touch["source"] != "direct"]
@@ -50,6 +53,7 @@ def _weights(touches: list[sqlite3.Row], model: AttributionModel) -> dict[str, F
 
 
 def allocations(connection: sqlite3.Connection, model: AttributionModel) -> list[dict]:
+    """One row per payment and credited touch; payments with no eligible touch stay unassigned."""
     if model not in MODELS:
         raise ValueError(f"unknown attribution model: {model}")
     payments = connection.execute(
@@ -60,20 +64,23 @@ def allocations(connection: sqlite3.Connection, model: AttributionModel) -> list
            GROUP BY p.payment_id, p.customer_id, p.paid_at, p.amount_cents
            ORDER BY p.payment_id"""
     ).fetchall()
+    touches_by_person: dict[str, list[dict]] = defaultdict(list)
+    for touch in connection.execute(
+        """SELECT t.contact_id, t.touch_id, t.campaign_id, t.touch_type, t.occurred_at,
+                  COALESCE(c.source,'unknown') source
+           FROM touches t LEFT JOIN campaigns c ON c.campaign_id=t.campaign_id
+           WHERE t.contact_id IN (SELECT customer_id FROM payments WHERE status='succeeded')
+           ORDER BY t.contact_id, t.occurred_at, t.touch_id"""
+    ):
+        touches_by_person[touch["contact_id"]].append(
+            {**dict(touch), "at": datetime.fromisoformat(touch["occurred_at"])})
     result = []
     for payment in payments:
         net = payment["amount_cents"] - payment["refund_cents"]
         if net < 0:
             raise ValueError(f"refunds exceed payment {payment['payment_id']}")
-        touches = connection.execute(
-            """SELECT t.touch_id, t.campaign_id, t.touch_type, t.occurred_at,
-                      COALESCE(c.source,'unknown') source
-               FROM touches t LEFT JOIN campaigns c ON c.campaign_id=t.campaign_id
-               WHERE t.contact_id=? ORDER BY t.occurred_at, t.touch_id""",
-            (payment["customer_id"],),
-        ).fetchall()
         paid_at = datetime.fromisoformat(payment["paid_at"])
-        eligible = [t for t in touches if datetime.fromisoformat(t["occurred_at"]) <= paid_at]
+        eligible = [t for t in touches_by_person.get(payment["customer_id"], []) if t["at"] <= paid_at]
         weights = _weights(eligible, model)
         if not weights:
             result.append({"model": model, "payment_id": payment["payment_id"], "touch_id": None,
