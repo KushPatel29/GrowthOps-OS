@@ -6,9 +6,11 @@ import hashlib
 import hmac
 import os
 from contextlib import asynccontextmanager
+from importlib.resources import files
 from typing import Literal
 
 from fastapi import FastAPI, Header, HTTPException, Request
+from fastapi.responses import HTMLResponse, RedirectResponse
 from pydantic import ValidationError
 
 from growthops.db import connect, initialize
@@ -37,6 +39,17 @@ app = FastAPI(title="GrowthOps OS", version="0.1.0", lifespan=lifespan)
 @app.get("/health")
 def health() -> dict:
     return {"status": "ok"}
+
+
+@app.get("/", include_in_schema=False)
+def root() -> RedirectResponse:
+    return RedirectResponse(url="/dashboard")
+
+
+@app.get("/dashboard", response_class=HTMLResponse, include_in_schema=False)
+def dashboard() -> HTMLResponse:
+    html = files("growthops").joinpath("static/dashboard.html").read_text(encoding="utf-8")
+    return HTMLResponse(html)
 
 
 @app.post("/campaign-links")

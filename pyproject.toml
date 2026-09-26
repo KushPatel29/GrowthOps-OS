@@ -16,7 +16,7 @@ dev = ["pytest>=8,<10", "httpx>=0.27,<1", "ruff>=0.8,<1"]
 include = ["growthops*"]
 
 [tool.setuptools.package-data]
-growthops = ["sql/*.sql"]
+growthops = ["sql/*.sql", "static/*.html"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

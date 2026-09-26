@@ -9,13 +9,14 @@
 - HMAC-signed payment webhook, event/payment idempotency, five-minute processing claims, persisted workflow steps, retry after partial failure, CRM update, and simulated access grant.
 - Campaign link builder that enforces registry taxonomy and creates canonical UTMs.
 - Read-only operations customer lookup and analytics endpoints with deterministic all-time executive findings.
+- Responsive Executive Pulse page with cash ledger, funnel, attribution model selector, and quality findings. Desktop and mobile browser renders were inspected.
 - Docker/Compose configuration and GitHub Actions checks. Docker execution is unverified because Docker is unavailable on this host.
-- Six tests passing; Ruff passing.
+- Six tests passing; Ruff passing. Wheel builds with packaged SQL and HTML assets.
 
 ## Not implemented yet
 
 - Real HubSpot, Stripe, GA4, ad-platform, and community integrations.
-- PostgreSQL operations store, BigQuery/warehouse, dbt project and Power BI artifact.
+- PostgreSQL operations store, BigQuery/warehouse, dbt project and Power BI artifact. The current dashboard is a local HTML reference.
 - Migration repair jobs, experiments, scheduled renewal/retry worker, alerting, RBAC, and deployed operations console.
 - AI analyst/classifier/RAG evaluation pipeline.
 
