@@ -12,9 +12,15 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - run: python -m pip install -e ".[dev]"
+      - run: python -m pip install -e ".[dev,warehouse]"
       - run: python -m ruff check growthops tests
       - run: python -m pytest -q
       - run: python -m growthops.seed --database data/growthops-sample.db
       - run: python -m growthops.warehouse --database data/growthops-sample.db
       - run: python -m growthops.report --database data/growthops-sample.db
+      - run: python -m growthops.export_warehouse --database data/growthops-sample.db
+      - run: dbt seed --profiles-dir . --quiet
+        working-directory: warehouse/dbt
+      - run: dbt build --profiles-dir . --select path:models path:tests --quiet
+        working-directory: warehouse/dbt
+      - run: python -m growthops.verify_dbt

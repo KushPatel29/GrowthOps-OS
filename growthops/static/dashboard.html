@@ -66,6 +66,17 @@
     .efficiency-item:last-child { border-right: 0; }
     .efficiency-item span { display: block; color: var(--slate); font-size: .84rem; margin-bottom: .35rem; }
     .efficiency-item strong { display: block; font-family: var(--display); font-size: 1.55rem; font-weight: 650; font-variant-numeric: tabular-nums; }
+    .period-panel { margin-top: 2.2rem; padding: clamp(1.2rem, 2.5vw, 2rem); background: var(--white); border: 1px solid var(--line); border-radius: 8px; }
+    .period-grid { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); margin-top: 1.2rem; }
+    .period-metric { padding: 1.1rem 1.3rem; border-right: 1px solid var(--line); }
+    .period-metric:first-child { padding-left: 0; }
+    .period-metric:last-child { border-right: 0; }
+    .period-metric .name { display: block; color: var(--slate); font-size: .85rem; }
+    .period-metric strong { display: block; font: 650 1.8rem/1.2 var(--display); font-variant-numeric: tabular-nums; margin: .35rem 0; }
+    .period-metric .change { color: var(--slate); font-size: .8rem; }
+    .period-finding { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1.3fr); gap: 1rem; padding-top: 1.1rem; }
+    .period-finding strong { display: block; margin-bottom: .25rem; }
+    .period-finding p { margin: 0; color: var(--slate); font-size: .84rem; line-height: 1.5; }
     .two-col { display: grid; grid-template-columns: minmax(0, 1.12fr) minmax(0, .88fr); gap: 1.5rem; margin-top: 3rem; }
     .panel { background: var(--white); border: 1px solid var(--line); border-radius: 8px; padding: clamp(1.2rem, 2.5vw, 2rem); min-width: 0; }
     .panel .section-heading { margin-bottom: 1.3rem; }
@@ -85,6 +96,25 @@
     .cash-track { height: 10px; background: #e8eff4; border-radius: 2px; overflow: hidden; }
     .cash-fill { height: 100%; background: var(--navy); border-radius: 2px; min-width: 2px; }
     .cash-note { color: var(--slate); font-size: .8rem; line-height: 1.45; margin: 1.4rem 0 0; }
+    .content-panel { margin-top: 3rem; }
+    .experiment-panel { margin-top: 3rem; }
+    .experiment-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 1rem; }
+    .experiment-variant { background: var(--paper); border: 1px solid var(--line); border-radius: 6px; padding: 1.1rem; }
+    .experiment-variant h3 { font: 650 1.1rem var(--display); margin-bottom: .25rem; }
+    .experiment-variant p { color: var(--slate); font-size: .83rem; margin-bottom: 1rem; }
+    .experiment-stats { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: .8rem; }
+    .experiment-stats span { display: block; color: var(--slate); font-size: .75rem; }
+    .experiment-stats strong { display: block; font: 650 1.4rem var(--display); margin-top: .25rem; }
+    .experiment-decision { border-left: 3px solid var(--teal); padding-left: 1rem; margin: 1.2rem 0 .5rem; font-weight: 600; line-height: 1.45; }
+    .table-wrap { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; font-size: .86rem; }
+    th { color: var(--slate); font-weight: 600; text-align: right; border-bottom: 1px solid var(--line); padding: .65rem .55rem; white-space: nowrap; }
+    td { text-align: right; padding: .78rem .55rem; border-bottom: 1px solid #e9eff3; font-variant-numeric: tabular-nums; }
+    th:first-child, td:first-child { text-align: left; padding-left: 0; }
+    tbody tr:last-child td { border-bottom: 0; }
+    .content-table { min-width: 735px; }
+    .content-table td:first-child { font-weight: 600; }
+    .insight { color: var(--slate); font-size: .84rem; line-height: 1.5; margin: 1rem 0 0; }
     .health-section { margin-top: 3rem; }
     .health-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
     .health-item { background: var(--white); padding: 1.2rem 1.1rem 1.25rem; min-width: 0; }
@@ -95,6 +125,13 @@
     .health-item.fail .health-bar span { background: var(--amber); }
     .health-item .target { display: block; color: var(--slate); font-size: .73rem; margin-top: .48rem; }
     .findings { margin-top: 3rem; }
+    .migration-panel { margin-top: 3rem; }
+    .migration-grid { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+    .migration-grid > div { padding: 1rem 1.1rem; border-right: 1px solid var(--line); }
+    .migration-grid > div:first-child { padding-left: 0; }
+    .migration-grid > div:last-child { border-right: 0; }
+    .migration-grid span { display: block; color: var(--slate); font-size: .8rem; }
+    .migration-grid strong { display: block; font: 650 1.65rem/1.2 var(--display); margin-top: .35rem; font-variant-numeric: tabular-nums; }
     .findings-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .8rem 1.5rem; }
     .finding { border-left: 3px solid var(--amber); padding: .15rem 0 .15rem 1rem; }
     .finding h3 { font-size: .98rem; line-height: 1.4; margin: 0 0 .45rem; }
@@ -117,8 +154,17 @@
       .efficiency { grid-template-columns: repeat(2, 1fr); }
       .efficiency-item:nth-child(2) { border-right: 0; }
       .efficiency-item:nth-child(-n+2) { border-bottom: 1px solid var(--line); }
+      .period-grid { grid-template-columns: 1fr; }
+      .period-metric, .period-metric:first-child { padding: .8rem 0; border-right: 0; border-bottom: 1px solid var(--line); }
+      .period-metric:last-child { border-bottom: 0; }
+      .period-finding { grid-template-columns: 1fr; }
+      .experiment-grid { grid-template-columns: 1fr; }
       .health-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
       .findings-list { grid-template-columns: 1fr; }
+      .migration-grid { grid-template-columns: repeat(2,minmax(0,1fr)); }
+      .migration-grid > div:nth-child(2) { border-right: 0; }
+      .migration-grid > div:nth-child(-n+2) { border-bottom: 1px solid var(--line); }
+      .migration-grid > div:nth-child(3) { padding-left: 0; }
     }
     @media (max-width: 420px) {
       .scope { padding: .25rem .4rem; }
@@ -173,6 +219,22 @@
       <div class="efficiency-item"><span>Net cash ROAS</span><strong id="roas">—</strong></div>
     </section>
 
+    <section class="period-panel" aria-labelledby="period-heading">
+      <div class="section-heading">
+        <h2 id="period-heading">Latest spend week</h2>
+        <span id="period-dates" class="section-note">Loading period comparison…</span>
+      </div>
+      <div class="period-grid">
+        <div class="period-metric"><span class="name">Paid spend</span><strong id="week-spend">—</strong><span id="week-spend-change" class="change">—</span></div>
+        <div class="period-metric"><span class="name">Recorded leads</span><strong id="week-leads">—</strong><span id="week-leads-change" class="change">—</span></div>
+        <div class="period-metric"><span class="name">Net cash by event date</span><strong id="week-cash">—</strong><span id="week-cash-change" class="change">—</span></div>
+      </div>
+      <div class="period-finding">
+        <div><strong id="week-finding">Checking recent activity</strong><p id="week-evidence">The brief compares equal seven-day windows.</p></div>
+        <p id="week-action">Cash can come from leads acquired in earlier periods. Check the funnel and measurement health before making a campaign decision.</p>
+      </div>
+    </section>
+
     <div class="two-col">
       <section class="panel" aria-labelledby="funnel-heading">
         <div class="section-heading"><h2 id="funnel-heading">Customer journey</h2><span class="section-note">First recorded stage per person</span></div>
@@ -195,9 +257,35 @@
       </section>
     </div>
 
+    <section id="content" class="panel content-panel" aria-labelledby="content-heading">
+      <div class="section-heading"><h2 id="content-heading">Content to pipeline</h2><span class="section-note">First identified content touch before conversion</span></div>
+      <div class="table-wrap"><table class="content-table">
+        <thead><tr><th scope="col">Content</th><th scope="col">Views</th><th scope="col">Clicks</th><th scope="col">Engaged leads</th><th scope="col">MQLs</th><th scope="col">Calls</th><th scope="col">Customers</th><th scope="col">Net cash</th></tr></thead>
+        <tbody id="content-body"></tbody>
+      </table></div>
+      <p id="content-insight" class="insight">Comparing reach with qualified pipeline…</p>
+    </section>
+
+    <section id="experiment" class="panel experiment-panel" aria-labelledby="experiment-heading">
+      <div class="section-heading"><h2 id="experiment-heading">CTA experiment</h2><span class="section-note">Balanced synthetic visitor assignments · cash per visitor is primary</span></div>
+      <div id="experiment-grid" class="experiment-grid"></div>
+      <p id="experiment-decision" class="experiment-decision">Analyzing experiment outcomes…</p>
+      <p id="experiment-uncertainty" class="insight">Confidence intervals show uncertainty around the comparison.</p>
+    </section>
+
     <section class="health-section" aria-labelledby="health-heading">
       <div class="section-heading"><h2 id="health-heading">Can we trust the numbers?</h2><span class="section-note">Targets are portfolio acceptance criteria</span></div>
       <div id="health-grid" class="health-grid"></div>
+    </section>
+    <section id="migration" class="panel migration-panel" aria-labelledby="migration-heading">
+      <div class="section-heading"><h2 id="migration-heading">CRM migration audit</h2><span class="section-note">Legacy records compared with current CRM</span></div>
+      <div class="migration-grid">
+        <div><span>Legacy contacts</span><strong id="legacy-count">—</strong></div>
+        <div><span>Missing after migration</span><strong id="missing-count">—</strong></div>
+        <div><span>Owner match</span><strong id="owner-match">—</strong></div>
+        <div><span>Duplicate CRM rows</span><strong id="duplicate-count">—</strong></div>
+      </div>
+      <p id="migration-note" class="insight">Safe owner and source repairs are available through the audit command. Missing contacts and duplicate records remain in the review queue.</p>
     </section>
     <section class="findings" aria-labelledby="findings-heading">
       <div class="section-heading"><h2 id="findings-heading">What needs investigation</h2><span class="section-note">Rule-based findings with visible evidence</span></div>
@@ -207,6 +295,7 @@
   </main>
   <script>
     const money = cents => cents == null ? '—' : new Intl.NumberFormat('en-US', {style:'currency',currency:'USD',maximumFractionDigits:0}).format(cents / 100);
+    const moneyPrecise = cents => cents == null ? '—' : new Intl.NumberFormat('en-US', {style:'currency',currency:'USD',minimumFractionDigits:2,maximumFractionDigits:2}).format(cents / 100);
     const number = value => value == null ? '—' : new Intl.NumberFormat('en-US').format(value);
     const percent = value => value == null ? '—' : new Intl.NumberFormat('en-US', {style:'percent',maximumFractionDigits:1}).format(value);
     const set = (id, value) => { document.getElementById(id).textContent = value; };
@@ -275,17 +364,80 @@
         article.append(title,evidence,action); host.append(article);
       }
     }
+    function renderBrief(brief) {
+      const current=brief.current, previous=brief.previous;
+      set('period-dates',`${current.start} to ${current.end} · prior ${previous.start} to ${previous.end}`);
+      const change=(id,key,formatter) => {
+        set(id,formatter(current[key]));
+        const delta=brief.change_pct[key];
+        set(`${id}-change`,delta == null ? `Prior ${formatter(previous[key])} · change unavailable` : `${delta > 0 ? '+' : ''}${percent(delta)} vs prior ${formatter(previous[key])}`);
+      };
+      change('week-spend','spend_cents',money);
+      change('week-leads','leads',number);
+      change('week-cash','net_cash_cents',money);
+      const finding=brief.findings[0];
+      if (finding) {
+        set('week-finding',finding.finding);
+        set('week-evidence',finding.evidence);
+        set('week-action',finding.investigation + ' Cause remains unconfirmed.');
+      } else {
+        set('week-finding','No threshold breach in this period');
+        set('week-evidence','The rule-based brief found no action threshold.');
+      }
+    }
+    function renderContent(rows) {
+      const body=document.getElementById('content-body'); body.replaceChildren();
+      for (const row of rows) {
+        const tr=document.createElement('tr');
+        for (const value of [row.title,number(row.views),number(row.clicks),number(row.engaged_leads),number(row.mqls),number(row.calls_booked),number(row.customers),money(row.influenced_net_cash_cents)]) {
+          const td=document.createElement('td'); td.textContent=value; tr.append(td);
+        }
+        body.append(tr);
+      }
+      if (rows.length) {
+        const mostViewed=[...rows].sort((a,b)=>b.views-a.views)[0];
+        set('content-insight',`Highest reach: ${mostViewed.title} had ${number(mostViewed.views)} views and ${money(mostViewed.influenced_net_cash_cents)} in first-content influenced net cash. Views alone do not establish pipeline value.`);
+      }
+    }
+    function renderMigration(data) {
+      set('legacy-count',number(data.legacy_contacts));
+      set('missing-count',number(data.missing_contacts));
+      set('owner-match',percent(data.owner_match_rate));
+      set('duplicate-count',number(data.duplicate_crm_rows));
+      set('migration-note',`${number(data.migrated_contacts)} contacts matched by legacy ID; source match is ${percent(data.source_match_rate)}. Safe null-field repairs require an explicit audit command. Missing contacts and duplicates remain for review.`);
+    }
+    function renderExperiment(data) {
+      const host=document.getElementById('experiment-grid'); host.replaceChildren();
+      for (const row of data.variants) {
+        const card=document.createElement('article'); card.className='experiment-variant';
+        const title=document.createElement('h3'); title.textContent=row.label;
+        const copy=document.createElement('p'); copy.textContent=`CTA: “${row.cta_text}” · ${number(row.visitors)} visitors`;
+        const stats=document.createElement('div'); stats.className='experiment-stats';
+        for (const [name,value] of [['Lead rate',percent(row.lead_rate)],['MQLs per lead',percent(row.mql_per_lead)],['Cash / visitor',moneyPrecise(row.net_cash_per_visitor_cents)]]) {
+          const item=document.createElement('div'); const caption=document.createElement('span'); caption.textContent=name;
+          const amount=document.createElement('strong'); amount.textContent=value; item.append(caption,amount); stats.append(item);
+        }
+        card.append(title,copy,stats); host.append(card);
+      }
+      if (data.comparison) {
+        set('experiment-decision',data.comparison.decision);
+        const c=data.comparison;
+        set('experiment-uncertainty',`B − A lead-rate difference: ${percent(c.variant_b_minus_a_lead_rate)} (95% interval ${percent(c.lead_rate_difference_95_ci[0])} to ${percent(c.lead_rate_difference_95_ci[1])}; p=${c.lead_rate_p_value}). Cash per visitor difference: ${moneyPrecise(c.variant_b_minus_a_cash_per_visitor_cents)} (bootstrap 95% interval ${moneyPrecise(c.cash_per_visitor_bootstrap_95_ci_cents[0])} to ${moneyPrecise(c.cash_per_visitor_bootstrap_95_ci_cents[1])}). Exploratory sample; no rollout claim.`);
+      }
+    }
     async function load() {
       try {
-        const [summaryResponse,funnelResponse] = await Promise.all([fetch('/metrics/executive'),fetch('/metrics/funnel')]);
-        if (!summaryResponse.ok || !funnelResponse.ok) throw new Error('The executive data could not be loaded.');
-        const [data,journey] = await Promise.all([summaryResponse.json(),funnelResponse.json()]);
+        const [summaryResponse,funnelResponse,briefResponse,contentResponse,migrationResponse,experimentResponse] = await Promise.all([fetch('/metrics/executive'),fetch('/metrics/funnel'),fetch('/metrics/brief'),fetch('/metrics/content'),fetch('/ops/migration'),fetch('/metrics/experiments/cta_growth_plan')]);
+        if (![summaryResponse,funnelResponse,briefResponse,contentResponse,migrationResponse,experimentResponse].every(response=>response.ok)) throw new Error('The executive data could not be loaded.');
+        const [data,journey,brief,content,migration,experiment] = await Promise.all([summaryResponse.json(),funnelResponse.json(),briefResponse.json(),contentResponse.json(),migrationResponse.json(),experimentResponse.json()]);
         const m=data.metrics;
         set('booked',money(m.booked_revenue_cents)); set('gross',money(m.gross_collected_cents));
         set('refunds',money(m.refunds_cents)); set('net',money(m.net_collected_cents));
         set('spend',money(m.spend_cents)); set('paid-leads',number(m.paid_leads));
         set('cpl',money(m.cost_per_lead_cents)); set('roas',m.net_cash_roas == null ? '—' : `${m.net_cash_roas.toFixed(2)}×`);
         renderFunnel(journey); renderHealth(data.measurement_health); renderFindings(data.observations);
+        renderBrief(brief);
+        renderContent(content); renderMigration(migration); renderExperiment(experiment);
         await renderAttribution(document.getElementById('model').value);
       } catch (error) {
         const banner=document.getElementById('load-error'); banner.textContent=`${error.message} Check that the sample database is seeded and reload the page.`; banner.classList.add('visible');

@@ -11,15 +11,17 @@
 - Read-only operations customer lookup and analytics endpoints with deterministic all-time executive findings.
 - Responsive Executive Pulse page with cash ledger, funnel, attribution model selector, and quality findings. Desktop and mobile browser renders were inspected.
 - Docker/Compose configuration and GitHub Actions checks. Docker execution is unverified because Docker is unavailable on this host.
-- Six tests passing; Ruff passing. Wheel builds with packaged SQL and HTML assets.
+- Eight Python tests and Ruff passing. DuckDB/dbt seeds, build, data tests, and cross-engine parity checks passing. Power BI-ready CSV marts export successfully.
+- 270 daily spend records, 8 content items, 60 identified engagements, 243 legacy contacts, and 1,000 CTA experiment exposures extend the synthetic scenario.
+- CRM migration audit and logged, idempotent repairs for unambiguous null owner/source fields; content-to-pipeline and experiment marts; recent-week brief and corresponding dashboard sections.
 
 ## Not implemented yet
 
 - Real HubSpot, Stripe, GA4, ad-platform, and community integrations.
-- PostgreSQL operations store, BigQuery/warehouse, dbt project and Power BI artifact. The current dashboard is a local HTML reference.
-- Migration repair jobs, experiments, scheduled renewal/retry worker, alerting, RBAC, and deployed operations console.
+- PostgreSQL operations store, BigQuery deployment, and native Power BI `.pbix` report. The interactive dashboard is local HTML; Power BI-ready data is exported as CSV.
+- Scheduled renewal/retry worker, alerting, RBAC, and deployed operations console.
 - AI analyst/classifier/RAG evaluation pipeline.
 
 ## Next engineering increment
 
-Move the validated local SQL views into a dbt project on a chosen warehouse engine, add periodized facts and source freshness, then build the first dashboard against those marts. The all-time snapshot should become a scheduled daily brief only after date-windowed spend and cash models are in place.
+Implement a real ingestion contract and persistent PostgreSQL operational store, then wire provider sandboxes and scheduled freshness checks. A native Power BI report should use the verified marts and the definitions in the metric catalog. The current brief is a deterministic on-demand period comparison, not a scheduled production report.

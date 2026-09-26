@@ -16,6 +16,23 @@ CREATE TABLE IF NOT EXISTS campaigns (
   spend_cents INTEGER NOT NULL CHECK (spend_cents >= 0),
   registry_valid INTEGER NOT NULL CHECK (registry_valid IN (0, 1))
 );
+CREATE TABLE IF NOT EXISTS ad_spend_daily (
+  campaign_id TEXT NOT NULL REFERENCES campaigns(campaign_id),
+  spend_date TEXT NOT NULL,
+  spend_cents INTEGER NOT NULL CHECK (spend_cents >= 0),
+  impressions INTEGER NOT NULL CHECK (impressions >= 0),
+  clicks INTEGER NOT NULL CHECK (clicks >= 0),
+  PRIMARY KEY (campaign_id, spend_date)
+);
+CREATE TABLE IF NOT EXISTS content_items (
+  content_id TEXT PRIMARY KEY,
+  title TEXT NOT NULL,
+  platform TEXT NOT NULL,
+  published_at TEXT NOT NULL,
+  views INTEGER NOT NULL CHECK (views >= 0),
+  clicks INTEGER NOT NULL CHECK (clicks >= 0),
+  offer_id TEXT NOT NULL
+);
 CREATE TABLE IF NOT EXISTS contacts (
   contact_id TEXT PRIMARY KEY,
   email TEXT NOT NULL,
@@ -24,6 +41,23 @@ CREATE TABLE IF NOT EXISTS contacts (
   original_source TEXT,
   current_stage TEXT NOT NULL
 );
+CREATE TABLE IF NOT EXISTS legacy_contacts (
+  legacy_id TEXT PRIMARY KEY,
+  email TEXT NOT NULL,
+  owner_id TEXT,
+  original_source TEXT,
+  lifecycle_stage TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS migration_repairs (
+  repair_id TEXT PRIMARY KEY,
+  contact_id TEXT NOT NULL REFERENCES contacts(contact_id),
+  legacy_id TEXT NOT NULL REFERENCES legacy_contacts(legacy_id),
+  field_name TEXT NOT NULL,
+  old_value TEXT,
+  new_value TEXT NOT NULL,
+  applied_at TEXT NOT NULL,
+  UNIQUE (contact_id, field_name)
+);
 CREATE TABLE IF NOT EXISTS touches (
   touch_id TEXT PRIMARY KEY,
   contact_id TEXT NOT NULL REFERENCES contacts(contact_id),
@@ -31,6 +65,37 @@ CREATE TABLE IF NOT EXISTS touches (
   occurred_at TEXT NOT NULL,
   touch_type TEXT NOT NULL,
   utm_source TEXT
+);
+CREATE TABLE IF NOT EXISTS content_engagements (
+  engagement_id TEXT PRIMARY KEY,
+  contact_id TEXT NOT NULL REFERENCES contacts(contact_id),
+  content_id TEXT NOT NULL REFERENCES content_items(content_id),
+  touch_id TEXT REFERENCES touches(touch_id),
+  occurred_at TEXT NOT NULL,
+  watched_seconds INTEGER NOT NULL CHECK (watched_seconds >= 0)
+);
+CREATE TABLE IF NOT EXISTS experiments (
+  experiment_id TEXT PRIMARY KEY,
+  hypothesis TEXT NOT NULL,
+  primary_metric TEXT NOT NULL,
+  assignment_unit TEXT NOT NULL,
+  started_at TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS experiment_variants (
+  variant_id TEXT PRIMARY KEY,
+  experiment_id TEXT NOT NULL REFERENCES experiments(experiment_id),
+  label TEXT NOT NULL,
+  cta_text TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS experiment_exposures (
+  exposure_id TEXT PRIMARY KEY,
+  experiment_id TEXT NOT NULL REFERENCES experiments(experiment_id),
+  variant_id TEXT NOT NULL REFERENCES experiment_variants(variant_id),
+  visitor_id TEXT NOT NULL,
+  session_id TEXT NOT NULL,
+  contact_id TEXT REFERENCES contacts(contact_id),
+  exposed_at TEXT NOT NULL,
+  UNIQUE (experiment_id, visitor_id)
 );
 CREATE TABLE IF NOT EXISTS lifecycle_events (
   lifecycle_event_id TEXT PRIMARY KEY,

@@ -1,0 +1,174 @@
+version: 2
+
+models:
+  - name: stg_campaigns
+    description: Normalized synthetic campaign registry, retaining invalid names for audit.
+    columns:
+      - name: campaign_id
+        data_tests: [unique, not_null]
+      - name: spend_cents
+        data_tests: [not_null]
+  - name: stg_contacts
+    description: CRM contacts after trimming and normalizing email for duplicate detection.
+    columns:
+      - name: contact_id
+        data_tests: [unique, not_null]
+  - name: stg_legacy_contacts
+    description: Original CRM snapshot before synthetic migration defects.
+    columns:
+      - name: legacy_id
+        data_tests: [unique, not_null]
+  - name: stg_content_items
+    description: Synthetic YouTube content catalog with platform views and clicks.
+    columns:
+      - name: content_id
+        data_tests: [unique, not_null]
+  - name: stg_content_engagements
+    description: Identifiable content engagement linked to a contact and tracking touch.
+    columns:
+      - name: engagement_id
+        data_tests: [unique, not_null]
+      - name: content_id
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('stg_content_items')
+                field: content_id
+      - name: contact_id
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('stg_contacts')
+                field: contact_id
+  - name: stg_experiments
+    columns:
+      - name: experiment_id
+        data_tests: [unique, not_null]
+  - name: stg_experiment_variants
+    columns:
+      - name: variant_id
+        data_tests: [unique, not_null]
+      - name: experiment_id
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('stg_experiments')
+                field: experiment_id
+  - name: stg_experiment_exposures
+    columns:
+      - name: exposure_id
+        data_tests: [unique, not_null]
+      - name: variant_id
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('stg_experiment_variants')
+                field: variant_id
+      - name: contact_id
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('stg_contacts')
+                field: contact_id
+  - name: stg_ad_spend_daily
+    description: Daily paid media spend at campaign and date grain.
+    columns:
+      - name: campaign_id
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_campaigns')
+                field: campaign_id
+      - name: spend_date
+        data_tests: [not_null]
+  - name: stg_touches
+    description: Acquisition and return touches with registry and eligibility flags.
+    columns:
+      - name: touch_id
+        data_tests: [unique, not_null]
+      - name: contact_id
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_contacts')
+                field: contact_id
+  - name: stg_lifecycle_events
+    columns:
+      - name: lifecycle_event_id
+        data_tests: [unique, not_null]
+  - name: stg_deals
+    columns:
+      - name: deal_id
+        data_tests: [unique, not_null]
+  - name: stg_payments
+    columns:
+      - name: payment_id
+        data_tests: [unique, not_null]
+      - name: customer_id
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('stg_contacts')
+                field: contact_id
+  - name: stg_refunds
+    columns:
+      - name: refund_id
+        data_tests: [unique, not_null]
+      - name: payment_id
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('stg_payments')
+                field: payment_id
+  - name: int_payment_cash
+    description: One row per successful payment with refunds netted against that payment.
+    columns:
+      - name: payment_id
+        data_tests: [unique, not_null]
+  - name: int_lead_touch
+    columns:
+      - name: contact_id
+        data_tests: [unique, not_null]
+  - name: mart_attribution_lead_creation
+    description: Payment-level net cash credit for the most recent eligible lead-creation touch.
+    columns:
+      - name: payment_id
+        data_tests: [unique, not_null]
+  - name: mart_campaign_performance
+    description: Paid and organic campaign counts plus attributed net collected cash.
+    columns:
+      - name: campaign_id
+        data_tests: [unique, not_null]
+  - name: mart_revenue
+    description: Booked deal value, gross cash, refunds, and net cash as distinct metrics.
+  - name: mart_growth_daily
+    description: Event-date growth facts. Cash refunds appear on the refund date; this is not acquisition-cohort ROAS.
+    columns:
+      - name: day
+        data_tests: [unique, not_null]
+  - name: mart_funnel
+    description: Stage counts and adjacent-stage conversion based on lifecycle history.
+    columns:
+      - name: stage
+        data_tests: [unique, not_null]
+  - name: mart_measurement_health
+    description: Counts behind UTM, campaign, ownership, lifecycle, and cash match health rates.
+  - name: mart_migration_audit
+    description: Legacy-to-current contact match and discrepancy flags at legacy ID grain.
+    columns:
+      - name: legacy_id
+        data_tests: [unique, not_null]
+  - name: mart_migration_summary
+    description: Aggregate migration reconciliation with missing, owner, source, stage, and duplicate rates.
+  - name: mart_content_performance
+    description: Content views/clicks and first-content influenced lead-to-cash outcomes.
+    columns:
+      - name: content_id
+        data_tests: [unique, not_null]
+  - name: mart_experiment_variants
+    description: Visitor-level CTA experiment outcomes with cash as the primary metric.
+    columns:
+      - name: variant_id
+        data_tests: [unique, not_null]

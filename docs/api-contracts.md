@@ -32,15 +32,19 @@ Accepts `campaign_id`, HTTPS `destination_url`, and snake-case `content`. Looks 
 
 ## Read-only analytics endpoints
 
-`GET /metrics/executive` returns the **all-time synthetic scenario** metrics, quality measures, and deterministic observations. `GET /metrics/funnel` returns stage counts, conversion from previous stage, and median/p90 transition time. `GET /metrics/attribution/{model}` accepts `first_touch`, `lead_creation`, `last_non_direct`, or `u_shaped` and returns net cash by campaign. Date windows, freshness metadata, and daily comparisons are planned; these endpoints do not yet constitute a scheduled morning brief.
+`GET /metrics/executive` returns the **all-time synthetic scenario** metrics, quality measures, and deterministic observations. `GET /metrics/funnel` returns stage counts, conversion from previous stage, and median/p90 transition time. `GET /metrics/attribution/{model}` accepts `first_touch`, `lead_creation`, `last_non_direct`, or `u_shaped` and returns net cash by campaign.
 
-`GET /dashboard` serves the local Executive Pulse page backed by those endpoints. The root URL redirects to it. The page is a reference UI for the synthetic scenario; Power BI remains a target artifact.
+`GET /metrics/daily?days=90` returns event-date spend, leads, and payment/refund cash from the local daily mart. `GET /metrics/brief?days=7` compares equal windows anchored to the latest day with paid spend and emits evidence and an investigation step when a rule fires. It is an on-demand comparison, not a scheduled morning brief. `GET /metrics/content` returns first identified content influence through MQL, calls, customers, and net cash. `GET /metrics/experiments/{experiment_id}` returns variant-level visitor, lead, MQL, customer, and cash results with lead-rate and bootstrap cash intervals. The synthetic assignment is balanced but is not a live randomized experiment.
+
+`GET /ops/migration` returns the legacy-to-current contact audit and issue list. Run `python -m growthops.migration --apply-safe-repairs` explicitly to fill only null owner/source values from matched legacy records; the API does not expose this mutation.
+
+`GET /dashboard` serves the local Executive Pulse page backed by those endpoints. The root URL redirects to it. The page is a reference UI for the synthetic scenario; generated Power BI import marts are documented in [the handoff](power-bi-handoff.md), while a native report remains a target artifact.
 
 ## Target endpoints (not implemented)
 
 | Endpoint | Contract |
 |---|---|
-| Daily executive brief | Governed metric IDs, period comparison, freshness, and quality suppression |
+| Scheduled executive brief | Delivery schedule, source freshness, and quality suppression |
 | `GET /ops/workflows/{event_id}` | Trace of adapter steps, retries, timestamps, and errors |
 | `POST /ops/workflows/{event_id}/retry` | Authorized, audited manual retry of a failed event |
 | `GET /ops/quality/issues` | Paginated data-quality queue with source links |
