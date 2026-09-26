@@ -11,6 +11,7 @@ from growthops.api import app
 from growthops.config import ConfigError, get_settings
 from growthops.db import SCHEMA_VERSION, connect, initialize, schema_version
 from growthops.freshness import check as freshness_check
+from growthops.observability import METRICS
 from growthops.ops import backup, restore, verify
 
 KEY = "k" * 32
@@ -75,6 +76,7 @@ def test_production_webhook_requires_fresh_timestamped_signature(monkeypatch, db
                        "customer_id": "c-000002", "amount_cents": 32000,
                        "paid_at": "2026-09-26T00:00:00Z"}).encode()
     secret = SAFE["GROWTHOPS_WEBHOOK_SECRET"]
+    before = dict(METRICS.counters)
     with TestClient(app) as client:
         post = lambda headers: client.post("/webhooks/payments", content=body, headers=headers)  # noqa: E731
         assert post(_sign(body, secret, None)).status_code == 401  # legacy body-only: dev only
@@ -82,8 +84,9 @@ def test_production_webhook_requires_fresh_timestamped_signature(monkeypatch, db
         assert post(_sign(body, "x" * 40, int(time.time()))).status_code == 401
         accepted = post(_sign(body, secret, int(time.time())))
         assert accepted.status_code == 202 and accepted.json()["status"] == "completed"
-        metrics = client.get("/metrics", headers={"X-API-Key": KEY}).text
-        assert "growthops_webhook_rejected_total 3" in metrics and "growthops_webhook_accepted_total 1" in metrics
+        assert "growthops_webhook_rejected_total" in client.get("/metrics", headers={"X-API-Key": KEY}).text
+    assert METRICS.counters["webhook_rejected"] - before.get("webhook_rejected", 0) == 3
+    assert METRICS.counters["webhook_accepted"] - before.get("webhook_accepted", 0) == 1
 
 
 def test_migrations_upgrade_an_old_database_once(tmp_path):
