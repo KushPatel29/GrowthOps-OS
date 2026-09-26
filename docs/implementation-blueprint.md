@@ -1,6 +1,6 @@
 # GrowthOps OS implementation blueprint
 
-Status: **design contract plus a runnable local slice**. The code in `growthops/` implements a subset of this design with SQLite and simulated adapters. Tables and services below marked *target* are not yet implemented.
+Status: **design contract plus a runnable local slice**. The code in `growthops/` implements a subset with SQLite and simulated adapters. `warehouse/dbt/` now implements a DuckDB dbt DAG for the local sources and marts; the BigQuery/PostgreSQL warehouse and provider architecture below remain targets. The exact current state is in [project status](../PROJECT_STATUS.md).
 
 ## Product and evidence boundary
 
@@ -81,7 +81,7 @@ The first local generator is implemented in `growthops.seed`: fixed random seed,
 
 Target scale: 450K sessions, 85K leads, 21K MQLs, 8K calls, 5K opportunities, 1.6K customers, 10K payment/refund records, and 25K workflow executions. Generation is chunked by month with reproducible seeds. Invariants: no refund exceeds its payment; each person has at most one first acquisition; payments can be unmatched to deals but never lack a stable payment ID; events may arrive late or twice. Defect manifest includes missing UTMs, invalid campaign names, duplicate CRM contacts, missing owners, inconsistent stages, missing original source, and payment/deal mismatches. Baseline defect percentages from the brief are *scenario targets*, not claims about an actual company.
 
-## dbt DAG and tests (target)
+## dbt DAG and tests (local subset implemented; full design target)
 
 ```text
 sources: ga4, ads, content, hubspot, legacy_crm, stripe, workflow
