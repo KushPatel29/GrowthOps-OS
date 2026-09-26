@@ -21,10 +21,13 @@ from __future__ import annotations
 
 import argparse
 import logging
+import os
 import signal
 import sqlite3
 import threading
+import time
 from datetime import datetime, timedelta, timezone
+from pathlib import Path
 
 from growthops.adapters import Adapters, Transport, build_adapters, urllib_transport
 from growthops.alerts import candidates, deliver, post_message
@@ -36,6 +39,11 @@ from growthops.workflow import run_due
 
 logger = logging.getLogger("growthops.worker")
 STALE_CLAIM = timedelta(minutes=30)
+HEARTBEAT = Path(os.getenv("GROWTHOPS_WORKER_HEARTBEAT", "/tmp/growthops-worker.heartbeat"))
+
+
+def heartbeat_age_seconds() -> float | None:
+    return time.time() - HEARTBEAT.stat().st_mtime if HEARTBEAT.exists() else None
 
 
 def _claim(connection: sqlite3.Connection, job: str, run_key: str, now: datetime) -> bool:
@@ -120,6 +128,7 @@ def serve(settings: Settings) -> None:
     while not stop.is_set():
         try:
             run_once(get_settings())
+            HEARTBEAT.touch()  # the container health check reads this file's age
         except sqlite3.Error:
             logger.exception("worker pass failed; retrying next poll")
         stop.wait(settings.worker_poll_seconds)
@@ -129,7 +138,12 @@ def serve(settings: Settings) -> None:
 def main() -> None:
     parser = argparse.ArgumentParser(description="GrowthOps background worker")
     parser.add_argument("--once", action="store_true", help="run one pass and exit")
+    parser.add_argument("--healthcheck", type=int, metavar="SECONDS",
+                        help="exit 0 if the last successful pass is newer than SECONDS")
     args = parser.parse_args()
+    if args.healthcheck:
+        age = heartbeat_age_seconds()
+        raise SystemExit(0 if age is not None and age <= args.healthcheck else 1)
     settings = get_settings()
     settings.require_safe()
     configure_logging(settings.log_level, settings.log_format)

@@ -147,3 +147,22 @@ def test_ask_endpoint_is_keyless_protected_and_audited(monkeypatch, db_path):
         assert client.get("/ask", params={"q": "x" * 301}, headers=headers).status_code == 422
         usage = client.get("/ops/ask-usage", headers=headers).json()
         assert {row["route"] for row in usage["by_route"]} == {"metric", "refused"}
+
+
+def test_dashboard_password_gate_blocks_before_any_data_loads(monkeypatch):
+    from streamlit.testing.v1 import AppTest
+
+    monkeypatch.setenv("GROWTHOPS_DASHBOARD_PASSWORD", "correct horse battery staple")
+    app = AppTest.from_file("../streamlit_app.py").run(timeout=60)
+    assert not app.exception and len(app.tabs) == 0
+    app.text_input[0].input("wrong").run(timeout=60)
+    assert app.error and len(app.tabs) == 0
+
+
+def test_worker_healthcheck_reads_the_heartbeat(monkeypatch, tmp_path):
+    from growthops import worker
+
+    monkeypatch.setattr(worker, "HEARTBEAT", tmp_path / "hb")
+    assert worker.heartbeat_age_seconds() is None
+    worker.HEARTBEAT.touch()
+    assert worker.heartbeat_age_seconds() < 5

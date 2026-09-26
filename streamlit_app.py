@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import hmac
+import os
 import tempfile
 from datetime import date, timedelta
 from pathlib import Path
@@ -43,15 +45,37 @@ st.markdown("""<style>
 </style>""", unsafe_allow_html=True)
 
 
-@st.cache_resource(show_spinner="Generating fifteen months of synthetic ScaleLab data…")
+@st.cache_resource(show_spinner="Preparing the data…")
 def demo_database() -> str:
+    """The configured database in a deployment; a freshly generated synthetic scenario for the public demo."""
+    configured = os.getenv("GROWTHOPS_DASHBOARD_DATABASE")
+    if configured:
+        if not Path(configured).exists():
+            st.error("The configured database does not exist yet. Run the seed or ingestion job first.")
+            st.stop()
+        build(configured)  # refresh the SQL views; never modifies source tables
+        return configured
     database = str(Path(tempfile.mkdtemp(prefix="growthops-")) / "sample.db")
     seed(database)
     build(database)
     return database
 
 
-@st.cache_data(show_spinner="Running the analytics…")
+def require_password() -> None:
+    """Optional shared-password gate for a private deployment (GROWTHOPS_DASHBOARD_PASSWORD)."""
+    expected = os.getenv("GROWTHOPS_DASHBOARD_PASSWORD", "")
+    if not expected or st.session_state.get("authenticated"):
+        return
+    supplied = st.text_input("Password", type="password")
+    if supplied and hmac.compare_digest(supplied, expected):
+        st.session_state["authenticated"] = True
+        st.rerun()
+    if supplied:
+        st.error("Incorrect password.")
+    st.stop()
+
+
+@st.cache_data(show_spinner="Running the analytics…", ttl=900)
 def load_case(database: str) -> dict:
     connection = connect(database)
     try:
@@ -158,6 +182,7 @@ def trend(points: list[dict], label: str, fmt: str) -> alt.LayerChart:
     return (lines + flagged).properties(height=240)
 
 
+require_password()
 database = demo_database()
 case = load_case(database)
 kpis, quality = case["summary"]["metrics"], case["summary"]["measurement_health"]
