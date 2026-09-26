@@ -12,3 +12,5 @@ warehouse/dbt/.user.yml
 *.db
 *.db-journal
 .env
+*.inspect.ndjson
+~$*.xlsx

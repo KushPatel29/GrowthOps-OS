@@ -1,15 +1,32 @@
-// Add these as explicit measures after importing the nine CSV marts.
-// The CSVs in dashboards/powerbi-data are synthetic and versioned with this case.
+// Manual-import reference matching the 18 measures in GrowthOpsOS.pbip.
+// Add each line to its named table after importing the nine synthetic CSV marts.
 
-Booked Value USD = DIVIDE(SUM(mart_revenue[booked_cents]), 100)
-Gross Collected USD = DIVIDE(SUM(mart_revenue[gross_collected_cents]), 100)
-Refunds USD = DIVIDE(SUM(mart_revenue[refunds_cents]), 100)
-Net Collected USD = [Gross Collected USD] - [Refunds USD]
-Daily Net Cash USD = DIVIDE(SUM(mart_growth_daily[net_cash_cents]), 100)
-Daily Paid Spend USD = DIVIDE(SUM(mart_growth_daily[spend_cents]), 100)
-Paid Spend USD = DIVIDE(CALCULATE(SUM(mart_campaign_performance[spend_cents]), mart_campaign_performance[medium] IN {"paid_search", "paid_social"}), 100)
-Paid Leads = CALCULATE(SUM(mart_campaign_performance[leads]), mart_campaign_performance[medium] IN {"paid_search", "paid_social"})
-Cost per Paid Lead USD = DIVIDE([Paid Spend USD], [Paid Leads])
-Paid Attributed Cash USD = DIVIDE(CALCULATE(SUM(mart_campaign_performance[net_cash_cents]), mart_campaign_performance[medium] IN {"paid_search", "paid_social"}), 100)
-Paid Net Cash ROAS = DIVIDE([Paid Attributed Cash USD], [Paid Spend USD])
-Campaign Net Cash USD = DIVIDE(SUM(mart_campaign_performance[net_cash_cents]), 100)
+// mart_revenue
+Booked USD = DIVIDE(SUM('mart_revenue'[booked_cents]), 100)
+Gross USD = DIVIDE(SUM('mart_revenue'[gross_collected_cents]), 100)
+Refunds USD = DIVIDE(SUM('mart_revenue'[refunds_cents]), 100)
+Net USD = DIVIDE(SUM('mart_revenue'[net_collected_cents]), 100)
+
+// mart_growth_daily
+Daily Cash USD = DIVIDE(SUM('mart_growth_daily'[net_cash_cents]), 100)
+Daily Spend USD = DIVIDE(SUM('mart_growth_daily'[spend_cents]), 100)
+
+// mart_campaign_performance
+Campaign Cash USD = DIVIDE(SUM('mart_campaign_performance'[net_cash_cents]), 100)
+Paid Spend USD = DIVIDE(CALCULATE(SUM('mart_campaign_performance'[spend_cents]), 'mart_campaign_performance'[medium] IN {"paid_search", "paid_social"}), 100)
+Paid Leads = CALCULATE(SUM('mart_campaign_performance'[leads]), 'mart_campaign_performance'[medium] IN {"paid_search", "paid_social"})
+Paid CPL USD = DIVIDE([Paid Spend USD], [Paid Leads])
+Paid Net Cash USD = DIVIDE(CALCULATE(SUM('mart_campaign_performance'[net_cash_cents]), 'mart_campaign_performance'[medium] IN {"paid_search", "paid_social"}), 100)
+Paid Cash ROAS = DIVIDE([Paid Net Cash USD], [Paid Spend USD])
+
+// mart_funnel and mart_content_performance
+Funnel People = SUM('mart_funnel'[people])
+Influenced Cash USD = DIVIDE(SUM('mart_content_performance'[influenced_net_cash_cents]), 100)
+
+// mart_measurement_health
+UTM Completeness = DIVIDE(SUM('mart_measurement_health'[touches_with_utm]), SUM('mart_measurement_health'[eligible_touches]))
+Campaign Registry Coverage = DIVIDE(SUM('mart_measurement_health'[registered_touches]), SUM('mart_measurement_health'[eligible_touches]))
+
+// mart_renewal_risk; risk levels are computed relative to the sample snapshot date.
+High Risk Renewals = CALCULATE(COUNTROWS('mart_renewal_risk'), 'mart_renewal_risk'[risk_level] = "high")
+Due Soon Renewals = CALCULATE(COUNTROWS('mart_renewal_risk'), 'mart_renewal_risk'[risk_level] = "medium")

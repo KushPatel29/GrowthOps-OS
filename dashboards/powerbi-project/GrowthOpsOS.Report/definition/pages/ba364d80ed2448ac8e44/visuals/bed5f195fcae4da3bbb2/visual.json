@@ -3,10 +3,10 @@
   "name": "bed5f195fcae4da3bbb2",
   "position": {
     "x": 25,
-    "y": 25,
+    "y": 160,
     "z": 1000,
     "width": 600,
-    "height": 300,
+    "height": 240,
     "tabOrder": 1000
   },
   "visual": {

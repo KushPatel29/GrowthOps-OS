@@ -1,6 +1,16 @@
 table mart_renewal_risk
 	lineageTag: 9d6f47d8-1c3d-4ba3-9259-fbd4d0508ade
 
+	measure 'High Risk Renewals' = CALCULATE(COUNTROWS('mart_renewal_risk'), 'mart_renewal_risk'[risk_level] = "high")
+		formatString: #,0
+		displayFolder: Lifecycle
+		lineageTag: ff746811-a5b6-4ed6-9d99-37fabc5f4a02
+
+	measure 'Due Soon Renewals' = CALCULATE(COUNTROWS('mart_renewal_risk'), 'mart_renewal_risk'[risk_level] = "medium")
+		formatString: #,0
+		displayFolder: Lifecycle
+		lineageTag: 9815253f-f91f-44e4-aa1e-10c6ddd2119c
+
 	column subscription_id
 		dataType: string
 		lineageTag: b9c5a1ba-76ae-4ef1-a5ac-5f7d1130b27f
@@ -44,4 +54,4 @@ table mart_renewal_risk
 				  Source = Table.FromRows(Json.Document(Binary.Decompress(Binary.FromText("pdJBCoMwEAXQu7g2MDNK1LOIFKq2uohCaxa9fVPHCUKbCFYQviKP79e6Tp72qgCw0EmatD7dZjt1/ePSzsbYaVxe7h4BaQWVws8D4M5hvA9Jk4rhjs3gFDUKd4E/DJ2LsaaYQcXWw/TdaM1OISg3hdM5BSrZhFNMySCo5NKFU1BBUCBdpnm5dLbfMZjLMJyiTBlmKhJmTTEGw22g9J+6hCOmCjJE8lKcYgxhuA36D4X6iIlsg34bpD8YLdtwOslAJm04xZgsvA2S/H6cwgwq/GrTvAE=", BinaryEncoding.Base64), Compression.Deflate)), let _t = ((type nullable text) meta [Serialized.Text = true]) in type table [subscription_id = nullable text, customer_id = nullable text, plan_id = nullable text, due_date = nullable text, failed_attempts = nullable text, risk_level = nullable text]),
 				  #"Changed column type" = Table.TransformColumnTypes(Source, {{"due_date", type date}, {"failed_attempts", Int64.Type}})
 				in
-				  #"Changed column type"
+				  #"Changed column type"\n

@@ -1,19 +1,19 @@
 {
   "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.7.0/schema.json",
-  "name": "fcbda93431574c2ca93e",
+  "name": "1759d0eca53746689d32",
   "position": {
     "x": 25,
-    "y": 350,
-    "z": 1000,
+    "y": 25,
+    "z": 5000,
     "width": 600,
-    "height": 310,
-    "tabOrder": 1000
+    "height": 300,
+    "tabOrder": 5000
   },
   "visual": {
-    "visualType": "tableEx",
+    "visualType": "clusteredBarChart",
     "query": {
       "queryState": {
-        "Values": {
+        "Category": {
           "projections": [
             {
               "field": {
@@ -28,48 +28,24 @@
               },
               "queryRef": "mart_funnel.stage",
               "nativeQueryRef": "stage"
-            },
+            }
+          ]
+        },
+        "Y": {
+          "projections": [
             {
               "field": {
-                "Column": {
+                "Measure": {
                   "Expression": {
                     "SourceRef": {
                       "Entity": "mart_funnel"
                     }
                   },
-                  "Property": "ordinal"
+                  "Property": "Funnel People"
                 }
               },
-              "queryRef": "mart_funnel.ordinal",
-              "nativeQueryRef": "ordinal"
-            },
-            {
-              "field": {
-                "Column": {
-                  "Expression": {
-                    "SourceRef": {
-                      "Entity": "mart_funnel"
-                    }
-                  },
-                  "Property": "people"
-                }
-              },
-              "queryRef": "mart_funnel.people",
-              "nativeQueryRef": "people"
-            },
-            {
-              "field": {
-                "Column": {
-                  "Expression": {
-                    "SourceRef": {
-                      "Entity": "mart_funnel"
-                    }
-                  },
-                  "Property": "from_previous_rate"
-                }
-              },
-              "queryRef": "mart_funnel.from_previous_rate",
-              "nativeQueryRef": "from_previous_rate"
+              "queryRef": "mart_funnel.Funnel People",
+              "nativeQueryRef": "Funnel People"
             }
           ]
         }
@@ -82,7 +58,7 @@
             "text": {
               "expr": {
                 "Literal": {
-                  "Value": "'Full funnel'"
+                  "Value": "'People by funnel stage'"
                 }
               }
             },

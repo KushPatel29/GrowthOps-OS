@@ -1,37 +1,19 @@
 {
   "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.7.0/schema.json",
-  "name": "9418c40236fa4b0b9fe5",
+  "name": "56c01692991c4a6ca8df",
   "position": {
-    "x": 25,
-    "y": 180,
-    "z": 1000,
-    "width": 600,
-    "height": 480,
-    "tabOrder": 1000
+    "x": 335,
+    "y": 20,
+    "z": 5001,
+    "width": 295,
+    "height": 130,
+    "tabOrder": 5001
   },
   "visual": {
-    "visualType": "clusteredBarChart",
+    "visualType": "cardVisual",
     "query": {
       "queryState": {
-        "Category": {
-          "projections": [
-            {
-              "field": {
-                "Column": {
-                  "Expression": {
-                    "SourceRef": {
-                      "Entity": "mart_campaign_performance"
-                    }
-                  },
-                  "Property": "campaign_id"
-                }
-              },
-              "queryRef": "mart_campaign_performance.campaign_id",
-              "nativeQueryRef": "campaign_id"
-            }
-          ]
-        },
-        "Y": {
+        "Data": {
           "projections": [
             {
               "field": {
@@ -41,11 +23,11 @@
                       "Entity": "mart_campaign_performance"
                     }
                   },
-                  "Property": "Campaign Cash USD"
+                  "Property": "Paid Leads"
                 }
               },
-              "queryRef": "mart_campaign_performance.Campaign Cash USD",
-              "nativeQueryRef": "Campaign Cash USD"
+              "queryRef": "mart_campaign_performance.Paid Leads",
+              "nativeQueryRef": "Paid Leads"
             }
           ]
         }
@@ -58,7 +40,7 @@
             "text": {
               "expr": {
                 "Literal": {
-                  "Value": "'Campaign net cash (USD)'"
+                  "Value": "'Paid leads'"
                 }
               }
             },
