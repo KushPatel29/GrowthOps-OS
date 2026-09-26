@@ -7,48 +7,15 @@ import os
 import sqlite3
 from urllib import request
 
-from growthops.brief import period_brief
-from growthops.experiments import analyze as experiment_analysis
-from growthops.renewals import monitor as renewal_monitor
-from growthops.report import executive_brief
+from growthops.brief import findings as brief_findings
+from growthops.narrator import narrate
 
 
 def evidence_pack(connection: sqlite3.Connection) -> list[dict]:
-    executive = executive_brief(connection)
-    weekly = period_brief(connection)
-    renewals = renewal_monitor(connection)
-    experiment = experiment_analysis(connection, "cta_growth_plan", bootstrap_draws=300)
-    findings = []
-    for index, observation in enumerate(executive["observations"], 1):
-        findings.append({
-            "id": f"quality_{index}", "category": "measurement",
-            "finding": observation["finding"], "evidence": observation["evidence"],
-            "action": observation["action"], "source": "measurement_health",
-        })
-    for index, finding in enumerate(weekly["findings"], 1):
-        findings.append({
-            "id": f"weekly_{index}", "category": "growth",
-            "finding": finding["finding"], "evidence": finding["evidence"],
-            "action": finding["investigation"], "source": "mart_growth_daily",
-        })
-    if renewals["high_risk"]:
-        findings.append({
-            "id": "renewal_risk", "category": "automation",
-            "finding": "Renewals need customer-success review.",
-            "evidence": f"{renewals['high_risk']} active subscriptions were overdue or had failed attempts as of {renewals['as_of']}.",
-            "action": "Review payment methods and retry history before contacting customers.",
-            "source": "subscriptions + renewal_attempts",
-        })
-    comparison = experiment["comparison"]
-    if comparison and comparison["variant_b_minus_a_cash_per_visitor_cents"] < 0:
-        findings.append({
-            "id": "experiment_cash", "category": "experiment",
-            "finding": "Lead lift did not translate into observed cash lift.",
-            "evidence": f"Variant B minus A cash per visitor was ${comparison['variant_b_minus_a_cash_per_visitor_cents']/100:.2f}; the bootstrap interval includes zero.",
-            "action": "Keep A while collecting a larger revenue sample.",
-            "source": "experiment_exposures + payments + refunds",
-        })
-    return findings
+    """Findings from the Morning Brief, reshaped as the evidence an LLM may rank."""
+    return [{"id": item["id"], "category": item["category"], "finding": item["finding"],
+             "evidence": item["evidence"], "why": item["why"], "action": item["investigation"],
+             "source": item["source"]} for item in brief_findings(connection)]
 
 
 def select_ids(findings: list[dict], llm_text: str | None = None, limit: int = 3) -> tuple[list[str], str]:
@@ -103,10 +70,12 @@ def generate(connection: sqlite3.Connection, *, llm_text: str | None = None,
     if use_provider and provider_text is None and llm_text is None:
         mode = "deterministic_provider_unavailable"
     by_id = {finding["id"]: finding for finding in findings}
+    narrative = narrate([{**item, "investigation": item["action"]} for item in (by_id[i] for i in selected)])
     return {
         "mode": mode,
         "synthetic": True,
         "findings": [by_id[item] for item in selected],
         "available_evidence_ids": list(by_id),
+        "narrative": narrative,
         "method": "An optional LLM ranks evidence IDs only. Displayed claims and actions come from validated source facts.",
     }

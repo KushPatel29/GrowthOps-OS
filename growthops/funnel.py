@@ -61,3 +61,32 @@ def lifecycle_integrity(connection: sqlite3.Connection) -> dict:
             valid += 1
     return {"paid_contact_count": len(paid), "valid_paid_journeys": valid,
             "lifecycle_integrity": round(valid / len(paid), 4) if paid else None}
+
+
+def funnel_by_campaign(connection: sqlite3.Connection) -> list[dict]:
+    """Stage conversion by the campaign that created the lead (unattributed leads kept visible)."""
+    rows = connection.execute(
+        """WITH lead_touch AS MATERIALIZED (
+             SELECT contact_id, campaign_id,
+                    ROW_NUMBER() OVER (PARTITION BY contact_id ORDER BY occurred_at DESC, touch_id DESC) rn
+             FROM touches WHERE touch_type='lead_creation'
+           ), reached AS (
+             SELECT contact_id,
+                    MAX(stage='mql') mql, MAX(stage='call_booked') booked,
+                    MAX(stage='closed_won') won, MAX(stage='paid') paid
+             FROM lifecycle_events GROUP BY contact_id
+           )
+           SELECT COALESCE(t.campaign_id,'(unattributed)') campaign_id, COUNT(*) leads,
+                  SUM(r.mql) mqls, SUM(r.booked) calls_booked, SUM(r.won) closed_won, SUM(r.paid) customers
+           FROM lead_touch t JOIN reached r ON r.contact_id=t.contact_id
+           WHERE t.rn=1 GROUP BY 1 ORDER BY leads DESC"""
+    ).fetchall()
+    result = []
+    for row in rows:
+        leads, mqls, booked = row["leads"], row["mqls"], row["calls_booked"]
+        result.append({**dict(row),
+                       "lead_to_mql": round(mqls / leads, 4) if leads else None,
+                       "mql_to_call": round(booked / mqls, 4) if mqls else None,
+                       "call_to_won": round(row["closed_won"] / booked, 4) if booked else None,
+                       "lead_to_customer": round(row["customers"] / leads, 4) if leads else None})
+    return result

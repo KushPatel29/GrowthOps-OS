@@ -1,9 +1,31 @@
-﻿content_id,title,platform,views,clicks,engaged_leads,mqls,calls_booked,customers,influenced_net_cash_cents
-video-00,Founder systems lesson 1,youtube,2000,90,8,8,8,8,500000
-video-02,Founder systems lesson 3,youtube,4500,174,8,8,8,8,490000
-video-06,Founder systems lesson 7,youtube,9500,342,7,7,7,7,455000
-video-04,Founder systems lesson 5,youtube,7000,258,7,7,7,7,445000
-video-01,Founder systems lesson 2,youtube,3250,132,8,3,3,0,0
-video-03,Founder systems lesson 4,youtube,5750,216,8,3,3,0,0
-video-05,Founder systems lesson 6,youtube,8250,300,7,2,2,0,0
-video-07,Founder systems lesson 8,youtube,10750,384,7,2,2,0,0
+﻿content_id,title,platform,topic,views,clicks,engaged_leads,mqls,calls_booked,customers,influenced_net_cash_cents
+video-01,Why founders burn out (ep. 1),youtube,mindset,44650,556,1122,232,104,16,13500000
+video-07,The discovery call script (ep. 7),youtube,sales,11740,324,246,82,40,15,12070000
+video-05,Morning routine of a CEO (ep. 5),youtube,mindset,24910,252,604,130,50,15,10460000
+video-03,Delegating the inbox (ep. 3),youtube,systems,11177,297,270,88,37,8,5790000
+video-13,Founder operating system (ep. 13),youtube,systems,12532,249,166,42,23,7,5260000
+video-06,Value-based pricing teardown (ep. 6),youtube,pricing,5936,256,165,71,37,7,4890000
+video-02,Handling the budget objection (ep. 2),youtube,sales,8300,324,221,73,36,8,4830000
+video-15,Value-based pricing teardown (ep. 15),youtube,pricing,7182,160,73,27,18,6,4380000
+video-08,Handling the budget objection (ep. 8),youtube,sales,5805,195,112,41,18,5,4200000
+video-12,Closing without pressure (ep. 12),youtube,sales,7187,227,114,34,14,2,3150000
+video-04,Your first operations hire (ep. 4),youtube,hiring,17570,440,455,137,60,7,3120000
+video-16,Raise prices without losing clients (ep. 16),youtube,pricing,9707,360,118,44,16,4,3120000
+video-18,Delegating the inbox (ep. 18),youtube,systems,5354,161,55,20,6,2,3000000
+video-19,Your first operations hire (ep. 19),youtube,hiring,8009,231,69,19,10,4,2820000
+video-23,Weekly metrics that matter (ep. 23),youtube,systems,30204,835,182,41,19,4,2800000
+video-10,Why founders burn out (ep. 10),youtube,mindset,18652,176,366,90,42,4,2670000
+video-25,Why founders burn out (ep. 25),youtube,mindset,45088,448,223,39,18,3,2500000
+video-09,Scorecards for new hires (ep. 9),youtube,hiring,8342,146,165,50,26,4,1920000
+video-21,Value-based pricing teardown (ep. 21),youtube,pricing,14524,470,123,47,22,4,1510000
+video-11,Pricing a high-ticket offer (ep. 11),youtube,pricing,8531,200,117,39,16,1,1500000
+video-17,Handling the budget objection (ep. 17),youtube,sales,11006,268,114,43,21,3,1470000
+video-14,Hiring an integrator (ep. 14),youtube,hiring,4007,94,51,16,10,2,1110000
+video-26,Pricing a high-ticket offer (ep. 26),youtube,pricing,11615,423,60,19,10,2,650000
+video-28,Founder operating system (ep. 28),youtube,systems,13319,321,57,7,5,1,630000
+video-27,Closing without pressure (ep. 27),youtube,sales,12822,402,56,17,7,1,480000
+video-20,Morning routine of a CEO (ep. 20),youtube,mindset,11724,186,120,17,11,2,410000
+video-22,The discovery call script (ep. 22),youtube,sales,7034,211,42,12,6,0,0
+video-24,Scorecards for new hires (ep. 24),youtube,hiring,9286,222,46,10,3,0,0
+video-29,Handling the budget objection (ep. 29),youtube,sales,7179,270,21,3,1,0,0
+video-30,Thinking in decades (ep. 30),youtube,mindset,27937,350,59,10,4,0,0

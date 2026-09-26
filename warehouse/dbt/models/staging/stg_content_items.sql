@@ -5,5 +5,6 @@ select
   try_cast(published_at as timestamptz) as published_at,
   cast(views as bigint) as views,
   cast(clicks as bigint) as clicks,
-  cast(offer_id as varchar) as offer_id
+  cast(offer_id as varchar) as offer_id,
+  cast(topic as varchar) as topic
 from {{ ref('raw_content_items') }}
