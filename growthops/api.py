@@ -6,6 +6,7 @@ import hashlib
 import hmac
 import os
 from contextlib import asynccontextmanager
+from datetime import date, timedelta
 from importlib.resources import files
 from typing import Literal
 
@@ -31,6 +32,10 @@ from growthops.diagnostics import detect, incident_recall
 from growthops.narrator import narrate
 from growthops.brief import findings as brief_findings
 from growthops.reconciliation import crm_bridge, four_numbers, platform_bridge, platform_comparison
+from growthops.campaign_links import audit_short_links
+from growthops.email_analytics import deliverability, email_performance, list_source_mix, newsletter_pipeline, type_summary
+from growthops.hubspot import audit as hubspot_audit, property_definitions
+from growthops.performance import daily_update, paid_efficiency
 
 
 def database_path() -> str:
@@ -261,6 +266,38 @@ def anomalies() -> dict:
 def narrative() -> dict:
     """Validated executive narrative (deterministic unless an LLM candidate passes the guardrail)."""
     return narrate(_read(brief_findings))
+
+
+@app.get("/metrics/daily-update")
+def written_daily_update(day: date | None = None) -> dict:
+    """Yesterday vs the trailing week, paid efficiency and what needs attention, as copy-ready text."""
+    return _read(daily_update, day)
+
+
+@app.get("/metrics/paid-efficiency")
+def paid_media_efficiency(days: int = Query(default=7, ge=1, le=450),
+                          by: Literal["campaign", "platform"] = "campaign") -> list[dict]:
+    """CPM, CTR, CPC, CPL, cost per MQL, cost per booked call and net-cash ROAS for the last N days."""
+    end = date.fromisoformat(_read(lambda c: c.execute("SELECT MAX(spend_date) FROM ad_spend_daily").fetchone()[0]))
+    return _read(paid_efficiency, end - timedelta(days=days - 1), end, by)
+
+
+@app.get("/metrics/email")
+def email_metrics() -> dict:
+    return {"by_type": _read(type_summary), "sends": _read(email_performance),
+            "newsletter_pipeline": _read(newsletter_pipeline), "deliverability": _read(deliverability),
+            "list_source_mix": _read(list_source_mix)}
+
+
+@app.get("/metrics/link-hygiene")
+def link_hygiene() -> dict:
+    return _read(audit_short_links)
+
+
+@app.get("/crm/hubspot/audit")
+def hubspot_crm_audit() -> dict:
+    """CRM hygiene against the HubSpot mapping, plus the custom-property definitions an import needs."""
+    return {"audit": _read(hubspot_audit), "property_definitions": _read(property_definitions)}
 
 
 @app.get("/ops/workflows")

@@ -40,6 +40,18 @@ All timestamps are UTC. A report must show its time range, cohort basis, data-as
 | Content-influenced net cash | Net cash from contacts whose first identified content engagement is the given item | Descriptive first-content influence, not causal incrementality or fractional attribution |
 | Experiment lead rate | Exposed visitors with a linked lead / exposed visitors in variant | Visitor assignment unit; one exposure per experiment/visitor |
 | Experiment MQL per lead | Exposed linked leads reaching MQL / exposed linked leads | Guardrail for lead quality |
+| CPM / CTR / CPC | Spend × 1000 / impressions; clicks / impressions; spend / clicks | Platform-reported delivery; campaign/day grain |
+| Cost per booked call (CPDM) | Paid spend / booked discovery calls from paid-created leads in the window | Activity basis (`growthops/performance.py`): leads, MQLs, calls, wins and cash inside the window, credited to the lead-creating campaign. "CPDM" is read here as cost per discovery meeting; confirm the house definition |
+| Window ROAS | Lead-creation net cash collected in the window less refunds issued in it / spend in the window | Cash lags leads by weeks, so 7- and 30-day ROAS understate; use the all-time figure to judge a campaign |
+| Delivery / bounce rate | Delivered / sends; bounces / sends | Per send; bounce above 2% or complaints above 0.1% flags the sending domain |
+| Human open rate | (Opens − machine opens) / delivered | Machine opens come from mailbox privacy proxies (e.g. Apple Mail Privacy Protection) and are excluded |
+| Reported open rate | Opens / delivered | Shown only to explain the gap; never used to judge engagement |
+| Click rate (CTR) | Clicks / delivered | Unique clicks per send |
+| Click-to-open rate | Clicks / human opens | Content relevance among people who actually opened |
+| Unsubscribe / complaint rate | Unsubscribes / delivered; spam complaints / delivered | Complaint limit 0.1% (Gmail/Yahoo bulk-sender guidance) |
+| Newsletter leads | Contacts whose lead-creation touch is `newsletter_weekly`, credited to the issue in whose window (send to next send) it falls | Followed to MQL, booked call, customers and net cash; descriptive |
+| List source mix | New CRM contacts in the last three months by original source | Includes `(no source)` for lost UTMs |
+| Short-link defect share | Last-30-day clicks on short links whose UTMs are missing, unregistered or off-taxonomy / all short-link clicks | Registry match is exact and case-sensitive |
 | Experiment cash per visitor | Net cash from exposed linked customers / all exposed visitors in variant | Primary experiment metric; refunds included; exploratory synthetic sample |
 
 ## Attribution rules

@@ -11,4 +11,4 @@ python -m pip install -r requirements.txt
 python -m streamlit run streamlit_app.py
 ```
 
-For Community Cloud, create an app from the repository and choose `main` and `streamlit_app.py`. Verify the nine views and the synthetic-data label after the build completes. Do not add real customer data or API keys to this public app.
+For Community Cloud, create an app from the repository and choose `main` and `streamlit_app.py`. Verify the ten views and the synthetic-data label after the build completes. Do not add real customer data or API keys to this public app.

@@ -13,6 +13,7 @@ TABLES = (
     "touches", "content_engagements", "lifecycle_events", "deals", "payments", "refunds",
     "experiments", "experiment_variants", "experiment_exposures",
     "subscriptions", "renewal_attempts", "platform_conversions", "products", "incidents",
+    "email_campaigns", "short_links", "short_link_clicks",
 )
 
 

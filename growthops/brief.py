@@ -12,6 +12,7 @@ import sqlite3
 from datetime import date, timedelta
 
 from growthops.diagnostics import BASELINE, detect
+from growthops.email_analytics import deliverability_finding
 from growthops.renewals import monitor as renewal_monitor
 from growthops.report import campaign_performance, executive_brief
 from growthops.scenario import AS_OF
@@ -161,6 +162,9 @@ def findings(connection: sqlite3.Connection, as_of: date = AS_OF, recent_days: i
             "confidence": "high: observed in subscription records",
             "source": "subscriptions + renewal_attempts",
         })
+    email = deliverability_finding(connection, as_of)
+    if email:
+        result.append(email)
     for index, observation in enumerate(quality["observations"], 1):
         result.append({
             "id": f"quality_{index}", "category": "measurement", "priority": 30 - index,

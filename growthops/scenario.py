@@ -23,6 +23,13 @@ BROAD_LAUNCH = date(2026, 8, 10)
 EXPERIMENT_WINDOW = (date(2026, 5, 1), date(2026, 6, 30))
 EXPERIMENT_PAGE = "/growth-guide"
 WORKFLOW_REPLAY_DAYS = 30  # Payments in this window flow through the lifecycle engine.
+ENROLLMENT_DEADLINE = date(2026, 9, 18)
+SITE = "https://scalelab.example"
+EMAIL_DOMAIN = "mail.scalelab.example"
+# Bulk sends moved to a new, unwarmed subdomain without DKIM alignment.
+NEW_EMAIL_DOMAIN = "news.scalelab.example"
+EMAIL_DOMAIN_SWITCH = date(2026, 9, 1)
+PROMO_DATES = (date(2026, 9, 11), date(2026, 9, 15), date(2026, 9, 17), date(2026, 9, 18))
 
 PAID_MEDIA = ("paid_social", "paid_search")
 OWNERS = ("owner-ava", "owner-ben", "owner-chloe", "owner-dev", "owner-emma", "owner-farid")
@@ -93,6 +100,28 @@ CONTENT_TOPICS = {
     "mindset": (0.55, 1.9),
 }
 
+SHORT_LINKS = (
+    # link_id, channel, path, (utm_source, utm_medium, utm_campaign) or None, created, owner, clicks/day
+    ("nl-guide", "newsletter", "/growth-guide", ("newsletter", "owned_email", "newsletter_weekly"),
+     date(2025, 7, 1), "owner-emma", 14),
+    ("yt-guide", "youtube", "/growth-guide", ("youtube", "organic_video", "youtube_founder_guide"),
+     date(2025, 7, 1), "owner-dev", 22),
+    ("web-invite", "email", "/webinar", ("webinar", "event", "webinar_growth_os"),
+     date(2025, 7, 1), "owner-emma", 9),
+    ("pod-apply", "podcast", "/apply", ("partner", "referral", "partner_podcast"),
+     date(2025, 9, 1), "owner-ben", 3),
+    ("nl-deadline", "newsletter", "/apply", ("newsletter", "owned_email", "newsletter_weekly"),
+     date(2026, 9, 10), "owner-emma", 18),
+    # Planted hygiene defects: the audit must find exactly these four.
+    ("ig-bio", "instagram", "/growth-guide", None, date(2026, 6, 1), "owner-chloe", 31),
+    ("pod-ep41", "podcast", "/apply", ("Podcast", "referral", "partner_podcast"),
+     date(2026, 8, 20), "owner-ben", 6),
+    ("yt-q3-guide", "youtube", "/growth-guide", ("youtube", "organic_video", "youtube_q3_guide"),
+     date(2026, 7, 15), "owner-dev", 12),
+    ("li-launch", "linkedin", "/executive", ("linkedin", "social", "linkedin_ceo_abm"),
+     date(2026, 9, 8), "owner-farid", 8),
+)
+
 INCIDENTS = (
     ("inc_meta_broad_quality", "lead_quality", BROAD_LAUNCH.isoformat(), None,
      "campaign:meta_broad_v17", "mql_rate_down",
@@ -106,6 +135,13 @@ INCIDENTS = (
     ("inc_crm_migration", "migration", MIGRATION_DATE.isoformat(), None,
      "system:crm", "migration_defects",
      "Legacy CRM cut-over created duplicates, blank owners, overwritten sources and lost deal links."),
+    ("inc_email_domain_switch", "deliverability", EMAIL_DOMAIN_SWITCH.isoformat(), None,
+     f"sending_domain:{NEW_EMAIL_DOMAIN}", "email_bounce_rate_up",
+     "Bulk email moved to a new sending subdomain without warm-up or DKIM alignment; "
+     "bounces and complaints rose and inbox placement fell before the enrollment deadline."),
+    ("inc_untagged_links", "tracking", "2026-06-01", None, "short_links", "link_utm_defects",
+     "Four short links (Instagram bio, a podcast episode, a YouTube guide and a LinkedIn launch post) "
+     "carry missing, unregistered or off-taxonomy UTM parameters."),
 )
 
 

@@ -13,6 +13,10 @@ import streamlit as st
 from growthops.ask_data import TOPICS, answer as ask_data
 from growthops.attribution import MODELS, summary as attribution_summary
 from growthops.brief import period_brief
+from growthops.campaign_links import audit_short_links
+from growthops.email_analytics import deliverability, email_performance, list_source_mix, newsletter_pipeline, type_summary
+from growthops.hubspot import audit as hubspot_audit
+from growthops.performance import daily_update, paid_efficiency
 from growthops.db import connect
 from growthops.diagnostics import detect, incident_recall, series as metric_series
 from growthops.experiments import analyze as experiment_analysis
@@ -84,6 +88,16 @@ def load_case(database: str) -> dict:
                    ORDER BY status <> 'dead_letter', received_at""")},
             "renewals": renewal_monitor(connection),
             "migration": migration_audit(connection),
+            "daily_update": daily_update(connection, findings=brief["findings"]),
+            "paid_7d": paid_efficiency(connection, AS_OF - timedelta(days=6), AS_OF),
+            "paid_30d": paid_efficiency(connection, AS_OF - timedelta(days=29), AS_OF),
+            "email_types": type_summary(connection, AS_OF - timedelta(days=89)),
+            "emails": email_performance(connection),
+            "newsletters": newsletter_pipeline(connection),
+            "deliverability": deliverability(connection),
+            "list_mix": list_source_mix(connection),
+            "links": audit_short_links(connection),
+            "hubspot": hubspot_audit(connection),
         }
     finally:
         connection.close()
@@ -154,7 +168,7 @@ st.title("GrowthOps OS")
 st.caption("Acquisition → CRM → cash → access → renewal for a fictional creator-led B2B education company. "
            "Fifteen months of generated data with planted incidents; the analytics have to find them.")
 
-tabs = st.tabs(["Morning brief", "Which number is right?", "Acquisition", "Funnel & content",
+tabs = st.tabs(["Morning brief", "Which number is right?", "Acquisition", "Email & links", "Funnel & content",
                 "Diagnostics", "Experiment", "Automation & renewals", "Data quality", "Ask your data"])
 
 with tabs[0]:
@@ -183,6 +197,9 @@ with tabs[0]:
     st.caption("Every sentence is assembled from computed evidence. An optional LLM may rewrite it only if the result "
                "passes a claim validator (no new numbers, dates or causal claims); this public app shows the "
                "deterministic narrative.")
+    with st.expander("Written daily update (copy into Slack or email)"):
+        st.code(case["daily_update"]["text"], language=None)
+        st.caption("Also available as `python -m growthops.performance` and `GET /metrics/daily-update`.")
 
 with tabs[1]:
     truth = case["truth"]
@@ -243,6 +260,26 @@ with tabs[2]:
             "mql_rate": st.column_config.NumberColumn("MQL rate", format="percent"),
             "cost_per_mql": st.column_config.NumberColumn("Cost/MQL ($)", format="localized", step=1),
             "roas": st.column_config.NumberColumn("ROAS", format="%.2f×")})
+    st.subheader("Paid efficiency: cost per lead, per MQL and per booked call")
+    window = st.radio("Window", ["Last 7 days", "Last 30 days"], horizontal=True, index=1)
+    paid = pd.DataFrame(case["paid_7d" if window == "Last 7 days" else "paid_30d"])
+    for column in ("spend_cents", "cpm_cents", "cpc_cents", "cost_per_lead_cents", "cost_per_mql_cents",
+                   "cost_per_booked_call_cents", "net_cash_cents"):
+        paid[column.replace("_cents", "")] = paid[column] / 100
+    st.dataframe(paid[["segment", "spend", "impressions", "cpm", "ctr", "cpc", "leads", "cost_per_lead", "mqls",
+                       "cost_per_mql", "calls_booked", "cost_per_booked_call", "closed_won_deals", "net_cash",
+                       "net_cash_roas"]], hide_index=True, width="stretch", column_config={
+        "segment": "Campaign", "spend": st.column_config.NumberColumn("Spend ($)", format="localized", step=1),
+        "cpm": st.column_config.NumberColumn("CPM ($)", format="%.2f"),
+        "ctr": st.column_config.NumberColumn("CTR", format="percent"),
+        "cpc": st.column_config.NumberColumn("CPC ($)", format="%.2f"),
+        "cost_per_lead": st.column_config.NumberColumn("CPL ($)", format="localized", step=1),
+        "cost_per_mql": st.column_config.NumberColumn("Cost/MQL ($)", format="localized", step=1),
+        "cost_per_booked_call": st.column_config.NumberColumn("Cost/booked call ($)", format="localized", step=1),
+        "net_cash": st.column_config.NumberColumn("Net cash ($)", format="localized", step=1),
+        "net_cash_roas": st.column_config.NumberColumn("ROAS", format="%.2f×")})
+    st.caption("Activity basis: spend, leads, MQLs, booked calls, wins and cash inside the window, credited to the "
+               "campaign that created the lead. Cash lags leads by weeks, so short-window ROAS understates.")
     model = st.selectbox("Attribution model", MODELS, index=1, format_func=lambda m: m.replace("_", " ").title())
     credit = pd.DataFrame(case["attribution"][model]).fillna({"campaign_id": "(untracked)"})
     credit["net_cash"] = credit["net_cash_cents"] / 100
@@ -257,6 +294,66 @@ with tabs[2]:
         st.dataframe(compare.style.format("${:,.0f}"), width="stretch")
 
 with tabs[3]:
+    check = case["deliverability"]
+    flagged = check["flagged_domains"]
+    if flagged:
+        recent = {row["sending_domain"]: row for row in check["recent_by_domain"]}[flagged[0]]
+        st.error(f"**Deliverability: {flagged[0]} breaks the bounce or complaint limit.** Bounce rate "
+                 f"{pct(recent['bounce_rate'])}, complaint rate {pct(recent['complaint_rate'], 2)} (limits 2% and "
+                 f"0.1%) across {recent['emails']} bulk sends since {check['affected_emails'][0]['sent_date']}, "
+                 "including the enrollment-deadline promos.")
+    st.subheader("Email performance, last 90 days")
+    types = pd.DataFrame(case["email_types"])
+    st.dataframe(types[["email_type", "emails", "sends", "delivery_rate", "reported_open_rate", "human_open_rate",
+                        "click_rate", "click_to_open_rate", "unsubscribe_rate", "complaint_rate"]],
+                 hide_index=True, width="stretch", column_config={"email_type": "Type", **{
+        key: st.column_config.NumberColumn(key.replace("_", " ").capitalize(), format="percent") for key in (
+            "delivery_rate", "reported_open_rate", "human_open_rate", "click_rate", "click_to_open_rate",
+            "unsubscribe_rate", "complaint_rate")}})
+    st.caption("Reported opens include machine opens from mailbox privacy proxies, so engagement is judged on human "
+               "opens and clicks. Click-to-open = clicks / human opens.")
+    sends = pd.DataFrame([row for row in case["emails"] if row["email_type"] != "nurture"])
+    sends["sent"] = pd.to_datetime(sends["sent_date"])
+    sends = sends[sends["sent_date"] >= (AS_OF - timedelta(days=180)).isoformat()]
+    rates = sends.melt(id_vars=["sent", "email_type", "sending_domain", "subject"],
+                       value_vars=["human_open_rate", "bounce_rate"], var_name="rate", value_name="value")
+    rates["rate"] = rates["rate"].map({"human_open_rate": "Human open rate", "bounce_rate": "Bounce rate"})
+    st.altair_chart(alt.Chart(rates).mark_point(filled=True, size=60).encode(
+        x=alt.X("sent:T", title=None), y=alt.Y("value:Q", title=None, axis=alt.Axis(format=".0%")),
+        color=alt.Color("rate:N", scale=alt.Scale(domain=["Human open rate", "Bounce rate"], range=[BLUE, RED]),
+                        legend=alt.Legend(title=None, orient="top")),
+        shape=alt.Shape("sending_domain:N", legend=alt.Legend(title="Sending domain", orient="bottom")),
+        tooltip=["sent:T", "email_type:N", "subject:N", "sending_domain:N", "rate:N",
+                 alt.Tooltip("value:Q", format=".1%")]).properties(height=260), width="stretch")
+    st.subheader("Newsletter to pipeline")
+    issues = pd.DataFrame(case["newsletters"]).tail(12)
+    issues["net_cash"] = issues["net_cash_cents"] / 100
+    st.dataframe(issues[["sent_date", "delivered", "clicks", "leads", "leads_per_1k_delivered", "mqls",
+                         "calls_booked", "customers", "net_cash"]], hide_index=True, width="stretch",
+                 column_config={"net_cash": st.column_config.NumberColumn("Net cash ($)", format="localized", step=1)})
+    st.caption("Leads created by the newsletter between one issue and the next, followed to MQL, booked call and "
+               "cash. Descriptive, not incremental.")
+    cols = st.columns([1, 1])
+    with cols[0]:
+        st.markdown("#### List growth by acquisition source (last 3 months)")
+        mix = pd.DataFrame(case["list_mix"])
+        st.altair_chart(alt.Chart(mix).mark_bar(cornerRadius=3, color=BLUE).encode(
+            y=alt.Y("source:N", sort="-x", title=None), x=alt.X("share:Q", title="Share of new contacts",
+                                                                axis=alt.Axis(format=".0%")),
+            tooltip=["source:N", "contacts:Q", alt.Tooltip("share:Q", format=".1%")]).properties(height=28 * len(mix) + 40),
+            width="stretch")
+    with cols[1]:
+        links = case["links"]
+        st.markdown("#### Short-link hygiene")
+        st.metric("Links with UTM defects", f"{links['links_with_issues']} of {len(links['links'])}")
+        st.caption(f"They carried {pct(links['share_of_recent_clicks_broken'], 0)} of short-link clicks in the last "
+                   f"{links['recent_days']} days; those visits reach the CRM without a campaign.")
+        table = pd.DataFrame(links["links"])
+        table["issues"] = table["issues"].map(lambda items: "; ".join(items) or "OK")
+        st.dataframe(table[["link_id", "channel", "recent_clicks", "issues"]].sort_values("recent_clicks",
+                     ascending=False), hide_index=True, width="stretch")
+
+with tabs[4]:
     stages = pd.DataFrame(case["funnel"])
     st.subheader("Lead to renewal")
     st.altair_chart(alt.Chart(stages).mark_bar(cornerRadius=3, color=BLUE).encode(
@@ -287,7 +384,7 @@ with tabs[3]:
         "cash_per_1k_views": st.column_config.NumberColumn("Cash per 1k views ($)", format="localized", step=1)})
     st.caption("First identified content touch: descriptive influence, not incrementality.")
 
-with tabs[4]:
+with tabs[5]:
     st.subheader("What changed, and which segment explains it")
     recall = pd.DataFrame(case["recall"])
     st.success(f"Ground-truth check: {int(recall['root_cause_correct'].sum())} of {len(recall)} planted incidents "
@@ -323,7 +420,7 @@ with tabs[4]:
                  alt.Tooltip("share_of_change:Q", format=".0%")]).properties(height=260), width="stretch")
     st.caption("Exact shift-share decomposition: segment contributions (mix + rate effects) sum to the total change.")
 
-with tabs[5]:
+with tabs[6]:
     experiment = case["experiment"]
     comparison = experiment["comparison"]
     st.subheader("CTA test: more leads, but more money?")
@@ -357,7 +454,7 @@ with tabs[5]:
     st.altair_chart(alt.hconcat(*charts))
     st.info(f"**Decision:** {comparison['decision']}")
 
-with tabs[6]:
+with tabs[7]:
     ops = case["ops"]
     st.subheader("Payment → CRM → community access (last 30 days of webhooks)")
     cols = st.columns(5)
@@ -402,7 +499,7 @@ with tabs[6]:
     if renewals["issues"]:
         st.dataframe(pd.DataFrame(renewals["issues"]), hide_index=True, width="stretch")
 
-with tabs[7]:
+with tabs[8]:
     st.subheader("Can we trust the numbers?")
     health = pd.DataFrame([
         ("UTM completeness", quality["utm_completeness"], TARGETS["utm_completeness"]),
@@ -431,8 +528,18 @@ with tabs[7]:
     cols[4].metric("No stage regression", pct(migration["stage_match_rate"]))
     st.caption("The CLI's safe-repair command restores blank owners and placeholder sources from unambiguous legacy "
                "matches and logs every change; duplicates and stage regressions are left for a person.")
+    crm = case["hubspot"]
+    st.markdown("#### HubSpot-shaped CRM audit")
+    cols = st.columns(4)
+    cols[0].metric("Rows merged on email", crm["rows_merged_on_email"])
+    cols[1].metric("Paying, stage not customer", crm["paying_contacts_not_customer"])
+    cols[2].metric("Won deal, stage not customer", crm["closed_won_contacts_not_customer"])
+    cols[3].metric("Stale leads (non-marketing candidates)", f"{crm['stale_leads_non_marketing_candidates']:,}")
+    st.caption("Mapped to HubSpot's lifecyclestage, dealstage and hubspot_owner_id values; `python -m growthops.hubspot` "
+               "writes import-ready contacts and deals CSVs and the custom-property definitions. No HubSpot portal is "
+               f"connected. Stale rule: {crm['stale_rule']}.")
 
-with tabs[8]:
+with tabs[9]:
     st.subheader("Ask your data")
     st.caption("Questions map to allowlisted, tested metric functions; nothing typed here is executed as SQL. "
                "Topics: " + ", ".join(TOPICS) + ".")

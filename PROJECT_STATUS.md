@@ -8,7 +8,10 @@ Live synthetic dashboard: https://growthops-os.streamlit.app/ · GitHub: https:/
   data: 12 campaigns across Meta, Google, LinkedIn, YouTube, newsletter, webinars and partners; 30 content
   items; a lead-to-renewal funnel; payment plans, refunds, community subscriptions and renewals; ad-platform
   self-reported conversions; a legacy-CRM snapshot with migration defects; a visitor-randomized CTA test.
-  Four incidents are planted and recorded in an `incidents` table as ground truth. Deterministic; about 3 s.
+  Weekly newsletters, webinar invites, deadline promos and nurture sends (with privacy-proxy machine opens) and
+  nine Bitly-style short links with daily clicks come from a separate random stream, so adding them changed no
+  other number. Six incidents are planted and recorded in an `incidents` table as ground truth. Deterministic;
+  about 3 s.
 - **Revenue truth** (`reconciliation.py`): platform claims → warehouse paid cash and CRM bookings → net cash,
   each step independently computed, residual 0; per-platform self-reported vs warehouse ROAS.
 - **Diagnostics** (`diagnostics.py`): rolling 7-day vs 56-day baseline detection (overdispersion-adjusted
@@ -19,11 +22,18 @@ Live synthetic dashboard: https://growthops-os.streamlit.app/ · GitHub: https:/
 - **Lifecycle engine** (`workflow.py`): HMAC-signed webhooks, event and payment idempotency, per-step traces,
   exponential backoff retry worker, dead-letter queue, role-gated operator replay, operations health metrics.
   The last 30 days of payments are replayed through it with simulated provider faults.
+- **Marketing operations**: paid efficiency (CPM, CTR, CPC, CPL, cost per MQL, cost per booked call, window
+  ROAS; `performance.py`), a written daily update (CLI, API, Streamlit copy block), email analytics with a
+  sending-domain deliverability check that recovers the planted domain switch (`email_analytics.py`), newsletter
+  to pipeline, list source mix, and a short-link registry audit that finds exactly the four planted defects.
+- **HubSpot-shaped CRM layer** (`hubspot.py`): lifecycle, deal-stage and owner mapping, Properties API
+  definitions, import-ready contacts/deals CSVs, a CRM v3 search request builder and response parser (fixture
+  tested), Original Traffic Source mismatch check and a CRM hygiene audit. No portal is connected.
 - **Attribution** (five models, exact-cent conservation), funnel timing and by-channel conversion, content to
   pipeline, renewal-risk queue, migration audit with logged safe repairs, allowlisted ask-your-data.
 - **Warehouse**: SQLite reference marts and a DuckDB dbt project (staging → intermediate → marts, schema and
-  singular tests, including bridge tie-out) verified against the Python reference.
-- **BI**: nine-view Streamlit app (light and dark), FastAPI Executive Pulse page, Power BI PBIP/TMDL with 11
+  singular tests, including bridge tie-out, email and link-hygiene marts) verified against the Python reference.
+- **BI**: ten-view Streamlit app (light and dark), FastAPI Executive Pulse page, Power BI PBIP/TMDL with 11
   embedded marts, and a formula-driven Excel workbook with a zero-difference audit sheet, the last two rebuilt
   by script and checked for drift in CI.
 - **Quality gates**: Ruff, pytest (unit, invariant, ground-truth, API, BI and case-study drift tests), the
@@ -31,7 +41,8 @@ Live synthetic dashboard: https://growthops-os.streamlit.app/ · GitHub: https:/
 
 ## Not implemented yet
 
-- Real HubSpot, Stripe, GA4, ad-platform and community integrations (adapters are simulated).
+- Real HubSpot, Stripe, GA4, ad-platform, email-platform, link-shortener and community integrations (adapters are
+  simulated; the HubSpot import files have not been loaded into a portal).
 - PostgreSQL operations store, BigQuery deployment, scheduled jobs and alert delivery.
 - Incrementality measurement (geo holdouts, conversion-lift studies); attribution here is descriptive.
 - A published Power BI Service report; the PBIP project was previously opened and queried in Power BI Desktop,
