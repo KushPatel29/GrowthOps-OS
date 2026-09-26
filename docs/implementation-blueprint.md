@@ -4,7 +4,7 @@ Status: **design contract plus a runnable local slice**. The code in `growthops/
 
 ## Product and evidence boundary
 
-Primary user: a Marketing Data Analyst who needs a defensible acquisition-to-cash view and a daily explanation of changes. Secondary users: revenue operations and support staff investigating failed customer workflows. All business and CRM records are synthetic and clearly labelled. This is a portfolio simulation, not a claim of access to Martell systems.
+Primary user: a Marketing Data Analyst who needs a defensible acquisition-to-cash view and a daily explanation of changes. Secondary users: revenue operations and support staff investigating failed customer workflows. All business and CRM records are synthetic and clearly labelled. This is a portfolio simulation, not a claim of access to any real company's systems.
 
 The working question is: which acquisition and content activity produced qualified pipeline and **net collected cash**, and how much of that answer is supported by healthy tracking and CRM data?
 

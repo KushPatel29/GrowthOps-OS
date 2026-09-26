@@ -5,6 +5,7 @@ select
   try_cast(t.occurred_at as timestamptz) as occurred_at,
   cast(t.touch_type as varchar) as touch_type,
   nullif(cast(t.utm_source as varchar), '') as utm_source,
+  nullif(cast(t.landing_page as varchar), '') as landing_page,
   c.source,
   c.medium,
   coalesce(c.registry_valid, 0) as registry_valid,

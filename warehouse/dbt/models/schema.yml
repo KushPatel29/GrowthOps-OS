@@ -126,6 +126,16 @@ models:
     columns:
       - name: payment_id
         data_tests: [unique, not_null]
+      - name: status
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [succeeded, failed]
+      - name: payment_type
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [new, installment, renewal]
       - name: customer_id
         data_tests:
           - relationships:
@@ -196,4 +206,35 @@ models:
     description: Fixed synthetic as-of renewal queue; read-only, no provider retries.
     columns:
       - name: subscription_id
+        data_tests: [unique, not_null]
+  - name: stg_platform_conversions
+    description: Purchase conversions each ad platform credits to itself, at pixel (contract) value.
+    columns:
+      - name: conversion_id
+        data_tests: [unique, not_null]
+      - name: platform
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [meta, google, linkedin]
+      - name: contact_id
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('stg_contacts')
+                field: contact_id
+  - name: int_duplicate_contacts
+    description: Contacts that share a normalized email with a surviving (migrated or earliest) record.
+    columns:
+      - name: contact_id
+        data_tests: [unique, not_null]
+  - name: mart_revenue_bridge
+    description: CRM closed-won value to gross collected to net collected cash, one named step per row.
+    columns:
+      - name: step
+        data_tests: [unique, not_null]
+  - name: mart_platform_comparison
+    description: Ad-platform self-reported conversion value versus warehouse lead-creation net cash, by platform.
+    columns:
+      - name: platform
         data_tests: [unique, not_null]

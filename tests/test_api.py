@@ -5,70 +5,76 @@ import json
 from fastapi.testclient import TestClient
 
 from growthops.api import app
-from growthops.seed import seed
 
 
-def test_signed_webhook_and_customer_lookup(tmp_path, monkeypatch):
-    database = tmp_path / "api.db"
-    seed(str(database), people=8)
-    monkeypatch.setenv("GROWTHOPS_DATABASE", str(database))
+def _signed(body: dict, secret: bytes = b"test-secret") -> tuple[bytes, dict]:
+    raw = json.dumps(body).encode()
+    return raw, {"X-GrowthOps-Signature": hmac.new(secret, raw, hashlib.sha256).hexdigest()}
+
+
+def test_webhook_security_idempotency_and_lookup(db_path, monkeypatch):
+    monkeypatch.setenv("GROWTHOPS_DATABASE", str(db_path))
     monkeypatch.setenv("GROWTHOPS_WEBHOOK_SECRET", "test-secret")
-    body = json.dumps({
-        "event_id": "evt-api-1",
-        "event_type": "payment.succeeded",
-        "payment_id": "pay-api-1",
-        "customer_id": "c-00001",
-        "amount_cents": 32000,
-        "paid_at": "2026-09-02T00:00:00Z",
-    }).encode()
-    signature = hmac.new(b"test-secret", body, hashlib.sha256).hexdigest()
+    event = {"event_id": "evt-api-1", "event_type": "payment.succeeded", "payment_id": "pay-api-1",
+             "customer_id": "c-000002", "amount_cents": 32000, "paid_at": "2026-09-26T00:00:00Z"}
+    body, headers = _signed(event)
     with TestClient(app) as client:
         assert client.post("/webhooks/payments", content=body).status_code == 401
-        first = client.post("/webhooks/payments", content=body, headers={"X-GrowthOps-Signature": signature})
-        assert first.status_code == 202
-        assert first.json()["status"] == "completed"
-        repeat = client.post("/webhooks/payments", content=body, headers={"X-GrowthOps-Signature": signature})
-        assert repeat.json()["duplicate"] is True
-        customer = client.get("/ops/customers/c-00001").json()
-        assert customer["crm"]["current_stage"] == "customer"
-        assert customer["access"]["status"] == "active"
-        assert len([p for p in customer["payments"] if p["payment_id"] == "pay-api-1"]) == 1
-        assert customer["workflows"][0]["event_id"] == "evt-api-1"
-        reuse = json.dumps({
-            "event_id": "evt-api-2", "event_type": "payment.succeeded",
-            "payment_id": "pay-api-1", "customer_id": "c-00001",
-            "amount_cents": 32000, "paid_at": "2026-09-02T00:00:00Z",
-        }).encode()
-        reuse_sig = hmac.new(b"test-secret", reuse, hashlib.sha256).hexdigest()
-        assert client.post("/webhooks/payments", content=reuse,
-                           headers={"X-GrowthOps-Signature": reuse_sig}).status_code == 409
+        first = client.post("/webhooks/payments", content=body, headers=headers)
+        assert first.status_code == 202 and first.json()["status"] == "completed"
+        assert client.post("/webhooks/payments", content=body, headers=headers).json()["duplicate"] is True
+        customer = client.get("/ops/customers/c-000002").json()
+        assert customer["crm"]["current_stage"] == "customer" and customer["access"]["status"] == "active"
+        assert [p for p in customer["payments"] if p["payment_id"] == "pay-api-1"]
+        reuse, reuse_headers = _signed({**event, "event_id": "evt-api-2"})
+        assert client.post("/webhooks/payments", content=reuse, headers=reuse_headers).status_code == 409
+        trace = client.get("/ops/events/evt-api-1").json()
+        assert trace["deliveries"] == 2 and len(trace["attempts_log"]) == 4
+
+
+def test_campaign_links_enforce_taxonomy(db_path, monkeypatch):
+    monkeypatch.setenv("GROWTHOPS_DATABASE", str(db_path))
+    with TestClient(app) as client:
         link = client.post("/campaign-links", json={
-            "campaign_id": "meta-founder",
+            "campaign_id": "meta_prospecting_founder",
             "destination_url": "https://scalelab.test/guide?ref=home&utm_source=bad#form",
-            "content": "video_hook_03",
-        })
+            "content": "video_hook_03"})
         assert link.status_code == 200
-        assert "utm_source=meta" in link.json()["url"]
-        assert "utm_campaign=meta_founder" in link.json()["url"]
-        assert "ref=home" in link.json()["url"]
-        assert link.json()["url"].endswith("#form")
+        url = link.json()["url"]
+        assert "utm_source=meta" in url and "utm_campaign=meta_prospecting_founder" in url
+        assert "ref=home" in url and "utm_source=bad" not in url and url.endswith("#form")
         invalid = client.post("/campaign-links", json={
-            "campaign_id": "FB-Broad",
-            "destination_url": "https://scalelab.test/guide",
-            "content": "video_hook_03",
-        })
+            "campaign_id": "FB-Broad", "destination_url": "https://scalelab.test/guide", "content": "video_hook_03"})
         assert invalid.status_code == 422
+
+
+def test_analytics_and_operations_endpoints(db_path, monkeypatch):
+    monkeypatch.setenv("GROWTHOPS_DATABASE", str(db_path))
+    monkeypatch.setenv("GROWTHOPS_OPS_TOKEN", "ops-secret")
+    with TestClient(app) as client:
         executive = client.get("/metrics/executive").json()
-        assert executive["period"] == "all_time_synthetic"
-        assert executive["metrics"]["leads"] == 8
+        assert executive["metrics"]["leads"] > 10_000
         assert client.get("/metrics/funnel").json()[0]["stage"] == "lead"
-        assert client.get("/metrics/attribution/lead_creation").status_code == 200
+        for model in ("lead_creation", "linear"):
+            assert client.get(f"/metrics/attribution/{model}").status_code == 200
         assert client.get("/metrics/attribution/unsupported").status_code == 422
-        assert client.get("/metrics/daily?days=14").status_code == 200
-        assert client.get("/metrics/brief").json()["current"]["spend_cents"] > 0
-        assert client.get("/ops/migration").json()["missing_contacts"] == 3
-        assert len(client.get("/metrics/content").json()) == 8
+        assert len(client.get("/metrics/daily?days=14").json()) == 14
+        assert client.get("/metrics/brief").json()["findings"][0]["id"] == "ops_dead_letter"
+        truth = client.get("/metrics/revenue-truth").json()
+        assert truth["platform_bridge"]["residual_cents"] == 0 and truth["crm_bridge"]["residual_cents"] == 0
+        anomalies = client.get("/metrics/anomalies").json()
+        assert all(item["root_cause_correct"] for item in anomalies["ground_truth_check"])
+        assert client.get("/metrics/narrative").json()["mode"] == "deterministic"
+        assert client.get("/ops/migration").json()["missing_contacts"] > 0
+        assert len(client.get("/metrics/content").json()) == 30
         assert client.get("/metrics/experiments/cta_growth_plan").status_code == 200
+        assert client.get("/ops/workflows").json()["dead_letter"] > 0
+        queue = client.get("/ops/paid-without-access").json()
+        stuck = next(row for row in queue if row["workflow_status"] == "dead_letter")
+        event_id = f"evt-{stuck['payment_id']}"
+        assert client.post(f"/ops/events/{event_id}/replay").status_code == 403
+        replayed = client.post(f"/ops/events/{event_id}/replay", headers={"X-GrowthOps-Ops-Token": "ops-secret"})
+        assert replayed.status_code == 200 and replayed.json()["status"] == "completed"
+        assert client.get(f"/ops/customers/{stuck['customer_id']}").json()["diagnosis"] == "OK"
         page = client.get("/dashboard")
-        assert page.status_code == 200
-        assert "Synthetic scenario" in page.text
+        assert page.status_code == 200 and "Synthetic scenario" in page.text

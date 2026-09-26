@@ -8,6 +8,8 @@ select
   p.customer_id,
   p.deal_id,
   p.paid_at,
+  p.payment_type,
+  p.product_id,
   p.amount_cents as gross_cents,
   coalesce(r.refund_cents, 0) as refund_cents,
   p.amount_cents - coalesce(r.refund_cents, 0) as net_cash_cents

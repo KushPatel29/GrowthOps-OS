@@ -4,29 +4,40 @@ Live synthetic dashboard: https://growthops-os.streamlit.app/ · GitHub: https:/
 
 ## Implemented and verified
 
-- Reproducible local ScaleLab scenario with 240 contacts, 5 acquisition campaigns, direct returns, deliberate CRM and attribution defects, lifecycle events, payments, and refunds.
-- Governed local metrics: lead, MQL, booked/attended calls, opportunity, closed-won, gross/refund/net cash, paid spend, CPL, net cash ROAS, quality rates, and funnel transition timing.
-- Exact-cent first touch, lead creation, last non-direct, and U-shaped cash attribution with unassigned cash preserved.
-- SQL staging and marts for lead-creation cash allocation, campaign performance, revenue, funnel, and measurement quality. Reconciliation tests compare them to the Python reference.
-- HMAC-signed payment webhook, event/payment idempotency, five-minute processing claims, persisted workflow steps, retry after partial failure, CRM update, and simulated access grant.
-- Campaign link builder that enforces registry taxonomy and creates canonical UTMs.
-- Read-only operations customer lookup and analytics endpoints with deterministic all-time executive findings.
-- Responsive Executive Pulse page with cash ledger, funnel, attribution model selector, and quality findings. Desktop and mobile browser renders were inspected.
-- Docker/Compose configuration and GitHub Actions checks. Docker execution is unverified because Docker is unavailable on this host.
-- Eleven Python tests and Ruff passing. DuckDB/dbt seeds, build, data tests, and cross-engine parity checks passing. Power BI-ready CSV marts export successfully.
-- 270 daily spend records, 8 content items, 60 identified engagements, 243 legacy contacts, and 1,000 CTA experiment exposures extend the synthetic scenario.
-- CRM migration audit and logged, idempotent repairs for unambiguous null owner/source fields; content-to-pipeline and experiment marts; recent-week brief and corresponding dashboard sections.
-- Six-view Streamlit dashboard with approved-question ask-your-data interface, deterministic evidence brief, and read-only renewal risk monitor.
-- Formula-backed Excel dashboard with two native charts, source marts, and a reconciliation audit.
-- Editable Power BI PBIP/PBIR source with nine embedded marts and four pages; report JSON and project metadata pass Microsoft schemas. Desktop rendering has not been verified.
+- **Scenario generator** (`growthops/seed.py`, `growthops/scenario.py`): fifteen months of seeded, probabilistic
+  data: 12 campaigns across Meta, Google, LinkedIn, YouTube, newsletter, webinars and partners; 30 content
+  items; a lead-to-renewal funnel; payment plans, refunds, community subscriptions and renewals; ad-platform
+  self-reported conversions; a legacy-CRM snapshot with migration defects; a visitor-randomized CTA test.
+  Four incidents are planted and recorded in an `incidents` table as ground truth. Deterministic; about 3 s.
+- **Revenue truth** (`reconciliation.py`): platform claims → warehouse paid cash and CRM bookings → net cash,
+  each step independently computed, residual 0; per-platform self-reported vs warehouse ROAS.
+- **Diagnostics** (`diagnostics.py`): rolling 7-day vs 56-day baseline detection (overdispersion-adjusted
+  binomial z for rates, robust z for volumes), practical-significance filter, exact shift-share root cause.
+  Both detectable planted incidents are found with the correct root cause within three days.
+- **Morning brief** (`brief.py`) and **claim-validated narrative** (`narrator.py`) with a 30-case labelled eval
+  set; optional Claude writer used only when its output passes the validator.
+- **Lifecycle engine** (`workflow.py`): HMAC-signed webhooks, event and payment idempotency, per-step traces,
+  exponential backoff retry worker, dead-letter queue, role-gated operator replay, operations health metrics.
+  The last 30 days of payments are replayed through it with simulated provider faults.
+- **Attribution** (five models, exact-cent conservation), funnel timing and by-channel conversion, content to
+  pipeline, renewal-risk queue, migration audit with logged safe repairs, allowlisted ask-your-data.
+- **Warehouse**: SQLite reference marts and a DuckDB dbt project (staging → intermediate → marts, schema and
+  singular tests, including bridge tie-out) verified against the Python reference.
+- **BI**: nine-view Streamlit app (light and dark), FastAPI Executive Pulse page, Power BI PBIP/TMDL with 11
+  embedded marts, and a formula-driven Excel workbook with a zero-difference audit sheet, the last two rebuilt
+  by script and checked for drift in CI.
+- **Quality gates**: Ruff, pytest (unit, invariant, ground-truth, API, BI and case-study drift tests), the
+  guardrail eval, a Streamlit render test, dbt build and parity, and a Docker build in GitHub Actions.
 
 ## Not implemented yet
 
-- Real HubSpot, Stripe, GA4, ad-platform, and community integrations.
-- PostgreSQL operations store, BigQuery deployment, and verified/published Power BI `.pbix` report. A PBIP source project and CSVs are provided.
-- Scheduled renewal/retry worker, alerting, RBAC, and deployed operations console. The renewal monitor is read-only.
-- Production AI analyst/classifier/RAG evaluation pipeline. The local brief uses constrained evidence selection, not an autonomous agent.
+- Real HubSpot, Stripe, GA4, ad-platform and community integrations (adapters are simulated).
+- PostgreSQL operations store, BigQuery deployment, scheduled jobs and alert delivery.
+- Incrementality measurement (geo holdouts, conversion-lift studies); attribution here is descriptive.
+- A published Power BI Service report; the PBIP project was previously opened and queried in Power BI Desktop,
+  and its visual layout after the data refresh has not been re-inspected in Desktop.
 
-## Next engineering increment
+## Next increment
 
-Implement a real ingestion contract and persistent PostgreSQL operational store, then wire provider sandboxes and scheduled freshness checks. A native Power BI report should use the verified marts and the definitions in the metric catalog. The current brief is a deterministic on-demand period comparison, not a scheduled production report. The public Streamlit app uses synthetic data only.
+Swap the simulated payment and CRM adapters for sandbox providers behind the same step interface, move
+operational state to PostgreSQL with Alembic migrations, and schedule the brief with source-freshness checks.

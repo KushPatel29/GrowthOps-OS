@@ -11,6 +11,7 @@ from growthops.report import campaign_performance, measurement_health, metrics
 from growthops.migration import audit as migration_audit
 from growthops.experiments import analyze as experiment_analysis
 from growthops.renewals import monitor as renewal_monitor
+from growthops.reconciliation import crm_bridge, platform_comparison
 
 
 def verify(sqlite_database: str, duckdb_database: str) -> None:
@@ -106,6 +107,19 @@ def verify(sqlite_database: str, duckdb_database: str) -> None:
         assert sum(renewal_counts.values()) == expected_renewals["active_subscriptions"]
         assert renewal_counts.get("high", 0) == expected_renewals["high_risk"]
         assert renewal_counts.get("medium", 0) == expected_renewals["due_soon"]
+
+        bridge = {step: int(cents) for step, cents in warehouse.execute(
+            "select step, cents from mart_revenue_bridge").fetchall()}
+        for step in crm_bridge(source)["steps"]:
+            assert bridge[step["step"]] == step["cents"], f"revenue bridge {step['step']}"
+
+        platforms = {row[0]: row[1:] for row in warehouse.execute(
+            """select platform, spend_cents, reported_conversions, reported_value_cents, warehouse_net_cash_cents
+               from mart_platform_comparison""").fetchall()}
+        for row in platform_comparison(source):
+            expected = (row["spend_cents"], row["reported_conversions"], row["reported_value_cents"],
+                        row["warehouse_net_cash_cents"])
+            assert tuple(int(value) for value in platforms[row["platform"]]) == expected, row["platform"]
     finally:
         warehouse.close()
         source.close()
