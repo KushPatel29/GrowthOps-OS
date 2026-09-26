@@ -6,12 +6,12 @@ All timestamps are UTC. A report must show its time range, cohort basis, data-as
 |---|---|---|
 | Lead | Distinct canonical person with a first valid form submission or CRM creation event | One per person; local slice counts contact rows because identity resolution is pending |
 | MQL | Distinct person with a validated first `mql` lifecycle event | Count at first MQL date; later reversals stay in history |
-| Booked call | Distinct scheduled meeting linked to a person | Exclude canceled meetings unless separately reported |
-| Attended call | Distinct booked call with attendance evidence | One attendance per meeting |
+| Booked call | Distinct person with a `call_booked` lifecycle event | Local slice does not model meeting IDs or cancellations |
+| Attended call | Distinct person with a `call_attended` lifecycle event | Local slice does not model meeting attendance evidence |
 | Opportunity | Distinct deal entering an opportunity stage | One first entry per deal |
 | Closed won | Distinct deal first entering closed-won | Booked outcome, not cash |
 | Customer | Distinct person with a successful payment and valid product entitlement | Local workflow uses payment plus access state |
-| Spend | Sum platform cost after source deduplication | Platform/day/creative; excludes agency fee unless configured |
+| Spend | Sum paid-media daily spend | Local slice is campaign/day; excludes agency fee |
 | Gross collected | Sum successful captured payment amounts | Payment event date, gross of refunds |
 | Refunds | Sum successful refund amounts | Refund event date; tied to original payment |
 | Net collected | Gross collected minus refunds | Cash basis; excludes tax/fees until modeled explicitly |
@@ -28,6 +28,10 @@ All timestamps are UTC. A report must show its time range, cohort basis, data-as
 | UTM completeness | Acquisition touches with valid `utm_source` / eligible acquisition touches | Include unresolved source in denominator |
 | Registry match | Acquisition touches mapped to a valid campaign / eligible acquisition touches | Invalid naming fails even when source is present |
 | Deal/payment reconciliation | Successful payments mapped to a valid deal / successful payments | Report count and money value separately |
+| Content-influenced net cash | Net cash from contacts whose first identified content engagement is the given item | Descriptive first-content influence, not causal incrementality or fractional attribution |
+| Experiment lead rate | Exposed visitors with a linked lead / exposed visitors in variant | Visitor assignment unit; one exposure per experiment/visitor |
+| Experiment MQL per lead | Exposed linked leads reaching MQL / exposed linked leads | Guardrail for lead quality |
+| Experiment cash per visitor | Net cash from exposed linked customers / all exposed visitors in variant | Primary experiment metric; refunds included; exploratory synthetic sample |
 
 ## Attribution rules
 
@@ -35,4 +39,4 @@ Use one row per net payment allocation and preserve unassigned cash. First touch
 
 ## Metric governance
 
-Each published measure has an owner, SQL expression, version, source freshness SLA, and failed-quality behavior. The executive brief suppresses or marks a metric when its source is stale or a critical reconciliation test fails. `growthops.report` currently implements the local subset: leads, MQLs, closed won, spend, gross/refund/net cash, lead-to-MQL, CPL, net cash ROAS, UTM completeness, registry match, owner completeness, duplicate rows, and payment/deal match.
+Production governance requires each published measure to have an owner, SQL expression, version, source freshness SLA, and failed-quality behavior. The local simulator has definitions and dbt tests but no source freshness monitoring or suppression. `growthops.report` implements leads, MQLs, closed won, spend, gross/refund/net cash, lead-to-MQL, CPL, net cash ROAS, UTM completeness, registry match, owner completeness, duplicate rows, and payment/deal match. Daily, content, migration, and experiment contracts are exposed by separate modules and verified against dbt marts.

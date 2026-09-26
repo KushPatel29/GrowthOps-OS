@@ -9,7 +9,7 @@ from contextlib import asynccontextmanager
 from importlib.resources import files
 from typing import Literal
 
-from fastapi import FastAPI, Header, HTTPException, Request
+from fastapi import FastAPI, Header, HTTPException, Query, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from pydantic import ValidationError
 
@@ -18,6 +18,10 @@ from growthops.campaign_links import LinkRequest, build_link
 from growthops.attribution import summary as attribution_summary
 from growthops.funnel import funnel
 from growthops.report import executive_brief
+from growthops.brief import daily_series, period_brief
+from growthops.warehouse import build as build_warehouse
+from growthops.migration import audit as migration_audit
+from growthops.experiments import analyze as experiment_analysis
 from growthops.workflow import EventConflict, PaymentEvent, process_payment
 
 
@@ -27,9 +31,7 @@ def database_path() -> str:
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    connection = connect(database_path())
-    initialize(connection)
-    connection.close()
+    build_warehouse(database_path())
     yield
 
 
@@ -96,6 +98,48 @@ def attribution_metrics(model: Literal["first_touch", "lead_creation", "last_non
         connection.close()
 
 
+@app.get("/metrics/daily")
+def daily_metrics(days: int = Query(default=90, ge=1, le=365)) -> list[dict]:
+    connection = connect(database_path())
+    try:
+        return daily_series(connection, days)
+    finally:
+        connection.close()
+
+
+@app.get("/metrics/content")
+def content_metrics() -> list[dict]:
+    connection = connect(database_path())
+    try:
+        return [dict(row) for row in connection.execute(
+            "SELECT * FROM mart_content_performance ORDER BY influenced_net_cash_cents DESC, content_id"
+        ).fetchall()]
+    finally:
+        connection.close()
+
+
+@app.get("/metrics/experiments/{experiment_id}")
+def experiment_metrics(experiment_id: str) -> dict:
+    connection = connect(database_path())
+    try:
+        return experiment_analysis(connection, experiment_id)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    finally:
+        connection.close()
+
+
+@app.get("/metrics/brief")
+def brief_metrics(days: int = Query(default=7, ge=1, le=30)) -> dict:
+    connection = connect(database_path())
+    try:
+        return period_brief(connection, days)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    finally:
+        connection.close()
+
+
 @app.post("/webhooks/payments", status_code=202)
 async def payment_webhook(request: Request, x_growthops_signature: str = Header(default="")) -> dict:
     body = await request.body()
@@ -144,5 +188,15 @@ def customer_lookup(customer_id: str) -> dict:
             "access": dict(access) if access else None,
             "workflows": [dict(row) for row in workflows],
         }
+    finally:
+        connection.close()
+
+
+@app.get("/ops/migration")
+def migration_status() -> dict:
+    connection = connect(database_path())
+    try:
+        initialize(connection)
+        return migration_audit(connection)
     finally:
         connection.close()

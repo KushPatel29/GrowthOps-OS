@@ -1,0 +1,17 @@
+name: growthops_os
+version: "1.0"
+config-version: 2
+profile: growthops_os
+model-paths: ["models"]
+seed-paths: ["seeds"]
+test-paths: ["tests"]
+clean-targets: ["target", "logs"]
+
+models:
+  growthops_os:
+    staging:
+      +materialized: view
+    intermediate:
+      +materialized: view
+    marts:
+      +materialized: table

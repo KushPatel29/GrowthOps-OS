@@ -5,6 +5,10 @@ __pycache__/
 build/
 dist/
 data/
+warehouse/dbt/seeds/*.csv
+warehouse/dbt/target/
+warehouse/dbt/logs/
+warehouse/dbt/.user.yml
 *.db
 *.db-journal
 .env

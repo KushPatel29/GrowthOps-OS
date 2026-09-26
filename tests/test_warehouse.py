@@ -3,6 +3,7 @@ from growthops.funnel import funnel
 from growthops.report import campaign_performance, measurement_health, metrics
 from growthops.seed import seed
 from growthops.warehouse import build
+from growthops.brief import daily_series, period_brief
 
 
 def test_sql_marts_match_reference_metrics(tmp_path):
@@ -37,4 +38,17 @@ def test_sql_marts_match_reference_metrics(tmp_path):
     assert round(sql_health["touches_with_utm"] / sql_health["eligible_touches"], 4) == health["utm_completeness"]
     assert round(sql_health["registered_touches"] / sql_health["eligible_touches"], 4) == health["campaign_registry_match"]
     assert sql_health["valid_paid_journeys"] == health["valid_paid_journeys"]
+    daily = daily_series(connection, 365)
+    assert sum(day["spend_cents"] for day in daily) == reference["spend_cents"]
+    assert sum(day["gross_collected_cents"] for day in daily) == reference["gross_collected_cents"]
+    assert sum(day["refunds_cents"] for day in daily) == reference["refunds_cents"]
+    assert sum(day["net_cash_cents"] for day in daily) == reference["net_collected_cents"]
+    brief = period_brief(connection)
+    assert brief["current"]["spend_cents"] > 0
+    assert brief["current"]["leads"] == 0
+    assert brief["findings"][0]["finding"] == "Spend continued without recorded leads."
+    content = [dict(row) for row in connection.execute("SELECT * FROM mart_content_performance")]
+    assert len(content) == 8
+    assert sum(item["influenced_net_cash_cents"] for item in content) <= reference["net_collected_cents"]
+    assert any(item["views"] > 5000 and item["influenced_net_cash_cents"] == 0 for item in content)
     connection.close()

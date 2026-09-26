@@ -20,7 +20,7 @@ def metrics(connection: sqlite3.Connection) -> dict:
     mqls = _one(connection, "SELECT COUNT(DISTINCT contact_id) FROM lifecycle_events WHERE stage='mql'")
     closed_won = _one(connection, "SELECT COUNT(*) FROM deals WHERE stage='closed_won'")
     booked = _one(connection, "SELECT SUM(amount_cents) FROM deals WHERE stage='closed_won'")
-    spend = _one(connection, "SELECT SUM(spend_cents) FROM campaigns WHERE medium IN ('paid_social','paid_search')")
+    spend = _one(connection, "SELECT SUM(spend_cents) FROM ad_spend_daily")
     gross = _one(connection, "SELECT SUM(amount_cents) FROM payments WHERE status='succeeded'")
     refunds = _one(connection, "SELECT SUM(amount_cents) FROM refunds")
     net = gross - refunds
@@ -82,13 +82,15 @@ def campaign_performance(connection: sqlite3.Connection) -> list[dict]:
         ), mql_people AS (
           SELECT DISTINCT contact_id FROM lifecycle_events WHERE stage='mql'
         )
-        SELECT c.campaign_id, c.source, c.medium, c.spend_cents,
+        SELECT c.campaign_id, c.source, c.medium, COALESCE(s.spend_cents,0) spend_cents,
                COUNT(t.contact_id) leads,
                COUNT(m.contact_id) mqls
         FROM campaigns c
+        LEFT JOIN (SELECT campaign_id, SUM(spend_cents) spend_cents
+                   FROM ad_spend_daily GROUP BY campaign_id) s ON s.campaign_id=c.campaign_id
         LEFT JOIN lead_touch t ON t.campaign_id=c.campaign_id AND t.rn=1
         LEFT JOIN mql_people m ON m.contact_id=t.contact_id
-        GROUP BY c.campaign_id, c.source, c.medium, c.spend_cents
+        GROUP BY c.campaign_id, c.source, c.medium, s.spend_cents
         ORDER BY c.campaign_id
         """
     ).fetchall()

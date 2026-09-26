@@ -1,6 +1,8 @@
 -- Local SQL warehouse reference. These are views over synthetic source tables.
 -- Rebuild order matters because later views depend on earlier views.
 DROP VIEW IF EXISTS mart_measurement_health;
+DROP VIEW IF EXISTS mart_growth_daily;
+DROP VIEW IF EXISTS mart_content_performance;
 DROP VIEW IF EXISTS mart_funnel;
 DROP VIEW IF EXISTS mart_revenue;
 DROP VIEW IF EXISTS mart_campaign_performance;
@@ -9,6 +11,9 @@ DROP VIEW IF EXISTS int_journey_firsts;
 DROP VIEW IF EXISTS int_lead_touch;
 DROP VIEW IF EXISTS int_payment_cash;
 DROP VIEW IF EXISTS stg_touches;
+DROP VIEW IF EXISTS stg_ad_spend_daily;
+DROP VIEW IF EXISTS stg_content_engagements;
+DROP VIEW IF EXISTS stg_content_items;
 DROP VIEW IF EXISTS stg_campaigns;
 DROP VIEW IF EXISTS stg_contacts;
 
@@ -22,6 +27,18 @@ CREATE VIEW stg_campaigns AS
 SELECT campaign_id, source, medium, campaign_name, spend_cents, registry_valid,
        CASE WHEN medium IN ('paid_social','paid_search') THEN 1 ELSE 0 END is_paid
 FROM campaigns;
+
+CREATE VIEW stg_ad_spend_daily AS
+SELECT campaign_id, spend_date, spend_cents, impressions, clicks
+FROM ad_spend_daily;
+
+CREATE VIEW stg_content_items AS
+SELECT content_id, title, platform, published_at, views, clicks, offer_id
+FROM content_items;
+
+CREATE VIEW stg_content_engagements AS
+SELECT engagement_id, contact_id, content_id, touch_id, occurred_at, watched_seconds
+FROM content_engagements;
 
 CREATE VIEW stg_touches AS
 SELECT t.touch_id, t.contact_id, t.campaign_id, t.occurred_at, t.touch_type,
@@ -81,13 +98,84 @@ WITH mql_people AS (
 ), cash_counts AS (
   SELECT campaign_id, SUM(net_cash_cents) net_cash_cents
   FROM mart_attribution_lead_creation GROUP BY campaign_id
+), spend_counts AS (
+  SELECT campaign_id, SUM(spend_cents) spend_cents
+  FROM stg_ad_spend_daily GROUP BY campaign_id
 )
-SELECT c.campaign_id, c.source, c.medium, c.spend_cents,
+SELECT c.campaign_id, c.source, c.medium, COALESCE(s.spend_cents,0) spend_cents,
        COALESCE(l.leads,0) leads, COALESCE(l.mqls,0) mqls,
        COALESCE(cash.net_cash_cents,0) net_cash_cents
 FROM stg_campaigns c
+LEFT JOIN spend_counts s ON s.campaign_id=c.campaign_id
 LEFT JOIN lead_counts l ON l.campaign_id=c.campaign_id
 LEFT JOIN cash_counts cash ON cash.campaign_id=c.campaign_id;
+
+CREATE VIEW mart_growth_daily AS
+WITH dates AS (
+  SELECT spend_date day FROM stg_ad_spend_daily
+  UNION SELECT SUBSTR(occurred_at,1,10) FROM lifecycle_events WHERE stage IN ('lead','mql','call_booked')
+  UNION SELECT SUBSTR(closed_at,1,10) FROM deals WHERE stage='closed_won'
+  UNION SELECT SUBSTR(paid_at,1,10) FROM payments WHERE status='succeeded'
+  UNION SELECT SUBSTR(refunded_at,1,10) FROM refunds
+), spend AS (
+  SELECT spend_date day, SUM(spend_cents) spend_cents FROM stg_ad_spend_daily GROUP BY spend_date
+), stages AS (
+  SELECT SUBSTR(occurred_at,1,10) day,
+    COUNT(DISTINCT CASE WHEN stage='lead' THEN contact_id END) leads,
+    COUNT(DISTINCT CASE WHEN stage='mql' THEN contact_id END) mqls,
+    COUNT(DISTINCT CASE WHEN stage='call_booked' THEN contact_id END) calls_booked
+  FROM lifecycle_events GROUP BY SUBSTR(occurred_at,1,10)
+), booked AS (
+  SELECT SUBSTR(closed_at,1,10) day, SUM(amount_cents) booked_cents
+  FROM deals WHERE stage='closed_won' GROUP BY SUBSTR(closed_at,1,10)
+), gross AS (
+  SELECT SUBSTR(paid_at,1,10) day, SUM(amount_cents) gross_collected_cents
+  FROM payments WHERE status='succeeded' GROUP BY SUBSTR(paid_at,1,10)
+), refunded AS (
+  SELECT SUBSTR(refunded_at,1,10) day, SUM(amount_cents) refunds_cents
+  FROM refunds GROUP BY SUBSTR(refunded_at,1,10)
+)
+SELECT d.day,
+  COALESCE(s.spend_cents,0) spend_cents,
+  COALESCE(st.leads,0) leads,
+  COALESCE(st.mqls,0) mqls,
+  COALESCE(st.calls_booked,0) calls_booked,
+  COALESCE(b.booked_cents,0) booked_cents,
+  COALESCE(g.gross_collected_cents,0) gross_collected_cents,
+  COALESCE(r.refunds_cents,0) refunds_cents,
+  COALESCE(g.gross_collected_cents,0)-COALESCE(r.refunds_cents,0) net_cash_cents
+FROM dates d
+LEFT JOIN spend s ON s.day=d.day
+LEFT JOIN stages st ON st.day=d.day
+LEFT JOIN booked b ON b.day=d.day
+LEFT JOIN gross g ON g.day=d.day
+LEFT JOIN refunded r ON r.day=d.day;
+
+CREATE VIEW mart_content_performance AS
+WITH first_content AS (
+  SELECT engagement_id, contact_id, content_id,
+         ROW_NUMBER() OVER (PARTITION BY contact_id ORDER BY occurred_at, engagement_id) rn
+  FROM stg_content_engagements
+), mql_people AS (
+  SELECT DISTINCT contact_id FROM lifecycle_events WHERE stage='mql'
+), booked_people AS (
+  SELECT DISTINCT contact_id FROM lifecycle_events WHERE stage='call_booked'
+), cash_by_contact AS (
+  SELECT customer_id, SUM(net_cash_cents) net_cash_cents
+  FROM int_payment_cash GROUP BY customer_id
+)
+SELECT ci.content_id, ci.title, ci.platform, ci.views, ci.clicks,
+       COUNT(e.contact_id) engaged_leads,
+       COUNT(m.contact_id) mqls,
+       COUNT(b.contact_id) calls_booked,
+       COUNT(cash.customer_id) customers,
+       COALESCE(SUM(cash.net_cash_cents),0) influenced_net_cash_cents
+FROM stg_content_items ci
+LEFT JOIN first_content e ON e.content_id=ci.content_id AND e.rn=1
+LEFT JOIN mql_people m ON m.contact_id=e.contact_id
+LEFT JOIN booked_people b ON b.contact_id=e.contact_id
+LEFT JOIN cash_by_contact cash ON cash.customer_id=e.contact_id
+GROUP BY ci.content_id, ci.title, ci.platform, ci.views, ci.clicks;
 
 CREATE VIEW mart_revenue AS
 SELECT (SELECT COALESCE(SUM(amount_cents),0) FROM deals WHERE stage='closed_won') booked_cents,
