@@ -1,0 +1,17 @@
+services:
+  api:
+    build: .
+    environment:
+      GROWTHOPS_DATABASE: /app/data/growthops-sample.db
+      GROWTHOPS_WEBHOOK_SECRET: ${GROWTHOPS_WEBHOOK_SECRET:-local-demo-secret}
+    volumes:
+      - ./data:/app/data
+    ports:
+      - "127.0.0.1:8000:8000"
+
+  seed:
+    build: .
+    profiles: ["tools"]
+    command: ["python", "-m", "growthops.seed", "--database", "/app/data/growthops-sample.db"]
+    volumes:
+      - ./data:/app/data
