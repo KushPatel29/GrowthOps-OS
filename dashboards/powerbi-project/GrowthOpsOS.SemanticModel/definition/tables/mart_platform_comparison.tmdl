@@ -1,0 +1,41 @@
+table mart_platform_comparison
+	lineageTag: 28f74e2b-575d-557b-a4e8-e8d181b99255
+
+	column platform
+		dataType: string
+		lineageTag: 9e78b5da-a9fe-5908-b9de-c382e039dce2
+		summarizeBy: none
+		sourceColumn: platform
+
+	column spend_cents
+		dataType: int64
+		lineageTag: 565dc8f0-2af1-52de-9a90-f656dc24b808
+		summarizeBy: none
+		sourceColumn: spend_cents
+
+	column reported_conversions
+		dataType: int64
+		lineageTag: 1925c316-d099-5d63-89a3-4195cb2421e1
+		summarizeBy: none
+		sourceColumn: reported_conversions
+
+	column reported_value_cents
+		dataType: int64
+		lineageTag: c33932f4-055b-59b4-8f25-9c4932a0ce71
+		summarizeBy: none
+		sourceColumn: reported_value_cents
+
+	column warehouse_net_cash_cents
+		dataType: int64
+		lineageTag: 72e98e5b-f8bd-5676-9958-4c2f76923eae
+		summarizeBy: none
+		sourceColumn: warehouse_net_cash_cents
+
+	partition mart_platform_comparison = m
+		mode: import
+		source =
+				let
+				  Source = Table.FromRows(Json.Document(Binary.Decompress(Binary.FromText("NYtLCsAgDETv4roLE40mZxEXhYqUftz0/jShdhbDY5hXiutj9LO5xQFGFmYwpGztOSSvUc4ImQzrUty530fb9lt3AckoyR5iBeCnQZHR/8bVnlU3TEQIyIZsJxCVp8Aphk+oLw==", BinaryEncoding.Base64), Compression.Deflate)), let _t = ((type nullable text) meta [Serialized.Text = true]) in type table [platform = nullable text, spend_cents = nullable text, reported_conversions = nullable text, reported_value_cents = nullable text, warehouse_net_cash_cents = nullable text]),
+				  #"Changed column type" = Table.TransformColumnTypes(Source, {{"platform", type text}, {"spend_cents", Int64.Type}, {"reported_conversions", Int64.Type}, {"reported_value_cents", Int64.Type}, {"warehouse_net_cash_cents", Int64.Type}})
+				in
+				  #"Changed column type"

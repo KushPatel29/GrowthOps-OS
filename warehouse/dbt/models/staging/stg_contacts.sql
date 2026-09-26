@@ -4,5 +4,6 @@ select
   nullif(cast(legacy_id as varchar), '') as legacy_id,
   nullif(cast(owner_id as varchar), '') as owner_id,
   nullif(cast(original_source as varchar), '') as original_source,
-  cast(current_stage as varchar) as current_stage
+  cast(current_stage as varchar) as current_stage,
+  try_cast(created_at as timestamptz) as created_at
 from {{ ref('raw_contacts') }}

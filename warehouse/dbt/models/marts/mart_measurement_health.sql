@@ -21,7 +21,7 @@ select
   (select duplicate_rows from contact_duplicates) as duplicate_contact_rows,
   (select count(*) from {{ ref('int_payment_cash') }} p
     left join {{ ref('stg_deals') }} d on d.deal_id = p.deal_id
-    where d.deal_id is null) as unmatched_payments,
-  (select count(*) from {{ ref('int_payment_cash') }}) as payments,
+    where d.deal_id is null and p.payment_type <> 'renewal') as unmatched_payments,
+  (select count(*) from {{ ref('int_payment_cash') }} where payment_type <> 'renewal') as payments,
   (select count(*) from paid_journeys) as paid_contact_count,
   (select coalesce(sum(valid_journey), 0) from paid_journeys) as valid_paid_journeys

@@ -1,53 +1,120 @@
 # GrowthOps OS
 
-**Live dashboard:** [growthops-os.streamlit.app](https://growthops-os.streamlit.app/) · **Source:** [GitHub](https://github.com/KushPatel29/GrowthOps-OS)
+**Marketing measurement, revenue reconciliation and lifecycle automation for a creator-led B2B business.**
 
-Growth and revenue analytics for **ScaleLab**, a fictional creator-led B2B education business. This portfolio project prioritizes marketing measurement: acquisition, CRM hygiene, funnel conversion, attribution, collected revenue, and an evidence-based executive brief. Lifecycle automation demonstrates how the underlying customer systems produce trustworthy data.
+[**Live dashboard**](https://growthops-os.streamlit.app/) · [Case study](docs/case-study.md) · [Metric catalog](docs/metric-catalog.md) · [API](docs/api-contracts.md)
 
-**Data provenance:** Commercial, advertising, CRM, and customer records in this repository are synthetic. No ScaleLab customer or Martell operational data is used. Any future live portfolio-site telemetry must be labelled separately and must not be joined to synthetic people.
+ScaleLab is a fictional coaching and education company that moved from a legacy CRM six months ago. Since
+then nobody trusts the numbers: Meta, Google, LinkedIn, the CRM and the payment processor each report a
+different revenue figure; lead volume is up but sales say leads got worse; some buyers email support
+because they paid and never got access. GrowthOps OS answers the questions a marketing and revenue team
+actually asks: **where did revenue come from, which number is right, what changed and why, and what should
+we do this morning?**
 
-## What works now
+Everything runs on fifteen months of **generated** data (14.7K contacts, 427 customers, $482K of ad spend,
+$3.06M net cash) with incidents deliberately planted in it. The analytics have to find them, and the tests
+check that they do.
 
-- Deterministic synthetic scenario with duplicate contacts, missing UTMs, owner gaps, stage conflicts, and unmatched payments.
-- SQLite-backed local analytical slice with controlled campaign taxonomy, lifecycle history, four cash attribution models, full-funnel timing, reconciliation, marketing KPIs, and an all-time executive snapshot.
-- SQLite marts and a DuckDB/dbt staging-to-marts DAG for revenue, campaign, funnel, daily growth, content, migration, experiments, and measurement quality, checked against the Python/SQLite metric reference.
-- FastAPI payment webhook with HMAC verification, durable idempotency, retryable step state, and an operations lookup.
-- Registered campaign link builder with canonical UTM parameters.
-- Responsive Executive Pulse page at `/dashboard`, with cash reconciliation, recent-week brief, funnel, selectable attribution, content-to-pipeline, CTA experiment, migration audit, and measurement health.
-- An editable [Power BI project](dashboards/powerbi-project/GrowthOpsOS.pbip) with nine embedded synthetic marts, 18 DAX measures, and four report pages (Executive, Acquisition, Funnel and Content, Quality and Lifecycle); [import and validation notes](docs/power-bi-handoff.md). It opens in Power BI Desktop, where its model and key measures were queried successfully. It has not been published to a Power BI workspace.
-- A six-view [Streamlit portfolio app](streamlit_app.py) for executive reporting, acquisition, funnel, experiments, renewal and data quality monitoring, and safe metric questions. It runs on a fresh synthetic sample with no external credentials.
-- A formula-backed [Excel dashboard](dashboards/GrowthOps_OS_Excel_Dashboard.xlsx) with 12 sheets, three native charts, editable period comparison, operating guardrails, raw mart sheets, and a zero-difference audit.
-- A read-only renewal risk monitor and an evidence-grounded AI brief. The brief is deterministic by default; optional LLM ranking can only select validated evidence IDs. The ask-your-data interface maps common questions to approved queries.
-- Tests for duplicate delivery, partial failure and retry, attribution conservation, reconciliation, and metric definitions.
+![Morning brief](docs/images/morning-brief.png)
 
-The local slice uses SQLite to run without cloud credentials. The target architecture uses PostgreSQL for operational state and BigQuery or PostgreSQL/dbt for the warehouse; see [implementation blueprint](docs/implementation-blueprint.md). The local slice is intentionally small and does not claim production integrations or production-scale data.
+## What it finds
 
-## Quick start
+| Question | Answer from the data | How |
+|---|---|---|
+| **Which revenue number is right?** | Platforms claim $3.72M; the CRM books $3.32M; $3.06M was collected. Meta reports 7.3× ROAS; on net cash it is 3.3×. | Two exact bridges, platform claims → warehouse cash and CRM bookings → cash, every step computed, residual $0 ([`reconciliation.py`](growthops/reconciliation.py)) |
+| **What changed and why?** | A new broad Meta campaign lifted leads 61% while the MQL rate fell from 29.8% to 20.4%; it explains 92% of the drop. | Rolling-window anomaly detection plus exact shift-share decomposition ([`diagnostics.py`](growthops/diagnostics.py)) |
+| **Can we trust tracking?** | A landing-page release stripped UTMs from `/webinar`: completeness fell to 90.2% and $42K of cash lost its campaign. | Same detector on data quality, root-caused to a landing page |
+| **Did every buyer get access?** | 9 launch-day buyers paid but have no community access after a six-hour provider outage. | Idempotent webhook engine with traces, backoff retries and a dead-letter queue ([`workflow.py`](growthops/workflow.py)) |
+| **Should we ship the new CTA?** | It lifts lead rate 50% (p < 0.001), but cash per visitor rests on 15 buyers and its interval spans zero. Keep the control. | Visitor-randomized test with a sample-ratio check and a bootstrap cash interval ([`experiments.py`](growthops/experiments.py)) |
 
-```powershell
-cd growthops-os
-python -m pip install -e ".[dev,warehouse]"
-python -m pip install -r requirements.txt
-python -m growthops.seed --database .\data\growthops-sample.db
-python -m growthops.warehouse --database .\data\growthops-sample.db
-python -m growthops.report --database .\data\growthops-sample.db
-python -m growthops.export_warehouse
-cd warehouse/dbt
-dbt seed --profiles-dir . --quiet
-dbt build --profiles-dir . --select path:models path:tests --quiet
-cd ../..
-python -m growthops.verify_dbt
-python -m growthops.export_bi
-python -m pytest
-python -m uvicorn growthops.api:app --reload
+The detector recovers **both planted incidents with the correct root cause within three days**; a test fails
+if it ever stops doing so.
+
+![Revenue truth](docs/images/revenue-truth.png)
+
+## What this demonstrates
+
+| Skill a marketing data / growth analytics role asks for | Where it lives |
+|---|---|
+| Paid, organic and email performance: CPL, cost per MQL, ROAS, funnel conversion by channel | Acquisition and Funnel views; [`report.py`](growthops/report.py), [`funnel.py`](growthops/funnel.py) |
+| Attribution: first touch, lead creation, last non-direct, U-shaped, linear, all conserving cash to the cent | [`attribution.py`](growthops/attribution.py) |
+| Reconciling ad platforms, CRM and payments after a migration | [`reconciliation.py`](growthops/reconciliation.py), [`migration.py`](growthops/migration.py) |
+| UTM governance and tracking-quality monitoring | [`campaign_links.py`](growthops/campaign_links.py), measurement health, [tracking plan](docs/tracking-plan.md) |
+| Explaining why a metric moved, in plain English, with an action | Morning brief ([`brief.py`](growthops/brief.py)) and Diagnostics view |
+| Experimentation that optimizes cash, not vanity conversion | [`experiments.py`](growthops/experiments.py) |
+| Content-to-pipeline analysis (views vs buyers) | Content section, `mart_content_performance` |
+| SQL modelling and analytics engineering: dbt staging → intermediate → marts with data tests | [`warehouse/dbt`](warehouse/dbt), verified against the Python reference in CI |
+| BI delivery: Streamlit, Power BI (PBIP/TMDL) and a formula-driven Excel workbook, all rebuilt from the same marts | [`dashboards/`](dashboards), [`export_bi.py`](growthops/export_bi.py), [`export_excel.py`](growthops/export_excel.py) |
+| Lifecycle automation: payment → CRM → access, idempotency, retries, dead letters, operator replay | [`workflow.py`](growthops/workflow.py), [`api.py`](growthops/api.py) |
+| Responsible AI: an LLM may only rewrite evidence it is given, and a validator rejects invented numbers, dates or causal claims; 30-case eval set | [`narrator.py`](growthops/narrator.py), [`evals/`](evals/narrative_guardrail_cases.json) |
+
+![Diagnostics](docs/images/diagnostics.png)
+
+## Architecture
+
+```mermaid
+flowchart LR
+  subgraph Sources["Synthetic sources (seed.py)"]
+    ads[Meta · Google · LinkedIn<br/>spend + platform claims]
+    web[Touches · UTMs · content]
+    crm[CRM contacts · lifecycle · deals<br/>+ legacy CRM snapshot]
+    pay[Payments · refunds<br/>subscriptions · renewals]
+  end
+  pay -- signed webhooks --> engine[Lifecycle engine<br/>record → CRM → access → onboarding<br/>retries · DLQ · traces]
+  engine --> db[(Operational store<br/>SQLite locally)]
+  ads & web & crm & pay --> db
+  db --> sql[SQL marts] & dbt[dbt on DuckDB<br/>staging → marts + tests]
+  sql <-. parity check .-> dbt
+  db --> analytics[Attribution · reconciliation<br/>diagnostics · experiments]
+  analytics --> brief[Morning brief<br/>+ claim-validated narrative]
+  analytics & brief --> ui[Streamlit · FastAPI]
+  dbt --> bi[Power BI PBIP · Excel]
 ```
 
-For the public portfolio dashboard, run `python -m streamlit run streamlit_app.py`. The entrypoint for Streamlit Community Cloud is `streamlit_app.py` on `main`; the repository's `requirements.txt` installs its dependencies. The public dashboard uses synthetic data only. See [deployment notes](docs/streamlit-deployment.md).
+The local build uses SQLite for operational state and DuckDB for the warehouse so it runs anywhere with no
+credentials. The [implementation blueprint](docs/implementation-blueprint.md) describes the production
+target (PostgreSQL, BigQuery or Postgres + dbt, real provider adapters).
 
-Open `http://127.0.0.1:8000/dashboard` for Executive Pulse. `GET /health` checks the API. `/metrics/executive`, `/metrics/daily`, `/metrics/brief`, `/metrics/funnel`, `/metrics/content`, `/metrics/experiments/cta_growth_plan`, and `/metrics/attribution/{model}` expose the analytics. `/ops/migration` and `/ops/customers/{customer_id}` expose operational audits. A signed `POST /webhooks/payments` models a Stripe-like payment event; [API contracts](docs/api-contracts.md) document it. No external API keys are needed for the simulator.
+## Run it
 
-Docker alternative: run `docker compose --profile tools run --rm seed`, then `docker compose up api`. The API is bound to localhost for this local demonstration.
+```bash
+python -m pip install -e ".[dev,warehouse]" -r requirements.txt
+python -m streamlit run streamlit_app.py            # the dashboard (generates data on start)
+python -m pytest                                    # 46 tests, about 30 seconds
+```
 
-## Current scope
+Full pipeline, as CI runs it:
 
-This is a reproducible portfolio slice, with deliberately broken measurement and a documented [case study](docs/case-study.md). The [implementation blueprint](docs/implementation-blueprint.md) describes the larger target system. Real provider adapters, Power BI Service publication, a scheduled renewal worker, PostgreSQL deployment, and production AI pipelines remain targets rather than implemented capabilities. This is portfolio evidence of implementation, not a claim of work performed for Martell.
+```bash
+python -m growthops.seed --database data/growthops-sample.db       # 15 months, ~3 s, deterministic
+python -m growthops.warehouse --database data/growthops-sample.db  # SQL marts
+python -m growthops.export_warehouse                               # dbt seeds
+(cd warehouse/dbt && dbt seed --profiles-dir . --full-refresh && dbt build --profiles-dir .)
+python -m growthops.verify_dbt                                     # DuckDB marts == Python reference
+python -m growthops.export_bi --refresh-pbip && python -m growthops.export_excel
+python -m growthops.narrator --eval                                # 30/30 guardrail cases
+python -m growthops.case_study                                     # regenerate docs/case-study.md
+python -m uvicorn growthops.api:app --reload                       # API + /dashboard
+```
+
+Useful endpoints: `/metrics/brief`, `/metrics/revenue-truth`, `/metrics/anomalies`, `/metrics/narrative`,
+`/ops/workflows`, `/ops/paid-without-access`, `/ops/events/{id}`. Docker: `docker compose --profile tools run
+--rm seed && docker compose up api`. An optional Claude-written narrative (`pip install -e ".[ai]"`,
+`python -m growthops.narrator --claude`) is shown only if it passes the claim validator.
+
+![Automation](docs/images/automation.png)
+
+## How it is kept honest
+
+- **Nothing is hand-typed.** The case study, Power BI partitions and Excel workbook are generated from the
+  code; CI fails if any committed copy drifts.
+- **Every total ties out.** All attribution models sum to net cash; both revenue bridges have zero residual;
+  the Excel audit sheet's checks all equal zero; dbt marts match the Python reference.
+- **Ground truth.** The generator records the incidents it plants (`incidents` table); tests assert the
+  detector finds each one with the right root cause.
+- **No causal overreach.** Drivers are arithmetic shares of a change; recommendations are phrased as checks.
+  Attribution is descriptive, not incremental.
+
+**Data provenance:** every person, transaction and campaign is synthetic. No real company's
+data or systems are used, and no provider (HubSpot, Stripe, ad platforms, community platform) is connected.
+Current state and limits: [PROJECT_STATUS.md](PROJECT_STATUS.md).

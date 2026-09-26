@@ -15,7 +15,7 @@ with dates as (
     count(distinct contact_id) filter (where stage='call_booked') as calls_booked
   from {{ ref('stg_lifecycle_events') }} group by cast(occurred_at as date)
 ), booked as (
-  select cast(closed_at as date) as day, sum(amount_cents) as booked_cents
+  select cast(closed_at as date) as day, sum(amount_cents) as booked_cents, count(*) as closed_won_deals
   from {{ ref('stg_deals') }} where stage='closed_won' group by cast(closed_at as date)
 ), gross as (
   select cast(paid_at as date) as day, sum(amount_cents) as gross_collected_cents
@@ -30,6 +30,7 @@ select
   coalesce(st.leads,0) as leads,
   coalesce(st.mqls,0) as mqls,
   coalesce(st.calls_booked,0) as calls_booked,
+  coalesce(b.closed_won_deals,0) as closed_won_deals,
   coalesce(b.booked_cents,0) as booked_cents,
   coalesce(g.gross_collected_cents,0) as gross_collected_cents,
   coalesce(r.refunds_cents,0) as refunds_cents,

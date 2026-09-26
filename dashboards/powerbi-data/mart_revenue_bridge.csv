@@ -1,0 +1,9 @@
+﻿ordinal,step,kind,cents
+1,crm_booked,total,332340000
+2,duplicate_deals,delta,-480000
+3,not_yet_collected,delta,-18960000
+4,unlinked_payments,delta,3330000
+5,renewals,delta,2850000
+6,gross_collected,total,319080000
+7,refunds,delta,-13345000
+8,net_collected,total,305735000

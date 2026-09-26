@@ -1,0 +1,35 @@
+table mart_revenue_bridge
+	lineageTag: 08623742-c390-5668-b687-cf5d2944153c
+
+	column ordinal
+		dataType: int64
+		lineageTag: 7a8b06d5-bef2-5338-a850-7503f9634314
+		summarizeBy: none
+		sourceColumn: ordinal
+
+	column step
+		dataType: string
+		lineageTag: 7b2ef253-48cc-527f-9661-17f7be17a5e5
+		summarizeBy: none
+		sourceColumn: step
+
+	column kind
+		dataType: string
+		lineageTag: 070c60bf-3ac3-56dd-ae6d-f0bd0efedabd
+		summarizeBy: none
+		sourceColumn: kind
+
+	column cents
+		dataType: int64
+		lineageTag: 07aaa463-6c0a-5ddd-aa9d-ac087184dbe6
+		summarizeBy: none
+		sourceColumn: cents
+
+	partition mart_revenue_bridge = m
+		mode: import
+		source =
+				let
+				  Source = Table.FromRows(Json.Document(Binary.Decompress(Binary.FromText("XY9RDoMgEETvwrdNxAXFsxhDKGwbUwSjmMbbd7UpreVnM5OXGabrGGcFs/OorzE+0JFIMRlPF6ACUdJjfdGxihy3Tn6wJqF2aPyyO+iToXsRKpNAOsSkN0zaRu/RpiM3s1y1daYFOWvwQ6ByPZltxJB+kwEgs5L0jAGf5/JKyYzUpO9zXJZTdZ7E2/L70eaIu63BnaZwACE/jNrH/A3JaaVs4E32Lw==", BinaryEncoding.Base64), Compression.Deflate)), let _t = ((type nullable text) meta [Serialized.Text = true]) in type table [ordinal = nullable text, step = nullable text, kind = nullable text, cents = nullable text]),
+				  #"Changed column type" = Table.TransformColumnTypes(Source, {{"ordinal", Int64.Type}, {"step", type text}, {"kind", type text}, {"cents", Int64.Type}})
+				in
+				  #"Changed column type"

@@ -1,4 +1,4 @@
-"""Read-only renewal-risk monitor for the synthetic community plan."""
+"""Read-only renewal-risk monitor for the synthetic community subscription."""
 
 from __future__ import annotations
 
@@ -8,27 +8,29 @@ import sqlite3
 from datetime import date, datetime, timedelta
 
 from growthops.db import connect
+from growthops.scenario import AS_OF
+
+DUE_SOON_DAYS = 14
 
 
-def monitor(connection: sqlite3.Connection, as_of: date = date(2026, 9, 26)) -> dict:
+def monitor(connection: sqlite3.Connection, as_of: date = AS_OF, due_soon_days: int = DUE_SOON_DAYS) -> dict:
     rows = connection.execute(
         """SELECT s.subscription_id, s.customer_id, s.plan_id, s.renewal_due_at,
                   COUNT(a.attempt_id) AS attempts,
-                  SUM(CASE WHEN a.outcome='failed' THEN 1 ELSE 0 END) AS failed_attempts,
-                  SUM(CASE WHEN a.outcome='succeeded' THEN 1 ELSE 0 END) AS successful_attempts
+                  COALESCE(SUM(CASE WHEN a.outcome='failed' AND a.attempted_at>=DATE(s.renewal_due_at,'-7 days') THEN 1 ELSE 0 END),0) AS failed_attempts,
+                  (SELECT failure_code FROM renewal_attempts f WHERE f.subscription_id=s.subscription_id
+                     AND f.outcome='failed' ORDER BY f.attempted_at DESC LIMIT 1) AS last_failure
            FROM subscriptions s LEFT JOIN renewal_attempts a
              ON a.subscription_id=s.subscription_id
            WHERE s.status='active'
            GROUP BY s.subscription_id, s.customer_id, s.plan_id, s.renewal_due_at
            ORDER BY s.renewal_due_at, s.subscription_id"""
     ).fetchall()
-    due_soon = as_of + timedelta(days=7)
+    due_soon = as_of + timedelta(days=due_soon_days)
     issues = []
     for row in rows:
         due = datetime.fromisoformat(row["renewal_due_at"]).date()
-        if row["successful_attempts"]:
-            continue
-        severity = "high" if due < as_of or row["failed_attempts"] else "medium" if due <= due_soon else None
+        severity = "high" if due <= as_of or row["failed_attempts"] else "medium" if due <= due_soon else None
         if severity is None:
             continue
         issues.append({
@@ -37,15 +39,26 @@ def monitor(connection: sqlite3.Connection, as_of: date = date(2026, 9, 26)) -> 
             "due_date": due.isoformat(),
             "days_to_due": (due - as_of).days,
             "failed_attempts": row["failed_attempts"],
+            "last_failure": row["last_failure"],
             "severity": severity,
-            "investigation": "Review payment method and contact customer success." if severity == "high"
-                             else "Confirm upcoming renewal and payment method.",
+            "investigation": "Payment failed or renewal overdue: update the card and have customer success call."
+                             if severity == "high" else "Confirm the upcoming renewal and payment method.",
         })
+    outcomes = connection.execute(
+        """SELECT SUM(outcome='succeeded') succeeded,
+                  COUNT(DISTINCT CASE WHEN outcome='failed' THEN subscription_id END) failed_subscriptions
+           FROM renewal_attempts"""
+    ).fetchone()
+    canceled = connection.execute("SELECT COUNT(*) FROM subscriptions WHERE status='canceled'").fetchone()[0]
+    renewed = outcomes["succeeded"] or 0
     return {
         "as_of": as_of.isoformat(),
         "active_subscriptions": len(rows),
         "high_risk": sum(item["severity"] == "high" for item in issues),
         "due_soon": sum(item["severity"] == "medium" for item in issues),
+        "due_soon_days": due_soon_days,
+        "renewals_collected": renewed,
+        "canceled": canceled,
         "issues": issues,
         "synthetic": True,
     }
@@ -54,7 +67,7 @@ def monitor(connection: sqlite3.Connection, as_of: date = date(2026, 9, 26)) -> 
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--database", default="data/growthops-sample.db")
-    parser.add_argument("--as-of", type=date.fromisoformat, default=date(2026, 9, 26))
+    parser.add_argument("--as-of", type=date.fromisoformat, default=AS_OF)
     args = parser.parse_args()
     connection = connect(args.database)
     try:
