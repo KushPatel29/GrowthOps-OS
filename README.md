@@ -2,6 +2,9 @@
 
 **Marketing measurement, revenue reconciliation and lifecycle automation for a creator-led B2B business.**
 
+[![tests](https://img.shields.io/badge/tests-47%20passing-brightgreen)](.github/workflows/ci.yml)
+[![guardrail eval](https://img.shields.io/badge/guardrail%20eval-30%2F30-brightgreen)](evals/narrative_guardrail_cases.json)
+
 [**Live dashboard**](https://growthops-os.streamlit.app/) · [Case study](docs/case-study.md) · [Metric catalog](docs/metric-catalog.md) · [API](docs/api-contracts.md)
 
 ScaleLab is a fictional coaching and education company that moved from a legacy CRM six months ago. Since
@@ -80,7 +83,7 @@ target (PostgreSQL, BigQuery or Postgres + dbt, real provider adapters).
 ```bash
 python -m pip install -e ".[dev,warehouse]" -r requirements.txt
 python -m streamlit run streamlit_app.py            # the dashboard (generates data on start)
-python -m pytest                                    # 46 tests, about 30 seconds
+python -m pytest                                    # 47 tests, about 30 seconds
 ```
 
 Full pipeline, as CI runs it:
