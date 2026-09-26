@@ -28,6 +28,15 @@ jobs:
         run: python -m pytest -q
       - name: Narrative guardrail eval (30 labelled cases)
         run: python -m growthops.narrator --eval
+      - name: Cache the local embedding model (checksum-verified on load)
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/growthops/models
+          key: minilm-onnx-913d7300
+      - name: Ask-your-data question contract, keyword and hybrid (zero wrong answers)
+        run: |
+          python -m growthops.embeddings
+          python -m growthops.ask_data --eval
       - name: Streamlit app renders every view without an exception
         run: |
           python - <<'PY'

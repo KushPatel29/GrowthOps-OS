@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "growthops-os"
-version = "0.2.0"
+version = "0.3.0"
 description = "Marketing measurement, revenue reconciliation, diagnostics and lifecycle automation on a synthetic B2B scenario"
 requires-python = ">=3.12"
 dependencies = ["fastapi>=0.115,<1", "pydantic>=2,<3", "uvicorn>=0.30,<1"]
@@ -12,7 +12,7 @@ dependencies = ["fastapi>=0.115,<1", "pydantic>=2,<3", "uvicorn>=0.30,<1"]
 [project.optional-dependencies]
 dev = ["pytest>=8,<10", "httpx>=0.27,<1", "ruff==0.15.21"]
 warehouse = ["dbt-core>=1.10,<2", "dbt-duckdb>=1.9,<2", "openpyxl>=3.1,<4"]
-ai = ["anthropic>=0.60"]
+rag = ["onnxruntime>=1.29,<2", "tokenizers>=0.23.1,<1", "numpy>=1.26,<3"]
 
 [tool.setuptools.packages.find]
 include = ["growthops*"]

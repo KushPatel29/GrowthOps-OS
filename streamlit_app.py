@@ -10,7 +10,7 @@ import altair as alt
 import pandas as pd
 import streamlit as st
 
-from growthops.ask_data import TOPICS, answer as ask_data
+from growthops.ask_data import answer as ask_data
 from growthops.attribution import MODELS, summary as attribution_summary
 from growthops.brief import period_brief
 from growthops.campaign_links import audit_short_links
@@ -194,9 +194,8 @@ with tabs[0]:
     with st.expander(f"{len(brief['findings']) - 5} lower-priority findings"):
         for item in brief["findings"][5:]:
             st.markdown(f"- **{item['finding']}** {item['evidence']} *Next:* {item['investigation']}".replace("$", r"\$"))
-    st.caption("Every sentence is assembled from computed evidence. An optional LLM may rewrite it only if the result "
-               "passes a claim validator (no new numbers, dates or causal claims); this public app shows the "
-               "deterministic narrative.")
+    st.caption("Every sentence is assembled from computed evidence, and a claim validator (no new numbers, dates or "
+               "causal claims) guards any other draft. No language model or API key is involved.")
     with st.expander("Written daily update (copy into Slack or email)"):
         st.code(case["daily_update"]["text"], language=None)
         st.caption("Also available as `python -m growthops.performance` and `GET /metrics/daily-update`.")
@@ -541,8 +540,12 @@ with tabs[8]:
 
 with tabs[9]:
     st.subheader("Ask your data")
-    st.caption("Questions map to allowlisted, tested metric functions; nothing typed here is executed as SQL. "
-               "Topics: " + ", ".join(TOPICS) + ".")
+    st.caption("Keyless and local, like Ask Your Data: questions are matched to governed metrics and documented "
+               "definitions by hybrid retrieval (BM25 + a local MiniLM model). Every number comes from a tested "
+               "function, every definition from the metric catalog, and anything else is refused. Nothing typed is "
+               "executed as SQL and no text leaves the machine.")
+    st.caption("Try: " + " · ".join(("Did anyone pay and not get into the community?", "What does a lead cost on Google?",
+                                     "Is our email going to junk?", "How is cost per MQL calculated?")))
     question = st.text_input("Question", placeholder="Which revenue number is right?")
     if question:
         connection = connect(database)
@@ -550,8 +553,14 @@ with tabs[9]:
             response = ask_data(connection, question)
         finally:
             connection.close()
-        st.markdown(response["answer"].replace("$", r"\$"))
-        st.caption(f"Metric: {response['metric_id'] or 'none'} · Evidence: {response['source']}")
+        (st.warning if response["route"] == "refused" else st.markdown)(response["answer"].replace("$", r"\$"))
+        confidence = f"{response['confidence']:.2f}" if response["confidence"] is not None else "n/a"
+        st.caption(f"Route: {response['route']} · target: {response['target'] or 'none'} · confidence {confidence} · "
+                   f"retrieval: {response['retrieval_mode'] or 'n/a'} · source: {response['source']} · "
+                   f"{response['latency_ms']} ms")
+        if response["retrieved"]:
+            with st.expander("What retrieval considered"):
+                st.dataframe(pd.DataFrame(response["retrieved"]), hide_index=True, width="stretch")
 
 st.divider()
 st.caption("All business data is synthetic and generated for this demonstration. No HubSpot, Stripe, ad account or "

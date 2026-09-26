@@ -20,11 +20,6 @@ from pydantic import BaseModel, Field
 DEMO_WEBHOOK_SECRET = "local-demo-secret"
 
 
-def _bool(name: str, default: bool = False) -> bool:
-    value = os.getenv(name)
-    return default if value is None else value.strip().lower() in ("1", "true", "yes", "on")
-
-
 def _list(name: str) -> list[str]:
     return [item.strip() for item in os.getenv(name, "").split(",") if item.strip()]
 
@@ -60,12 +55,7 @@ class Settings(BaseModel):
     daily_update_time_utc: time = time(14, 0)  # 07:00 in Kelowna/Vancouver during daylight time
     freshness_sla_hours: int = Field(default=36, ge=1)
 
-    ai_enabled: bool = False
-    ai_model: str = "claude-opus-5"
-    ai_max_tokens: int = Field(default=4000, ge=256, le=32000)
-    ai_timeout_seconds: float = Field(default=60, gt=0, le=600)
-    ai_max_retries: int = Field(default=2, ge=0, le=5)
-    ai_daily_call_limit: int = Field(default=50, ge=0)
+    retrieval_mode: Literal["auto", "keyword", "hybrid"] = "auto"
 
     @property
     def production(self) -> bool:
@@ -142,11 +132,6 @@ def get_settings() -> Settings:
         "worker_poll_seconds": env.get("GROWTHOPS_WORKER_POLL_SECONDS", 30),
         "daily_update_time_utc": env.get("GROWTHOPS_DAILY_UPDATE_TIME_UTC", "14:00"),
         "freshness_sla_hours": env.get("GROWTHOPS_FRESHNESS_SLA_HOURS", 36),
-        "ai_enabled": _bool("GROWTHOPS_AI_ENABLED") or _bool("GROWTHOPS_USE_CLAUDE"),
-        "ai_model": env.get("GROWTHOPS_AI_MODEL", "claude-opus-5"),
-        "ai_max_tokens": env.get("GROWTHOPS_AI_MAX_TOKENS", 4000),
-        "ai_timeout_seconds": env.get("GROWTHOPS_AI_TIMEOUT_SECONDS", 60),
-        "ai_max_retries": env.get("GROWTHOPS_AI_MAX_RETRIES", 2),
-        "ai_daily_call_limit": env.get("GROWTHOPS_AI_DAILY_CALL_LIMIT", 50),
+        "retrieval_mode": env.get("GROWTHOPS_RETRIEVAL_MODE", "auto"),
     }
     return Settings.model_validate(raw)
