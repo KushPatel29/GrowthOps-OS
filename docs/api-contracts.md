@@ -41,6 +41,16 @@ Accepts `campaign_id`, HTTPS `destination_url`, and snake-case `content`. Looks 
 
 `GET /metrics/daily?days=90` returns event-date spend, leads, and payment/refund cash from the local daily mart. `GET /metrics/brief?days=7` returns the Morning Brief: the latest week against the prior week plus prioritized findings, each with evidence, drivers, a recommended investigation, confidence and a source ID. `GET /metrics/content` returns first identified content influence through MQL, calls, customers, and net cash. `GET /metrics/experiments/{experiment_id}` returns variant-level visitor, lead, MQL, customer, and cash results with lead-rate, lead-quality and bootstrap cash intervals, a sample-ratio-mismatch check and a decision derived from those intervals. Assignment is simulated per visitor; it is not a live experiment.
 
+## Marketing operations endpoints
+
+| Endpoint | Contract |
+|---|---|
+| `GET /metrics/daily-update?day=YYYY-MM-DD` | The written daily update: yesterday against the trailing seven-day average, paid efficiency by platform, the last bulk email, and the top findings with next steps; `text` is copy-ready (also `python -m growthops.performance`) |
+| `GET /metrics/paid-efficiency?days=7&by=campaign\|platform` | Spend, impressions, clicks, CPM, CTR, CPC, leads, CPL, MQLs, cost per MQL, booked calls, cost per booked call, deals won, net cash and ROAS on an activity basis; the last row is the paid total |
+| `GET /metrics/email` | Per-send and per-type rates (delivery, bounce, reported and human open, click, click-to-open, unsubscribe, complaint), newsletter-to-pipeline, the deliverability check by sending domain and the list source mix |
+| `GET /metrics/link-hygiene` | Every short link checked against the campaign registry, with the share of recent clicks on defective links |
+| `GET /crm/hubspot/audit` | CRM hygiene against the HubSpot mapping plus custom-property definitions ([mapping](hubspot-mapping.md)) |
+
 `GET /ops/migration` returns the legacy-to-current contact audit and issue list. Run `python -m growthops.migration --apply-safe-repairs` explicitly to fill only null owner/source values from matched legacy records; the API does not expose this mutation.
 
 `GET /dashboard` serves the local Executive Pulse page backed by those endpoints. The root URL redirects to it. The page is a reference UI for the synthetic scenario; generated Power BI import marts and the editable native project are documented in [the handoff](power-bi-handoff.md).

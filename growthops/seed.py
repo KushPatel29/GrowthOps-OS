@@ -13,6 +13,7 @@ import argparse
 import math
 import random
 import sqlite3
+from bisect import bisect_left
 from collections import defaultdict
 from datetime import date, datetime, time, timedelta, timezone
 from pathlib import Path
@@ -30,6 +31,7 @@ TABLES = (
     "subscriptions", "deals", "experiment_exposures", "experiment_variants", "experiments",
     "content_engagements", "lifecycle_events", "touches", "contacts", "legacy_contacts",
     "content_items", "ad_spend_daily", "campaigns", "products", "incidents",
+    "short_link_clicks", "short_links", "email_campaigns",
 )
 PLATFORM_WINDOWS = {"meta": ("28d_click_1d_view", 28), "google": ("30d_click", 30),
                     "linkedin": ("30d_click_7d_view", 30)}
@@ -506,6 +508,86 @@ class Generator:
                 self.add("experiment_exposures", f"exp-{visitor:06d}", "cta_growth_plan", variant,
                          f"visitor-{visitor:06d}", f"session-{visitor:06d}", contact_id, _iso(exposed))
 
+    # --- owned channels -------------------------------------------------
+    def owned_channels(self, seed_value: int) -> None:
+        """Email sends and short-link clicks, from their own random stream.
+
+        A separate generator keeps every acquisition, CRM and cash number identical
+        whether or not these channels are simulated.
+        """
+        rng = random.Random(seed_value * 7919 + 1)
+        noise = lambda: math.exp(rng.gauss(0, 0.06))  # noqa: E731
+        lead_days = sorted(contact["lead_at"].date() for contact in self.contacts.values())
+        topics = [f"{title} (issue {index})" for index, title in enumerate((
+            "The pricing conversation most founders avoid", "Three numbers to review every Monday",
+            "How we would hire your first operator", "The discovery call, line by line",
+            "Why busy founders stall at $1M", "A calmer launch calendar"), 1)]
+        base_rates = {  # human open, machine (privacy-proxy) open, click, unsubscribe; share of delivered
+            "newsletter": (0.27, 0.30, 0.021, 0.0018), "webinar_invite": (0.24, 0.30, 0.028, 0.0015),
+            "promo": (0.22, 0.30, 0.017, 0.0035), "nurture": (0.38, 0.28, 0.052, 0.0022),
+        }
+        unsubscribed = 0
+        sends: list[tuple[date, str, str, int]] = []
+        for day in self.days():
+            audience = round(self.scale * 12000 + 0.8 * bisect_left(lead_days, day)) - unsubscribed
+            todays = []
+            if day.weekday() == 1:
+                todays.append(("newsletter", topics[len(sends) % len(topics)], audience))
+            if day.weekday() == 0 and self.webinar_day(day + timedelta(days=3)):
+                todays.append(("webinar_invite", f"Live this Thursday: the Growth OS workshop ({day:%B})", audience))
+            if day in sc.PROMO_DATES:
+                subject = ("Enrollment for the Accelerator closes next Friday", "Three days left to enroll",
+                           "Doors close tomorrow", "Last call: enrollment closes tonight")[sc.PROMO_DATES.index(day)]
+                todays.append(("promo", subject, audience))
+            if day.weekday() == 3:
+                recent = bisect_left(lead_days, day) - bisect_left(lead_days, day - timedelta(days=7))
+                todays.append(("nurture", "Welcome sequence (weekly batch)", recent * 3))
+            for email_type, subject, size in todays:
+                sends.append((day, email_type, subject, size))
+                if email_type != "nurture":
+                    unsubscribed += round(size * base_rates[email_type][3])
+        hours = {"newsletter": 14, "webinar_invite": 15, "promo": 13, "nurture": 16}
+        for day, email_type, subject, audience in sends:
+            human, machine, click, unsub = base_rates[email_type]
+            bulk = email_type in ("newsletter", "promo")
+            switched = bulk and day >= sc.EMAIL_DOMAIN_SWITCH
+            bounce, complaint = (0.039, 0.0016) if switched else (0.005, 0.00015)
+            if switched:  # Mailbox providers filter an unwarmed, unaligned domain to spam.
+                human, machine, click = human * 0.62, machine * 0.7, click * 0.6
+            if email_type == "promo" and day == sc.ENROLLMENT_DEADLINE:
+                click *= 1.5
+            bounces = round(audience * bounce * noise())
+            delivered = audience - bounces
+            human_opens = round(delivered * human * noise())
+            machine_opens = round(delivered * machine * noise())
+            clicks = min(round(delivered * click * noise()), human_opens)
+            self.add("email_campaigns", f"em-{day:%Y%m%d}-{email_type}",
+                     _iso(datetime.combine(day, time(hours[email_type]), UTC)), email_type, subject,
+                     sc.NEW_EMAIL_DOMAIN if switched else sc.EMAIL_DOMAIN, audience, delivered, bounces,
+                     human_opens + machine_opens, machine_opens, clicks, round(delivered * unsub * noise()),
+                     round(delivered * complaint * noise()))
+        for link_id, channel, path, utm, created, owner, per_day in sc.SHORT_LINKS:
+            query = "" if utm is None else "?" + "&".join(
+                f"utm_{key}={value}" for key, value in zip(("source", "medium", "campaign"), utm))
+            self.add("short_links", link_id, f"{sc.SITE}{path}{query}", channel, created.isoformat(), owner)
+            day = created
+            while day <= sc.AS_OF:
+                weekday = (1.1, 1.15, 1.1, 1.05, 0.95, 0.8, 0.85)[day.weekday()]
+                clicks = self.poisson_from(rng, per_day * weekday * self.scale)
+                if clicks:
+                    self.add("short_link_clicks", link_id, day.isoformat(), clicks)
+                day += timedelta(days=1)
+
+    @staticmethod
+    def poisson_from(rng: random.Random, lam: float) -> int:
+        if lam > 40:
+            return max(0, round(rng.gauss(lam, math.sqrt(lam))))
+        threshold, count, product = math.exp(-lam), 0, rng.random()
+        while product > threshold:
+            count += 1
+            product *= rng.random()
+        return count
+
     # --- persistence ----------------------------------------------------
     def write(self, connection: sqlite3.Connection) -> None:
         self.rows["campaigns"] = [(
@@ -517,7 +599,8 @@ class Generator:
         order = ("products", "incidents", "campaigns", "ad_spend_daily", "content_items", "contacts",
                  "legacy_contacts", "touches", "content_engagements", "experiments", "experiment_variants",
                  "experiment_exposures", "lifecycle_events", "deals", "payments", "refunds", "subscriptions",
-                 "renewal_attempts", "platform_conversions", "access_entitlements")
+                 "renewal_attempts", "platform_conversions", "access_entitlements", "email_campaigns",
+                 "short_links", "short_link_clicks")
         connection.execute("BEGIN")
         for table in order:
             rows = self.rows.get(table, [])
@@ -584,6 +667,7 @@ def seed(database: str, *, seed_value: int = 29, scale: float = 1.0) -> dict[str
     generator.crm()
     generator.unmatched_payments()
     generator.experiment()
+    generator.owned_channels(seed_value)
     generator.write(connection)
     _replay(connection, generator)
     counts = {table: connection.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0]

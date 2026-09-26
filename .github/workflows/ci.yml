@@ -34,7 +34,7 @@ jobs:
           from streamlit.testing.v1 import AppTest
           app = AppTest.from_file("streamlit_app.py").run(timeout=180)
           assert not app.exception, app.exception
-          assert len(app.tabs) == 9
+          assert len(app.tabs) == 10
           app.text_input[0].input("Which revenue number is right?").run(timeout=60)
           assert not app.exception, app.exception
           PY

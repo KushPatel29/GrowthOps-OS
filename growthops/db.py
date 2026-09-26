@@ -169,6 +169,36 @@ CREATE TABLE IF NOT EXISTS platform_conversions (
   click_through INTEGER NOT NULL CHECK (click_through IN (0, 1)),
   attribution_setting TEXT NOT NULL
 );
+CREATE TABLE IF NOT EXISTS email_campaigns (
+  email_id TEXT PRIMARY KEY,
+  sent_at TEXT NOT NULL,
+  email_type TEXT NOT NULL CHECK (email_type IN ('newsletter','webinar_invite','promo','nurture')),
+  subject TEXT NOT NULL,
+  sending_domain TEXT NOT NULL,
+  sends INTEGER NOT NULL CHECK (sends >= 0),
+  delivered INTEGER NOT NULL CHECK (delivered >= 0),
+  bounces INTEGER NOT NULL CHECK (bounces >= 0),
+  opens INTEGER NOT NULL CHECK (opens >= 0),
+  machine_opens INTEGER NOT NULL CHECK (machine_opens >= 0),
+  clicks INTEGER NOT NULL CHECK (clicks >= 0),
+  unsubscribes INTEGER NOT NULL CHECK (unsubscribes >= 0),
+  spam_complaints INTEGER NOT NULL CHECK (spam_complaints >= 0),
+  CHECK (delivered + bounces = sends),
+  CHECK (opens <= delivered AND machine_opens <= opens AND clicks <= delivered)
+);
+CREATE TABLE IF NOT EXISTS short_links (
+  link_id TEXT PRIMARY KEY,
+  destination_url TEXT NOT NULL,
+  channel TEXT NOT NULL,
+  created_at TEXT NOT NULL,
+  owner TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS short_link_clicks (
+  link_id TEXT NOT NULL REFERENCES short_links(link_id),
+  click_date TEXT NOT NULL,
+  clicks INTEGER NOT NULL CHECK (clicks >= 0),
+  PRIMARY KEY (link_id, click_date)
+);
 CREATE TABLE IF NOT EXISTS incidents (
   incident_id TEXT PRIMARY KEY,
   kind TEXT NOT NULL,

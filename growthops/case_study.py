@@ -8,15 +8,20 @@ from __future__ import annotations
 
 import argparse
 import sqlite3
+from datetime import timedelta
 from pathlib import Path
 
 from growthops.brief import findings
+from growthops.campaign_links import audit_short_links
+from growthops.email_analytics import deliverability, email_performance
+from growthops.hubspot import audit as hubspot_audit
+from growthops.performance import paid_efficiency
 from growthops.diagnostics import detect, incident_recall
 from growthops.experiments import analyze as experiment_analysis
 from growthops.migration import audit as migration_audit
 from growthops.reconciliation import crm_bridge, four_numbers, platform_bridge, platform_comparison
 from growthops.report import TARGETS, executive_brief
-from growthops.scenario import AS_OF, START
+from growthops.scenario import AS_OF, ENROLLMENT_DEADLINE, PROMO_DATES, START
 from growthops.workflow import health as workflow_health
 
 OUTPUT = Path(__file__).resolve().parent.parent / "docs" / "case-study.md"
@@ -52,6 +57,25 @@ def render(connection: sqlite3.Connection) -> str:
     top = findings(connection)[0]
     migration = migration_audit(connection)
     meta = platforms["meta"]
+    email_check = deliverability(connection)
+    new_domain = email_check["flagged_domains"][0]
+    email_now = next(r for r in email_check["recent_by_domain"] if r["sending_domain"] == new_domain)
+    email_base = email_check["baseline_by_domain"][0]
+    promos = [r for r in email_performance(connection, "promo")]
+    links = audit_short_links(connection)
+    broken_links = "; ".join(f"`{link['link_id']}` ({link['issues'][0]})" for link in links["links"] if link["issues"])
+    crm = hubspot_audit(connection)
+    launch_start, launch_days = PROMO_DATES[0], (ENROLLMENT_DEADLINE - PROMO_DATES[0]).days + 1
+
+    def window_sum(start, days):
+        return dict(connection.execute(
+            """SELECT SUM(closed_won_deals) won, SUM(net_cash_cents) cash, SUM(calls_booked) calls
+               FROM mart_growth_daily WHERE day BETWEEN ? AND ?""",
+            (start.isoformat(), (start + timedelta(days=days - 1)).isoformat())).fetchone())
+    launch = window_sum(launch_start, launch_days)
+    before = window_sum(launch_start - timedelta(days=56), 56)
+    per_window = {key: before[key] * launch_days / 56 for key in before}
+    paid30 = {row["segment"]: row for row in paid_efficiency(connection, AS_OF - timedelta(days=29), AS_OF)}
     health_rows = "\n".join(
         f"| {label} | {quality[key]:.1%} | {TARGETS[key]:.0%} | {'Pass' if quality[key] >= TARGETS[key] else 'Below target'} |"
         for label, key in (("UTM completeness", "utm_completeness"),
@@ -152,7 +176,28 @@ The lead-rate lift is large and significant (p = {comparison['lead_rate_p_value'
 difference has a bootstrap 95% interval of ${comparison['cash_per_visitor_bootstrap_95_ci_cents'][0] / 100:.2f}
 to ${comparison['cash_per_visitor_bootstrap_95_ci_cents'][1] / 100:.2f}. **{comparison['decision']}**
 
-## 5. Can we trust the data?
+## 5. Email, links and the enrollment deadline
+
+**Launch readout.** In the {launch_days} days from the first promo ({launch_start:%d %B}) to the enrollment deadline
+({ENROLLMENT_DEADLINE:%d %B}), {launch['won']} deals closed and {_usd(launch['cash'])} of net cash was collected, against
+{per_window['won']:.0f} deals and {_usd(per_window['cash'])} in an average {launch_days}-day stretch of the prior eight weeks.
+The deadline worked, but three things went wrong around it, and each shows up in its own check:
+
+- **Email deliverability.** Bulk sends moved to `{new_domain}` on {email_check['affected_emails'][0]['sent_date']}.
+  Across its {email_now['emails']} sends the bounce rate was {email_now['bounce_rate']:.1%} and the complaint rate
+  {email_now['complaint_rate']:.2%} (limits 2% and 0.1%); the human open rate fell to {email_now['human_open_rate']:.1%}
+  from {email_base['human_open_rate']:.1%}. All {len(promos)} deadline promos went out on the new domain. Reported open
+  rates hide part of this, because privacy-proxy machine opens are counted as opens.
+- **Links.** {links['links_with_issues']} of {len(links['links'])} short links fail the registry check: {broken_links}.
+  They carried {links['share_of_recent_clicks_broken']:.0%} of short-link clicks in the last {links['recent_days']} days.
+- **Access.** The six-hour provider outage on launch day is the dead-letter finding in section 3.
+
+**Paid efficiency, last 30 days** (activity basis): {_usd(paid30['meta_prospecting_founder']['cost_per_booked_call_cents'])}
+per booked call on `meta_prospecting_founder` against
+{_usd(paid30['meta_broad_v17']['cost_per_booked_call_cents'])} on `meta_broad_v17`; paid media overall
+{_usd(paid30['Total paid']['cost_per_lead_cents'])} per lead and {_usd(paid30['Total paid']['cost_per_mql_cents'])} per MQL.
+
+## 6. Can we trust the data?
 
 | Check | Actual | Target | Status |
 |---|---:|---:|---|
@@ -162,6 +207,12 @@ The migration audit matched {migration['migrated_contacts']:,} of {migration['le
 contacts ({migration['missing_contacts']} missing) and found {migration['duplicate_crm_rows']} duplicate CRM rows.
 The safe-repair command restores blank owners and placeholder sources from unambiguous legacy matches and logs
 every change; duplicates, missing contacts and stage regressions are left for a person.
+
+Mapped onto HubSpot's standard properties (`lifecyclestage`, `dealstage`, `hubspot_owner_id`), an import would merge
+{crm['rows_merged_on_email']} rows on email; {crm['paying_contacts_not_customer']} paying contacts and
+{crm['closed_won_contacts_not_customer']} closed-won contacts are not at the customer stage, and
+{crm['stale_leads_non_marketing_candidates']:,} leads untouched for a year are candidates to set as non-marketing
+contacts, which lowers the HubSpot marketing-contact tier.
 
 ## Limits
 

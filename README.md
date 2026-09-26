@@ -2,7 +2,7 @@
 
 **Marketing measurement, revenue reconciliation and lifecycle automation for a creator-led B2B business.**
 
-[![tests](https://img.shields.io/badge/tests-47%20passing-brightgreen)](.github/workflows/ci.yml)
+[![tests](https://img.shields.io/badge/tests-56%20passing-brightgreen)](.github/workflows/ci.yml)
 [![guardrail eval](https://img.shields.io/badge/guardrail%20eval-30%2F30-brightgreen)](evals/narrative_guardrail_cases.json)
 
 [**Live dashboard**](https://growthops-os.streamlit.app/) · [Case study](docs/case-study.md) · [Metric catalog](docs/metric-catalog.md) · [API](docs/api-contracts.md)
@@ -28,6 +28,8 @@ check that they do.
 | **What changed and why?** | A new broad Meta campaign lifted leads 61% while the MQL rate fell from 29.8% to 20.4%; it explains 92% of the drop. | Rolling-window anomaly detection plus exact shift-share decomposition ([`diagnostics.py`](growthops/diagnostics.py)) |
 | **Can we trust tracking?** | A landing-page release stripped UTMs from `/webinar`: completeness fell to 90.2% and $42K of cash lost its campaign. | Same detector on data quality, root-caused to a landing page |
 | **Did every buyer get access?** | 9 launch-day buyers paid but have no community access after a six-hour provider outage. | Idempotent webhook engine with traces, backoff retries and a dead-letter queue ([`workflow.py`](growthops/workflow.py)) |
+| **Is email still reaching people?** | Bulk sends moved to a new, unwarmed domain on 1 Sep: bounce rate 3.8% and complaints 0.16% (limits 2% and 0.1%); human opens fell from 27% to 15%, and all four enrollment-deadline promos went out on it. | Per-send deliverability check by sending domain; machine (privacy-proxy) opens excluded ([`email_analytics.py`](growthops/email_analytics.py)) |
+| **Are our links tagged?** | 4 of 9 short links have missing, unregistered or off-taxonomy UTMs, and they carry 48% of recent short-link clicks. | Registry check on every Bitly-style link ([`campaign_links.py`](growthops/campaign_links.py)) |
 | **Should we ship the new CTA?** | It lifts lead rate 50% (p < 0.001), but cash per visitor rests on 15 buyers and its interval spans zero. Keep the control. | Visitor-randomized test with a sample-ratio check and a bootstrap cash interval ([`experiments.py`](growthops/experiments.py)) |
 
 The detector recovers **both planted incidents with the correct root cause within three days**; a test fails
@@ -39,10 +41,13 @@ if it ever stops doing so.
 
 | Skill a marketing data / growth analytics role asks for | Where it lives |
 |---|---|
-| Paid, organic and email performance: CPL, cost per MQL, ROAS, funnel conversion by channel | Acquisition and Funnel views; [`report.py`](growthops/report.py), [`funnel.py`](growthops/funnel.py) |
+| Paid media efficiency: CPM, CTR, CPC, CPL, cost per MQL, cost per booked call, net-cash ROAS, funnel conversion by channel | Acquisition and Funnel views; [`performance.py`](growthops/performance.py), [`report.py`](growthops/report.py), [`funnel.py`](growthops/funnel.py) |
+| Email analytics: delivery, bounce, human vs reported opens, CTR, click-to-open, unsubscribes, complaints, newsletter → pipeline, list source mix | Email & links view; [`email_analytics.py`](growthops/email_analytics.py), `mart_email_performance` |
+| Clear written daily updates | `python -m growthops.performance`, `GET /metrics/daily-update`, copy block in the Morning brief |
+| HubSpot-shaped CRM work: lifecycle, deal stage and owner mapping, custom-property definitions, import files, v3 search parsing, CRM hygiene audit | [`hubspot.py`](growthops/hubspot.py), [HubSpot mapping](docs/hubspot-mapping.md) (no portal connected) |
 | Attribution: first touch, lead creation, last non-direct, U-shaped, linear, all conserving cash to the cent | [`attribution.py`](growthops/attribution.py) |
 | Reconciling ad platforms, CRM and payments after a migration | [`reconciliation.py`](growthops/reconciliation.py), [`migration.py`](growthops/migration.py) |
-| UTM governance and tracking-quality monitoring | [`campaign_links.py`](growthops/campaign_links.py), measurement health, [tracking plan](docs/tracking-plan.md) |
+| UTM and short-link governance, tracking-quality monitoring | [`campaign_links.py`](growthops/campaign_links.py), `mart_link_hygiene`, measurement health, [tracking plan](docs/tracking-plan.md) |
 | Explaining why a metric moved, in plain English, with an action | Morning brief ([`brief.py`](growthops/brief.py)) and Diagnostics view |
 | Experimentation that optimizes cash, not vanity conversion | [`experiments.py`](growthops/experiments.py) |
 | Content-to-pipeline analysis (views vs buyers) | Content section, `mart_content_performance` |
@@ -50,6 +55,8 @@ if it ever stops doing so.
 | BI delivery: Streamlit, Power BI (PBIP/TMDL) and a formula-driven Excel workbook, all rebuilt from the same marts | [`dashboards/`](dashboards), [`export_bi.py`](growthops/export_bi.py), [`export_excel.py`](growthops/export_excel.py) |
 | Lifecycle automation: payment → CRM → access, idempotency, retries, dead letters, operator replay | [`workflow.py`](growthops/workflow.py), [`api.py`](growthops/api.py) |
 | Responsible AI: an LLM may only rewrite evidence it is given, and a validator rejects invented numbers, dates or causal claims; 30-case eval set | [`narrator.py`](growthops/narrator.py), [`evals/`](evals/narrative_guardrail_cases.json) |
+
+![Email and links](docs/images/email-links.png)
 
 ![Diagnostics](docs/images/diagnostics.png)
 
@@ -59,7 +66,7 @@ if it ever stops doing so.
 flowchart LR
   subgraph Sources["Synthetic sources (seed.py)"]
     ads[Meta · Google · LinkedIn<br/>spend + platform claims]
-    web[Touches · UTMs · content]
+    web[Touches · UTMs · content<br/>short links · email sends]
     crm[CRM contacts · lifecycle · deals<br/>+ legacy CRM snapshot]
     pay[Payments · refunds<br/>subscriptions · renewals]
   end
@@ -83,7 +90,7 @@ target (PostgreSQL, BigQuery or Postgres + dbt, real provider adapters).
 ```bash
 python -m pip install -e ".[dev,warehouse]" -r requirements.txt
 python -m streamlit run streamlit_app.py            # the dashboard (generates data on start)
-python -m pytest                                    # 47 tests, about 30 seconds
+python -m pytest                                    # 56 tests, about 40 seconds
 ```
 
 Full pipeline, as CI runs it:
@@ -97,10 +104,13 @@ python -m growthops.verify_dbt                                     # DuckDB mart
 python -m growthops.export_bi --refresh-pbip && python -m growthops.export_excel
 python -m growthops.narrator --eval                                # 30/30 guardrail cases
 python -m growthops.case_study                                     # regenerate docs/case-study.md
+python -m growthops.performance                                    # the written daily update
+python -m growthops.hubspot --output build/hubspot                 # HubSpot import files + CRM audit
 python -m uvicorn growthops.api:app --reload                       # API + /dashboard
 ```
 
-Useful endpoints: `/metrics/brief`, `/metrics/revenue-truth`, `/metrics/anomalies`, `/metrics/narrative`,
+Useful endpoints: `/metrics/brief`, `/metrics/daily-update`, `/metrics/paid-efficiency`, `/metrics/email`,
+`/metrics/link-hygiene`, `/crm/hubspot/audit`, `/metrics/revenue-truth`, `/metrics/anomalies`, `/metrics/narrative`,
 `/ops/workflows`, `/ops/paid-without-access`, `/ops/events/{id}`. Docker: `docker compose --profile tools run
 --rm seed && docker compose up api`. An optional Claude-written narrative (`pip install -e ".[ai]"`,
 `python -m growthops.narrator --claude`) is shown only if it passes the claim validator.

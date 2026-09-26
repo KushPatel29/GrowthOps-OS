@@ -108,7 +108,28 @@ The lead-rate lift is large and significant (p = 0.0); the cash-per-visitor
 difference has a bootstrap 95% interval of $-8.37
 to $5.67. **Do not ship on lead rate alone: B lifts leads 50%, but cash per visitor rests on 15 buyers and its interval spans zero. Keep A and extend the test until the cash interval is decisive.**
 
-## 5. Can we trust the data?
+## 5. Email, links and the enrollment deadline
+
+**Launch readout.** In the 8 days from the first promo (11 September) to the enrollment deadline
+(18 September), 30 deals closed and $162,500 of net cash was collected, against
+12 deals and $71,314 in an average 8-day stretch of the prior eight weeks.
+The deadline worked, but three things went wrong around it, and each shows up in its own check:
+
+- **Email deliverability.** Bulk sends moved to `news.scalelab.example` on 2026-09-01.
+  Across its 8 sends the bounce rate was 3.8% and the complaint rate
+  0.16% (limits 2% and 0.1%); the human open rate fell to 14.8%
+  from 27.1%. All 4 deadline promos went out on the new domain. Reported open
+  rates hide part of this, because privacy-proxy machine opens are counted as opens.
+- **Links.** 4 of 9 short links fail the registry check: `ig-bio` (missing utm_source, utm_medium, utm_campaign); `li-launch` (utm_medium 'social' should be 'paid_social'); `pod-ep41` (utm_source 'Podcast' should be 'partner'); `yt-q3-guide` (campaign 'youtube_q3_guide' is not registered).
+  They carried 48% of short-link clicks in the last 30 days.
+- **Access.** The six-hour provider outage on launch day is the dead-letter finding in section 3.
+
+**Paid efficiency, last 30 days** (activity basis): $396
+per booked call on `meta_prospecting_founder` against
+$1,275 on `meta_broad_v17`; paid media overall
+$40 per lead and $201 per MQL.
+
+## 6. Can we trust the data?
 
 | Check | Actual | Target | Status |
 |---|---:|---:|---|
@@ -122,6 +143,12 @@ The migration audit matched 7,600 of 7,638 legacy
 contacts (38 missing) and found 138 duplicate CRM rows.
 The safe-repair command restores blank owners and placeholder sources from unambiguous legacy matches and logs
 every change; duplicates, missing contacts and stage regressions are left for a person.
+
+Mapped onto HubSpot's standard properties (`lifecyclestage`, `dealstage`, `hubspot_owner_id`), an import would merge
+138 rows on email; 8 paying contacts and
+19 closed-won contacts are not at the customer stage, and
+1,878 leads untouched for a year are candidates to set as non-marketing
+contacts, which lowers the HubSpot marketing-contact tier.
 
 ## Limits
 

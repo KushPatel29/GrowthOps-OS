@@ -12,6 +12,8 @@ from growthops.migration import audit as migration_audit
 from growthops.experiments import analyze as experiment_analysis
 from growthops.renewals import monitor as renewal_monitor
 from growthops.reconciliation import crm_bridge, platform_comparison
+from growthops.email_analytics import email_performance
+from growthops.campaign_links import audit_short_links
 
 
 def verify(sqlite_database: str, duckdb_database: str) -> None:
@@ -120,6 +122,27 @@ def verify(sqlite_database: str, duckdb_database: str) -> None:
             expected = (row["spend_cents"], row["reported_conversions"], row["reported_value_cents"],
                         row["warehouse_net_cash_cents"])
             assert tuple(int(value) for value in platforms[row["platform"]]) == expected, row["platform"]
+
+        email_columns = [item[0] for item in warehouse.execute("select * from mart_email_performance limit 0").description]
+        email_rows = {row[0]: dict(zip(email_columns, row)) for row in warehouse.execute(
+            "select * from mart_email_performance").fetchall()}
+        expected_emails = email_performance(source)
+        assert len(email_rows) == len(expected_emails), "email mart has a different number of sends"
+        for expected in expected_emails:
+            actual = email_rows[expected["email_id"]]
+            for field in ("sends", "delivered", "bounces", "opens", "machine_opens", "human_opens", "clicks",
+                          "unsubscribes", "spam_complaints", "sending_domain", "sent_date"):
+                assert actual[field] == expected[field], f"email {expected['email_id']} {field}"
+            for field in ("bounce_rate", "human_open_rate", "click_rate", "click_to_open_rate", "complaint_rate"):
+                assert abs(actual[field] - expected[field]) <= 0.0001, f"email {expected['email_id']} {field}"
+
+        links = audit_short_links(source)
+        hygiene = {row[0]: row[1:] for row in warehouse.execute(
+            """select link_id, missing_utm or unregistered_campaign or off_taxonomy, recent_clicks, clicks
+               from mart_link_hygiene""").fetchall()}
+        for link in links["links"]:
+            assert hygiene[link["link_id"]] == (bool(link["issues"]), link["recent_clicks"], link["clicks"]), \
+                f"link hygiene {link['link_id']}"
     finally:
         warehouse.close()
         source.close()

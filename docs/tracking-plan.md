@@ -43,3 +43,19 @@ Allowed `utm_source`: `meta`, `google`, `linkedin`, `youtube`, `newsletter`, `pa
 | `migration_reconciliation_status` | enum | Matched, missing, conflicting, resolved |
 
 For every property, store business definition, owner, type, requiredness, source system, update rule, and change history. The source of truth for payment and refund amounts remains the payment system. CRM records may mirror these values for operations but cannot redefine collected revenue.
+
+## Short links (Bitly or equivalent)
+
+Every short link must resolve to a destination whose `utm_source`, `utm_medium` and `utm_campaign` match a valid
+row in the campaign registry exactly (case included). `audit_short_links` (API: `GET /metrics/link-hygiene`, dbt:
+`mart_link_hygiene`) checks each link and reports the share of recent clicks landing on defective links. Build new
+links with `POST /campaign-links`, then shorten the result; never shorten a hand-typed URL. The seeded defects are an
+Instagram bio link with no UTMs, a podcast link tagged `Podcast` instead of `partner`, a YouTube link pointing at an
+unregistered campaign and a LinkedIn post tagged `social` for a `paid_social` campaign.
+
+## Email
+
+Sends are logged with delivered, bounces, opens, machine opens, clicks, unsubscribes and complaints. Machine opens
+(mailbox privacy proxies) are excluded from engagement. A sending-domain change must be warmed up and authenticated
+(SPF, DKIM, DMARC alignment) before bulk sends move to it; the deliverability check flags any domain above a 2% bounce
+or 0.1% complaint rate over the last 28 days.

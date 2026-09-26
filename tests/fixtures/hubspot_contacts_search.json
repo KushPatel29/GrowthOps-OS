@@ -1,0 +1,57 @@
+{
+  "total": 3,
+  "results": [
+    {
+      "id": "51001",
+      "properties": {
+        "email": "Person2@Synthetic.ScaleLab.test ",
+        "lifecyclestage": "customer",
+        "hubspot_owner_id": "71000003",
+        "createdate": "2025-07-01T14:02:11.000Z",
+        "lastmodifieddate": "2026-09-20T08:15:00.000Z",
+        "hs_analytics_source": "PAID_SOCIAL",
+        "growthops_contact_id": "c-000002",
+        "growthops_original_source": "meta",
+        "growthops_lead_campaign": "meta_prospecting_founder"
+      },
+      "createdAt": "2025-07-01T14:02:11.000Z",
+      "updatedAt": "2026-09-20T08:15:00.000Z",
+      "archived": false
+    },
+    {
+      "id": "51002",
+      "properties": {
+        "email": "person3@synthetic.scalelab.test",
+        "lifecyclestage": "salesqualifiedlead",
+        "hubspot_owner_id": "99999999",
+        "createdate": "2025-07-01T16:40:00.000Z",
+        "lastmodifieddate": "2026-09-21T10:00:00.000Z",
+        "hs_analytics_source": "OFFLINE",
+        "growthops_contact_id": "c-000003",
+        "growthops_original_source": "google",
+        "growthops_lead_campaign": "google_nonbrand_growth"
+      },
+      "createdAt": "2025-07-01T16:40:00.000Z",
+      "updatedAt": "2026-09-21T10:00:00.000Z",
+      "archived": false
+    },
+    {
+      "id": "51003",
+      "properties": {
+        "email": "person4@synthetic.scalelab.test",
+        "lifecyclestage": "lead",
+        "hubspot_owner_id": null,
+        "createdate": "2025-07-02T09:00:00.000Z",
+        "lastmodifieddate": "2026-09-22T11:30:00.000Z",
+        "hs_analytics_source": "EMAIL_MARKETING",
+        "growthops_contact_id": "c-000004",
+        "growthops_original_source": "newsletter",
+        "growthops_lead_campaign": "newsletter_weekly"
+      },
+      "createdAt": "2025-07-02T09:00:00.000Z",
+      "updatedAt": "2026-09-22T11:30:00.000Z",
+      "archived": false
+    }
+  ],
+  "paging": {"next": {"after": "3", "link": "https://api.hubapi.com/crm/v3/objects/contacts/search?after=3"}}
+}
