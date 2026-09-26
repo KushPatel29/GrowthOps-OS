@@ -34,6 +34,8 @@ Accepts `campaign_id`, HTTPS `destination_url`, and snake-case `content`. Looks 
 
 `GET /metrics/executive` returns the **all-time synthetic scenario** metrics, quality measures, and deterministic observations. `GET /metrics/funnel` returns stage counts, conversion from previous stage, and median/p90 transition time. `GET /metrics/attribution/{model}` accepts `first_touch`, `lead_creation`, `last_non_direct`, or `u_shaped` and returns net cash by campaign. Date windows, freshness metadata, and daily comparisons are planned; these endpoints do not yet constitute a scheduled morning brief.
 
+`GET /dashboard` serves the local Executive Pulse page backed by those endpoints. The root URL redirects to it. The page is a reference UI for the synthetic scenario; Power BI remains a target artifact.
+
 ## Target endpoints (not implemented)
 
 | Endpoint | Contract |

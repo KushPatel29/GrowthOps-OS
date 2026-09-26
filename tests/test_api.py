@@ -64,3 +64,6 @@ def test_signed_webhook_and_customer_lookup(tmp_path, monkeypatch):
         assert client.get("/metrics/funnel").json()[0]["stage"] == "lead"
         assert client.get("/metrics/attribution/lead_creation").status_code == 200
         assert client.get("/metrics/attribution/unsupported").status_code == 422
+        page = client.get("/dashboard")
+        assert page.status_code == 200
+        assert "Synthetic scenario" in page.text

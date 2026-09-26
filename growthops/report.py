@@ -19,6 +19,7 @@ def metrics(connection: sqlite3.Connection) -> dict:
     leads = _one(connection, "SELECT COUNT(*) FROM contacts")
     mqls = _one(connection, "SELECT COUNT(DISTINCT contact_id) FROM lifecycle_events WHERE stage='mql'")
     closed_won = _one(connection, "SELECT COUNT(*) FROM deals WHERE stage='closed_won'")
+    booked = _one(connection, "SELECT SUM(amount_cents) FROM deals WHERE stage='closed_won'")
     spend = _one(connection, "SELECT SUM(spend_cents) FROM campaigns WHERE medium IN ('paid_social','paid_search')")
     gross = _one(connection, "SELECT SUM(amount_cents) FROM payments WHERE status='succeeded'")
     refunds = _one(connection, "SELECT SUM(amount_cents) FROM refunds")
@@ -36,6 +37,7 @@ def metrics(connection: sqlite3.Connection) -> dict:
         "leads": leads,
         "mqls": mqls,
         "closed_won_deals": closed_won,
+        "booked_revenue_cents": booked,
         "spend_cents": spend,
         "paid_leads": paid_leads,
         "paid_mqls": paid_mqls,

@@ -1,0 +1,300 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Executive Pulse · GrowthOps OS</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #102a43;
+      --navy: #173a5c;
+      --slate: #4b6479;
+      --paper: #f2f6f9;
+      --white: #ffffff;
+      --line: #cddbe5;
+      --teal: #087f78;
+      --teal-pale: #dcefeb;
+      --amber: #a96612;
+      --amber-pale: #fff2dc;
+      --red: #a53d36;
+      --display: Bahnschrift, "Arial Narrow", "Segoe UI", sans-serif;
+      --body: "Segoe UI", Arial, sans-serif;
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body { margin: 0; background: var(--paper); color: var(--ink); font-family: var(--body); }
+    a { color: inherit; }
+    a:focus-visible, button:focus-visible, select:focus-visible {
+      outline: 3px solid var(--teal); outline-offset: 3px;
+    }
+    .skip { position: absolute; left: 1rem; top: -5rem; padding: .6rem 1rem; background: var(--white); z-index: 10; }
+    .skip:focus { top: 1rem; }
+    .shell { max-width: 1376px; margin: 0 auto; padding: 0 clamp(1.2rem, 4vw, 4rem); }
+    .masthead { background: var(--white); border-bottom: 1px solid var(--line); }
+    .masthead-inner { display: flex; justify-content: space-between; align-items: center; min-height: 76px; gap: 1rem; }
+    .brand { display: flex; align-items: center; gap: .8rem; font-family: var(--display); font-size: 1.18rem; font-weight: 700; letter-spacing: -.02em; text-decoration: none; }
+    .brand-mark { width: 30px; height: 30px; display: grid; align-content: center; gap: 4px; transform: skewY(-18deg); }
+    .brand-mark span { height: 5px; background: var(--teal); border-radius: 2px; }
+    .brand-mark span:first-child { width: 60%; }
+    .brand-mark span:last-child { width: 100%; }
+    .masthead-meta { color: var(--slate); font-size: .88rem; text-align: right; }
+    .scope { display: inline-block; border: 1px solid #b9d9d4; background: var(--teal-pale); color: #0b5d58; padding: .35rem .65rem; border-radius: 4px; font-weight: 650; }
+    main { padding-bottom: 4rem; }
+    .hero { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: end; gap: 2rem; padding-top: clamp(2.5rem, 5vw, 5rem); padding-bottom: 2rem; }
+    h1, h2, h3, p { margin-top: 0; }
+    h1 { max-width: 12ch; font-family: var(--display); font-weight: 700; font-size: clamp(2.7rem, 6vw, 5.1rem); line-height: .99; letter-spacing: -.045em; margin-bottom: 1.35rem; }
+    .intro { max-width: 62ch; font-size: 1.05rem; line-height: 1.55; color: var(--slate); margin-bottom: 0; }
+    .hero-side { width: 260px; padding-left: 1.2rem; border-left: 3px solid var(--teal); line-height: 1.45; font-size: .91rem; color: var(--slate); }
+    .hero-side strong { display: block; color: var(--ink); margin-bottom: .35rem; }
+    .section-heading { display: flex; justify-content: space-between; align-items: baseline; gap: 1rem; margin: 0 0 1rem; }
+    h2 { font-family: var(--display); font-size: clamp(1.45rem, 2.7vw, 2rem); letter-spacing: -.025em; margin-bottom: 0; }
+    .section-note { color: var(--slate); font-size: .84rem; line-height: 1.45; }
+    .reconcile { background: var(--navy); color: #fff; border-radius: 8px; padding: clamp(1.4rem, 3vw, 2.4rem); }
+    .reconcile .section-note { color: #c3d6e5; }
+    .ledger { display: grid; grid-template-columns: repeat(4, 1fr); margin-top: 2.2rem; }
+    .ledger-item { padding: .1rem 1.35rem; border-left: 1px solid #53718c; min-width: 0; }
+    .ledger-item:first-child { border-left: 0; padding-left: 0; }
+    .ledger-item:last-child { padding-right: 0; }
+    .ledger-item .label { display: block; color: #c3d6e5; font-size: .88rem; margin-bottom: .55rem; }
+    .ledger-item .value { display: block; font-family: var(--display); font-size: clamp(1.7rem, 3.7vw, 3.2rem); line-height: 1; letter-spacing: -.035em; font-weight: 650; font-variant-numeric: tabular-nums; white-space: nowrap; }
+    .ledger-item.net .value { color: #6de0ca; }
+    .ledger-item .sign { color: #a9c4d7; font-size: 1.1rem; margin-right: .25rem; }
+    .ledger-foot { border-top: 1px solid #53718c; margin-top: 2rem; padding-top: .85rem; color: #c3d6e5; font-size: .83rem; line-height: 1.45; }
+    .efficiency { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0; background: var(--white); border: 1px solid var(--line); border-top: 0; border-radius: 0 0 8px 8px; }
+    .efficiency-item { padding: 1.3rem 1.5rem; border-right: 1px solid var(--line); }
+    .efficiency-item:last-child { border-right: 0; }
+    .efficiency-item span { display: block; color: var(--slate); font-size: .84rem; margin-bottom: .35rem; }
+    .efficiency-item strong { display: block; font-family: var(--display); font-size: 1.55rem; font-weight: 650; font-variant-numeric: tabular-nums; }
+    .two-col { display: grid; grid-template-columns: minmax(0, 1.12fr) minmax(0, .88fr); gap: 1.5rem; margin-top: 3rem; }
+    .panel { background: var(--white); border: 1px solid var(--line); border-radius: 8px; padding: clamp(1.2rem, 2.5vw, 2rem); min-width: 0; }
+    .panel .section-heading { margin-bottom: 1.3rem; }
+    .funnel-list, .cash-list, .findings-list { list-style: none; margin: 0; padding: 0; }
+    .funnel-row { display: grid; grid-template-columns: 128px minmax(0, 1fr) 65px; gap: .8rem; align-items: center; padding: .54rem 0; }
+    .funnel-row + .funnel-row { border-top: 1px solid #ecf0f3; }
+    .funnel-name { font-size: .88rem; font-weight: 600; }
+    .funnel-track { background: #e8eff4; height: 12px; border-radius: 2px; overflow: hidden; }
+    .funnel-fill { height: 100%; background: var(--teal); border-radius: 2px; min-width: 2px; }
+    .funnel-count { text-align: right; font-family: var(--display); font-variant-numeric: tabular-nums; font-size: 1.05rem; font-weight: 650; }
+    .funnel-rate { grid-column: 2 / 4; margin-top: -.32rem; color: var(--slate); font-size: .76rem; }
+    .select-wrap { display: flex; align-items: center; gap: .6rem; color: var(--slate); font-size: .86rem; }
+    select { font: inherit; color: var(--ink); background: var(--white); border: 1px solid #aabfce; border-radius: 4px; padding: .36rem .5rem; max-width: 190px; }
+    .cash-row { padding: .7rem 0; }
+    .cash-label { display: flex; justify-content: space-between; gap: .7rem; font-size: .88rem; margin-bottom: .45rem; }
+    .cash-label strong { font-family: var(--display); font-size: 1rem; font-variant-numeric: tabular-nums; }
+    .cash-track { height: 10px; background: #e8eff4; border-radius: 2px; overflow: hidden; }
+    .cash-fill { height: 100%; background: var(--navy); border-radius: 2px; min-width: 2px; }
+    .cash-note { color: var(--slate); font-size: .8rem; line-height: 1.45; margin: 1.4rem 0 0; }
+    .health-section { margin-top: 3rem; }
+    .health-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+    .health-item { background: var(--white); padding: 1.2rem 1.1rem 1.25rem; min-width: 0; }
+    .health-item .name { font-size: .86rem; line-height: 1.35; min-height: 2.35rem; }
+    .health-item .number { display: block; margin: .5rem 0 .8rem; font-family: var(--display); font-size: 1.9rem; font-variant-numeric: tabular-nums; font-weight: 650; }
+    .health-bar { background: #e8eff4; height: 6px; border-radius: 2px; overflow: hidden; }
+    .health-bar span { display: block; height: 100%; background: var(--teal); }
+    .health-item.fail .health-bar span { background: var(--amber); }
+    .health-item .target { display: block; color: var(--slate); font-size: .73rem; margin-top: .48rem; }
+    .findings { margin-top: 3rem; }
+    .findings-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .8rem 1.5rem; }
+    .finding { border-left: 3px solid var(--amber); padding: .15rem 0 .15rem 1rem; }
+    .finding h3 { font-size: .98rem; line-height: 1.4; margin: 0 0 .45rem; }
+    .finding p { margin: 0 0 .35rem; color: var(--slate); font-size: .85rem; line-height: 1.48; }
+    .finding .action { color: var(--ink); }
+    .footer { border-top: 1px solid var(--line); margin-top: 3rem; padding-top: 1rem; color: var(--slate); font-size: .82rem; line-height: 1.5; }
+    .error { display: none; margin-top: 1rem; background: var(--amber-pale); border-left: 3px solid var(--amber); padding: .8rem 1rem; font-size: .9rem; }
+    .error.visible { display: block; }
+    @media (max-width: 1050px) {
+      .health-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+      .two-col { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 700px) {
+      .masthead-inner { min-height: 66px; }
+      .masthead-meta { font-size: .75rem; }
+      .hero { grid-template-columns: 1fr; gap: 1.5rem; }
+      .hero-side { width: auto; }
+      .ledger { grid-template-columns: repeat(2, 1fr); gap: 1.4rem 0; margin-top: 1.6rem; }
+      .ledger-item:nth-child(3) { border-left: 0; padding-left: 0; }
+      .efficiency { grid-template-columns: repeat(2, 1fr); }
+      .efficiency-item:nth-child(2) { border-right: 0; }
+      .efficiency-item:nth-child(-n+2) { border-bottom: 1px solid var(--line); }
+      .health-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .findings-list { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 420px) {
+      .scope { padding: .25rem .4rem; }
+      .ledger-item .value { font-size: 1.55rem; }
+      .funnel-row { grid-template-columns: 105px minmax(0, 1fr) 42px; gap: .5rem; }
+      .health-grid { grid-template-columns: 1fr; }
+    }
+    @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+  </style>
+</head>
+<body>
+  <a class="skip" href="#main">Skip to analysis</a>
+  <header class="masthead">
+    <div class="shell masthead-inner">
+      <a class="brand" href="/dashboard" aria-label="ScaleLab GrowthOps home">
+        <span class="brand-mark" aria-hidden="true"><span></span><span></span></span>
+        <span>ScaleLab <span style="font-weight:400;color:var(--slate)">/ GrowthOps</span></span>
+      </a>
+      <div class="masthead-meta"><span class="scope">Synthetic scenario</span> · All-time view</div>
+    </div>
+  </header>
+  <main id="main" class="shell">
+    <div class="hero">
+      <div>
+        <h1>What made it to cash?</h1>
+        <p class="intro">Follow the ScaleLab journey from lead to payment, then inspect the tracking gaps that could change the answer.</p>
+      </div>
+      <aside class="hero-side">
+        <strong>Read the cash line first.</strong>
+        Deal value, collected payments and refunds answer different questions. Every cash attribution model reconciles to net collected revenue.
+      </aside>
+    </div>
+    <div id="load-error" class="error" role="alert"></div>
+
+    <section class="reconcile" aria-labelledby="cash-heading">
+      <div class="section-heading">
+        <h2 id="cash-heading">Revenue reconciliation</h2>
+        <span class="section-note">USD · all available synthetic records</span>
+      </div>
+      <div class="ledger">
+        <div class="ledger-item"><span class="label">Booked deal value</span><span id="booked" class="value">—</span></div>
+        <div class="ledger-item"><span class="label">Gross collected</span><span id="gross" class="value">—</span></div>
+        <div class="ledger-item"><span class="label">Less refunds</span><span class="value"><span class="sign">−</span><span id="refunds">—</span></span></div>
+        <div class="ledger-item net"><span class="label">Net collected cash</span><span id="net" class="value">—</span></div>
+      </div>
+      <div class="ledger-foot">Booked value comes from closed-won CRM deals. Collected cash and refunds come from payment records. They are shown separately even when their totals happen to match.</div>
+    </section>
+    <section class="efficiency" aria-label="Paid acquisition efficiency">
+      <div class="efficiency-item"><span>Paid spend</span><strong id="spend">—</strong></div>
+      <div class="efficiency-item"><span>Paid leads</span><strong id="paid-leads">—</strong></div>
+      <div class="efficiency-item"><span>Cost per paid lead</span><strong id="cpl">—</strong></div>
+      <div class="efficiency-item"><span>Net cash ROAS</span><strong id="roas">—</strong></div>
+    </section>
+
+    <div class="two-col">
+      <section class="panel" aria-labelledby="funnel-heading">
+        <div class="section-heading"><h2 id="funnel-heading">Customer journey</h2><span class="section-note">First recorded stage per person</span></div>
+        <ol id="funnel-list" class="funnel-list" aria-label="Funnel stages"></ol>
+      </section>
+      <section class="panel" aria-labelledby="attribution-heading">
+        <div class="section-heading">
+          <h2 id="attribution-heading">Source of net cash</h2>
+          <label class="select-wrap">Credit model
+            <select id="model" aria-label="Attribution credit model">
+              <option value="lead_creation">Lead creation</option>
+              <option value="first_touch">First touch</option>
+              <option value="last_non_direct">Last non-direct</option>
+              <option value="u_shaped">U-shaped</option>
+            </select>
+          </label>
+        </div>
+        <ul id="cash-list" class="cash-list"></ul>
+        <p class="cash-note">Each model allocates net payment cash, including refunds. “Unassigned” remains visible when a payment has no eligible touch.</p>
+      </section>
+    </div>
+
+    <section class="health-section" aria-labelledby="health-heading">
+      <div class="section-heading"><h2 id="health-heading">Can we trust the numbers?</h2><span class="section-note">Targets are portfolio acceptance criteria</span></div>
+      <div id="health-grid" class="health-grid"></div>
+    </section>
+    <section class="findings" aria-labelledby="findings-heading">
+      <div class="section-heading"><h2 id="findings-heading">What needs investigation</h2><span class="section-note">Rule-based findings with visible evidence</span></div>
+      <div id="findings-list" class="findings-list"></div>
+    </section>
+    <footer class="footer">ScaleLab is fictional. Commercial, CRM, advertising and customer records are synthetic. This page is an all-time demonstration, not a live company report or a scheduled daily brief.</footer>
+  </main>
+  <script>
+    const money = cents => cents == null ? '—' : new Intl.NumberFormat('en-US', {style:'currency',currency:'USD',maximumFractionDigits:0}).format(cents / 100);
+    const number = value => value == null ? '—' : new Intl.NumberFormat('en-US').format(value);
+    const percent = value => value == null ? '—' : new Intl.NumberFormat('en-US', {style:'percent',maximumFractionDigits:1}).format(value);
+    const set = (id, value) => { document.getElementById(id).textContent = value; };
+    const label = {
+      lead:'Lead', mql:'Qualified', call_booked:'Call booked', call_attended:'Call attended',
+      opportunity:'Opportunity', closed_won:'Closed won', paid:'Paid', activated:'Activated', renewed:'Renewed'
+    };
+    function renderFunnel(rows) {
+      const host = document.getElementById('funnel-list'); host.replaceChildren();
+      const max = Math.max(1, ...rows.map(row => row.people));
+      for (const row of rows) {
+        const item = document.createElement('li'); item.className = 'funnel-row';
+        const name = document.createElement('span'); name.className='funnel-name'; name.textContent=label[row.stage] || row.stage;
+        const track = document.createElement('div'); track.className='funnel-track';
+        const fill = document.createElement('div'); fill.className='funnel-fill'; fill.style.width=`${100*row.people/max}%`; track.append(fill);
+        const count = document.createElement('span'); count.className='funnel-count'; count.textContent=number(row.people);
+        const rate = document.createElement('span'); rate.className='funnel-rate';
+        rate.textContent = row.from_previous_rate == null ? 'Starting cohort' : `${percent(row.from_previous_rate)} from previous stage${row.median_days_from_previous == null ? '' : ` · median ${row.median_days_from_previous} days`}`;
+        item.append(name,track,count,rate); host.append(item);
+      }
+    }
+    async function renderAttribution(model) {
+      const response = await fetch(`/metrics/attribution/${encodeURIComponent(model)}`);
+      if (!response.ok) throw new Error('Attribution data could not be loaded.');
+      const rows = (await response.json()).sort((a,b) => b.net_cash_cents-a.net_cash_cents);
+      const host = document.getElementById('cash-list'); host.replaceChildren();
+      const max = Math.max(1, ...rows.map(row => row.net_cash_cents));
+      for (const row of rows) {
+        const item = document.createElement('li'); item.className='cash-row';
+        const top = document.createElement('div'); top.className='cash-label';
+        const campaign = document.createElement('span'); campaign.textContent=row.campaign_id || 'Unassigned';
+        const value = document.createElement('strong'); value.textContent=money(row.net_cash_cents);
+        top.append(campaign,value);
+        const track = document.createElement('div'); track.className='cash-track';
+        const fill = document.createElement('div'); fill.className='cash-fill'; fill.style.width=`${100*row.net_cash_cents/max}%`; track.append(fill);
+        item.append(top,track); host.append(item);
+      }
+    }
+    function renderHealth(quality) {
+      const definitions = [
+        ['UTM completeness',quality.utm_completeness,.95,'Target ≥95%'],
+        ['Campaign registry',quality.campaign_registry_match,.98,'Target ≥98%'],
+        ['CRM owner coverage',quality.crm_owner_completeness,.99,'Target ≥99%'],
+        ['Lifecycle integrity',quality.lifecycle_integrity,.99,'Target ≥99%'],
+        ['Payment–deal match',quality.deal_payment_reconciliation,.99,'Target ≥99%']
+      ];
+      const host=document.getElementById('health-grid'); host.replaceChildren();
+      for (const [name,value,target,targetText] of definitions) {
+        const item=document.createElement('div'); item.className=`health-item${value < target ? ' fail' : ''}`;
+        const title=document.createElement('span'); title.className='name'; title.textContent=name;
+        const amount=document.createElement('strong'); amount.className='number'; amount.textContent=percent(value);
+        const track=document.createElement('div'); track.className='health-bar';
+        const fill=document.createElement('span'); fill.style.width=`${Math.max(0,Math.min(100,(value||0)*100))}%`; track.append(fill);
+        const targetLabel=document.createElement('span'); targetLabel.className='target'; targetLabel.textContent=targetText;
+        item.append(title,amount,track,targetLabel); host.append(item);
+      }
+    }
+    function renderFindings(items) {
+      const host=document.getElementById('findings-list'); host.replaceChildren();
+      if (!items.length) { const p=document.createElement('p'); p.textContent='No current rule-based findings.'; host.append(p); return; }
+      for (const item of items) {
+        const article=document.createElement('article'); article.className='finding';
+        const title=document.createElement('h3'); title.textContent=item.finding;
+        const evidence=document.createElement('p'); evidence.textContent=item.evidence;
+        const action=document.createElement('p'); action.className='action'; action.textContent=item.action;
+        article.append(title,evidence,action); host.append(article);
+      }
+    }
+    async function load() {
+      try {
+        const [summaryResponse,funnelResponse] = await Promise.all([fetch('/metrics/executive'),fetch('/metrics/funnel')]);
+        if (!summaryResponse.ok || !funnelResponse.ok) throw new Error('The executive data could not be loaded.');
+        const [data,journey] = await Promise.all([summaryResponse.json(),funnelResponse.json()]);
+        const m=data.metrics;
+        set('booked',money(m.booked_revenue_cents)); set('gross',money(m.gross_collected_cents));
+        set('refunds',money(m.refunds_cents)); set('net',money(m.net_collected_cents));
+        set('spend',money(m.spend_cents)); set('paid-leads',number(m.paid_leads));
+        set('cpl',money(m.cost_per_lead_cents)); set('roas',m.net_cash_roas == null ? '—' : `${m.net_cash_roas.toFixed(2)}×`);
+        renderFunnel(journey); renderHealth(data.measurement_health); renderFindings(data.observations);
+        await renderAttribution(document.getElementById('model').value);
+      } catch (error) {
+        const banner=document.getElementById('load-error'); banner.textContent=`${error.message} Check that the sample database is seeded and reload the page.`; banner.classList.add('visible');
+      }
+    }
+    document.getElementById('model').addEventListener('change',event => renderAttribution(event.target.value).catch(error => {
+      const banner=document.getElementById('load-error'); banner.textContent=error.message; banner.classList.add('visible');
+    }));
+    load();
+  </script>
+</body>
+</html>
