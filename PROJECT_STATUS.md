@@ -1,5 +1,7 @@
 # Project status — 2026-09-26
 
+Live synthetic dashboard: https://growthops-os.streamlit.app/ · GitHub: https://github.com/KushPatel29/GrowthOps-OS
+
 ## Implemented and verified
 
 - Reproducible local ScaleLab scenario with 240 contacts, 5 acquisition campaigns, direct returns, deliberate CRM and attribution defects, lifecycle events, payments, and refunds.

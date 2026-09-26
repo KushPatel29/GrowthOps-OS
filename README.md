@@ -1,5 +1,7 @@
 # GrowthOps OS
 
+**Live dashboard:** [growthops-os.streamlit.app](https://growthops-os.streamlit.app/) · **Source:** [GitHub](https://github.com/KushPatel29/GrowthOps-OS)
+
 Growth and revenue analytics for **ScaleLab**, a fictional creator-led B2B education business. This portfolio project prioritizes marketing measurement: acquisition, CRM hygiene, funnel conversion, attribution, collected revenue, and an evidence-based executive brief. Lifecycle automation demonstrates how the underlying customer systems produce trustworthy data.
 
 **Data provenance:** Commercial, advertising, CRM, and customer records in this repository are synthetic. No ScaleLab customer or Martell operational data is used. Any future live portfolio-site telemetry must be labelled separately and must not be joined to synthetic people.
