@@ -1,0 +1,83 @@
+table mart_experiment_variants
+	lineageTag: e515b0fc-0bcd-41c4-9413-cec429e7611d
+
+	column experiment_id
+		dataType: string
+		lineageTag: 61ded60e-5bcc-4f53-93f3-4bbb18cf06b9
+		summarizeBy: none
+		sourceColumn: experiment_id
+
+	column variant_id
+		dataType: string
+		lineageTag: cb378796-4f8f-4b29-9784-d629a05883a6
+		summarizeBy: none
+		sourceColumn: variant_id
+
+	column label
+		dataType: string
+		lineageTag: cc9409a2-7613-421c-9292-2074491e16ac
+		summarizeBy: none
+		sourceColumn: label
+
+	column cta_text
+		dataType: string
+		lineageTag: e3a9d6b7-fc80-4ff9-a91b-537d88dc764f
+		summarizeBy: none
+		sourceColumn: cta_text
+
+	column visitors
+		dataType: int64
+		lineageTag: c3109310-a062-4f57-b1f4-97d4c57eabb8
+		summarizeBy: none
+		sourceColumn: visitors
+
+	column leads
+		dataType: int64
+		lineageTag: ec1b39d1-4654-49eb-85d2-1b8f8a981247
+		summarizeBy: none
+		sourceColumn: leads
+
+	column mqls
+		dataType: int64
+		lineageTag: 3cdcf1c4-3710-4fe6-ac1b-4e8b8e04c94e
+		summarizeBy: none
+		sourceColumn: mqls
+
+	column customers
+		dataType: int64
+		lineageTag: a1d8ca65-297a-4c55-aae4-06ac23859b6f
+		summarizeBy: none
+		sourceColumn: customers
+
+	column net_cash_cents
+		dataType: int64
+		lineageTag: d644eef6-0b68-43d6-a6f9-748c71c3df88
+		summarizeBy: none
+		sourceColumn: net_cash_cents
+
+	column lead_rate
+		dataType: double
+		lineageTag: 342af15b-145c-424f-abd0-ba70b42cbc2d
+		summarizeBy: none
+		sourceColumn: lead_rate
+
+	column mql_per_lead
+		dataType: double
+		lineageTag: 54d7e2aa-98a1-4d80-974a-4489c0178704
+		summarizeBy: none
+		sourceColumn: mql_per_lead
+
+	column net_cash_per_visitor_cents
+		dataType: double
+		lineageTag: 55def697-3bbf-400a-9558-373821478ba1
+		summarizeBy: none
+		sourceColumn: net_cash_per_visitor_cents
+
+	partition mart_experiment_variants = m
+		mode: import
+		source =
+				let
+				  Source = Table.FromRows(Json.Document(Binary.Decompress(Binary.FromText("i45WSi5JjE8vyi8vyYgvyEnMU9IBiyQCaaf8/GyFRIXikqLEktT0SoXkxJwc3MKmBgZA0hBMmoMIIzDfyMzAACxmoGcEJs1BUqZGBnoGSrE6uKxPAtLuqSUKuZUKEEkFqCRWQajVJiDSGOIKIGFmjLDZAkIZmhhD3QSyPRYA", BinaryEncoding.Base64), Compression.Deflate)), let _t = ((type nullable text) meta [Serialized.Text = true]) in type table [experiment_id = nullable text, variant_id = nullable text, label = nullable text, cta_text = nullable text, visitors = nullable text, leads = nullable text, mqls = nullable text, customers = nullable text, net_cash_cents = nullable text, lead_rate = nullable text, mql_per_lead = nullable text, net_cash_per_visitor_cents = nullable text]),
+				  #"Changed column type" = Table.TransformColumnTypes(Source, {{"visitors", Int64.Type}, {"leads", Int64.Type}, {"mqls", Int64.Type}, {"customers", Int64.Type}, {"net_cash_cents", Int64.Type}, {"lead_rate", type number}, {"mql_per_lead", type number}, {"net_cash_per_visitor_cents", type number}})
+				in
+				  #"Changed column type"

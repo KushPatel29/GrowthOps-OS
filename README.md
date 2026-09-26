@@ -14,7 +14,7 @@ Growth and revenue analytics for **ScaleLab**, a fictional creator-led B2B educa
 - FastAPI payment webhook with HMAC verification, durable idempotency, retryable step state, and an operations lookup.
 - Registered campaign link builder with canonical UTM parameters.
 - Responsive Executive Pulse page at `/dashboard`, with cash reconciliation, recent-week brief, funnel, selectable attribution, content-to-pipeline, CTA experiment, migration audit, and measurement health.
-- Power BI-ready CSV exports from verified dbt marts; [import guidance](docs/power-bi-handoff.md). A native `.pbix` is not yet included.
+- An editable [Power BI project](dashboards/powerbi-project/GrowthOpsOS.pbip) with nine embedded synthetic marts and four report pages (Executive, Acquisition, Funnel and Content, Quality and Lifecycle); [import and validation notes](docs/power-bi-handoff.md). It has not been opened in Power BI Desktop or published to a Power BI workspace yet.
 - A six-view [Streamlit portfolio app](streamlit_app.py) for executive reporting, acquisition, funnel, experiments, renewal and data quality monitoring, and safe metric questions. It runs on a fresh synthetic sample with no external credentials.
 - A formula-backed [Excel dashboard](dashboards/GrowthOps_OS_Excel_Dashboard.xlsx) with native charts, raw mart sheets, and a zero-difference audit.
 - A read-only renewal risk monitor and an evidence-grounded AI brief. The brief is deterministic by default; optional LLM ranking can only select validated evidence IDs. The ask-your-data interface maps common questions to approved queries.
@@ -50,4 +50,4 @@ Docker alternative: run `docker compose --profile tools run --rm seed`, then `do
 
 ## Current scope
 
-This is a reproducible portfolio slice, with deliberately broken measurement and a documented [case study](docs/case-study.md). The [implementation blueprint](docs/implementation-blueprint.md) describes the larger target system. Real provider adapters, native Power BI pages, a scheduled renewal worker, PostgreSQL deployment, and production AI pipelines remain targets rather than implemented capabilities. This is portfolio evidence of implementation, not a claim of work performed for Martell.
+This is a reproducible portfolio slice, with deliberately broken measurement and a documented [case study](docs/case-study.md). The [implementation blueprint](docs/implementation-blueprint.md) describes the larger target system. Real provider adapters, Power BI Desktop verification and workspace publication, a scheduled renewal worker, PostgreSQL deployment, and production AI pipelines remain targets rather than implemented capabilities. This is portfolio evidence of implementation, not a claim of work performed for Martell.

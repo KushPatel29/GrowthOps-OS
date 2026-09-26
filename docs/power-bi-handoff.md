@@ -1,5 +1,11 @@
 # Power BI import handoff
 
+## Editable project
+
+Open [GrowthOpsOS.pbip](../dashboards/powerbi-project/GrowthOpsOS.pbip) in Power BI Desktop. The project contains four PBIR pages: Executive Pulse (four cards and two charts), Acquisition (campaign bar and detail table), Funnel and Content (two tables), and Quality and Lifecycle (four tables). Its TMDL semantic model embeds the nine versioned synthetic marts, so it has no local CSV path or credentials to configure. All report JSON, `.pbip`, `.pbir`, and `.platform` files passed Microsoft's published JSON schemas. This environment could not open Power BI Desktop to verify rendering, refresh, or save a `.pbix`; please inspect the visuals and refresh after opening. The base theme comes from the [Microsoft Fabric CLI blank report template](https://github.com/microsoft/fabric-cli/tree/main/src/fabric_cli/commands/fs/payloads/Blank.Report).
+
+The DAX measures and theme alongside the project are also available for a manual import workflow.
+
 The dbt marts are the governed source for the Power BI import. After the seed and dbt build in the README, run:
 
 ```powershell
@@ -28,4 +34,4 @@ Paid Leads = CALCULATE(SUM(mart_campaign_performance[leads]), mart_campaign_perf
 Cost per Paid Lead USD = DIVIDE([Paid Spend USD], [Paid Leads])
 ```
 
-The daily mart uses event dates: refunds reduce cash on the refund date, while campaign ROAS uses the modeled lead-creation attribution. The campaign mart and measures above are all-time and should not respond to a daily date slicer. Do not sum `mart_revenue` or `mart_measurement_health` across unrelated tables; each is a single-row snapshot. Experiment confidence intervals and the cautious decision are computed by `/metrics/experiments/cta_growth_plan`, not by the mart. A native `.pbix` report has not yet been authored. The Streamlit app and Excel workbook are interactive reports in this repository. Power BI Desktop or a signed-in Power BI workspace is required to save and verify a native report. For the first report page, use four cards (booked, gross cash, refunds, net cash), a line chart of daily spend and net cash, a campaign bar chart, then a measurement-quality table. Label all pages **Synthetic ScaleLab case**.
+The daily mart uses event dates: refunds reduce cash on the refund date, while campaign ROAS uses the modeled lead-creation attribution. The campaign mart and measures above are all-time and should not respond to a daily date slicer. Do not sum `mart_revenue` or `mart_measurement_health` across unrelated tables; each is a single-row snapshot. Experiment confidence intervals and the cautious decision are computed by `/metrics/experiments/cta_growth_plan`, not by the mart. The Power BI project is editable source, not a verified `.pbix` or a published Power BI Service report. The Streamlit app and Excel workbook are working interactive reports in this repository. Label any additional Power BI pages **Synthetic ScaleLab case**.

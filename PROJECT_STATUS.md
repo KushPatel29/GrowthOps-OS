@@ -18,11 +18,12 @@ Live synthetic dashboard: https://growthops-os.streamlit.app/ · GitHub: https:/
 - CRM migration audit and logged, idempotent repairs for unambiguous null owner/source fields; content-to-pipeline and experiment marts; recent-week brief and corresponding dashboard sections.
 - Six-view Streamlit dashboard with approved-question ask-your-data interface, deterministic evidence brief, and read-only renewal risk monitor.
 - Formula-backed Excel dashboard with two native charts, source marts, and a reconciliation audit.
+- Editable Power BI PBIP/PBIR source with nine embedded marts and four pages; report JSON and project metadata pass Microsoft schemas. Desktop rendering has not been verified.
 
 ## Not implemented yet
 
 - Real HubSpot, Stripe, GA4, ad-platform, and community integrations.
-- PostgreSQL operations store, BigQuery deployment, and native Power BI `.pbix` report. Power BI-ready data is exported as CSV.
+- PostgreSQL operations store, BigQuery deployment, and verified/published Power BI `.pbix` report. A PBIP source project and CSVs are provided.
 - Scheduled renewal/retry worker, alerting, RBAC, and deployed operations console. The renewal monitor is read-only.
 - Production AI analyst/classifier/RAG evaluation pipeline. The local brief uses constrained evidence selection, not an autonomous agent.
 

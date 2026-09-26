@@ -1,0 +1,11 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/gitIntegration/platformProperties/2.0.0/schema.json",
+  "metadata": {
+    "type": "Report",
+    "displayName": "GrowthOps OS Executive Pulse"
+  },
+  "config": {
+    "version": "2.0",
+    "logicalId": "74f9d9b8-2cb2-43f9-b374-e048a73ff561"
+  }
+}

@@ -1,0 +1,115 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.7.0/schema.json",
+  "name": "bed5f195fcae4da3bbb2",
+  "position": {
+    "x": 25,
+    "y": 25,
+    "z": 1000,
+    "width": 600,
+    "height": 300,
+    "tabOrder": 1000
+  },
+  "visual": {
+    "visualType": "tableEx",
+    "query": {
+      "queryState": {
+        "Values": {
+          "projections": [
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "mart_measurement_health"
+                    }
+                  },
+                  "Property": "eligible_touches"
+                }
+              },
+              "queryRef": "mart_measurement_health.eligible_touches",
+              "nativeQueryRef": "eligible_touches"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "mart_measurement_health"
+                    }
+                  },
+                  "Property": "touches_with_utm"
+                }
+              },
+              "queryRef": "mart_measurement_health.touches_with_utm",
+              "nativeQueryRef": "touches_with_utm"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "mart_measurement_health"
+                    }
+                  },
+                  "Property": "registered_touches"
+                }
+              },
+              "queryRef": "mart_measurement_health.registered_touches",
+              "nativeQueryRef": "registered_touches"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "mart_measurement_health"
+                    }
+                  },
+                  "Property": "duplicate_contact_rows"
+                }
+              },
+              "queryRef": "mart_measurement_health.duplicate_contact_rows",
+              "nativeQueryRef": "duplicate_contact_rows"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "mart_measurement_health"
+                    }
+                  },
+                  "Property": "unmatched_payments"
+                }
+              },
+              "queryRef": "mart_measurement_health.unmatched_payments",
+              "nativeQueryRef": "unmatched_payments"
+            }
+          ]
+        }
+      }
+    },
+    "visualContainerObjects": {
+      "title": [
+        {
+          "properties": {
+            "text": {
+              "expr": {
+                "Literal": {
+                  "Value": "'Measurement health'"
+                }
+              }
+            },
+            "show": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}
