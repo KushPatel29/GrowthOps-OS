@@ -7,7 +7,8 @@ Growth and revenue analytics for **ScaleLab**, a fictional creator-led B2B educa
 ## What works now
 
 - Deterministic synthetic scenario with duplicate contacts, missing UTMs, owner gaps, stage conflicts, and unmatched payments.
-- SQLite-backed local analytical slice with controlled campaign taxonomy, lifecycle history, four cash attribution models, full-funnel timing, reconciliation, marketing KPIs, and a daily executive brief.
+- SQLite-backed local analytical slice with controlled campaign taxonomy, lifecycle history, four cash attribution models, full-funnel timing, reconciliation, marketing KPIs, and an all-time executive snapshot.
+- SQL staging and marts for cash, campaign, funnel, and measurement quality, checked against the Python metric reference.
 - FastAPI payment webhook with HMAC verification, durable idempotency, retryable step state, and an operations lookup.
 - Registered campaign link builder with canonical UTM parameters.
 - Tests for duplicate delivery, partial failure and retry, attribution conservation, reconciliation, and metric definitions.
@@ -20,12 +21,13 @@ The local slice uses SQLite to run without cloud credentials. The target archite
 cd growthops-os
 python -m pip install -e ".[dev]"
 python -m growthops.seed --database .\data\growthops-sample.db
+python -m growthops.warehouse --database .\data\growthops-sample.db
 python -m growthops.report --database .\data\growthops-sample.db
 python -m uvicorn growthops.api:app --reload
 python -m pytest
 ```
 
-`GET /health` checks the API. `GET /ops/customers/{customer_id}` shows payment, CRM, access, and workflow state. A signed `POST /webhooks/payments` models a Stripe-like payment event; [API contracts](docs/api-contracts.md) document it. No external API keys are needed for the simulator.
+`GET /health` checks the API. `GET /metrics/executive`, `/metrics/funnel`, and `/metrics/attribution/{model}` expose the local analytics. `GET /ops/customers/{customer_id}` shows payment, CRM, access, and workflow state. A signed `POST /webhooks/payments` models a Stripe-like payment event; [API contracts](docs/api-contracts.md) document it. No external API keys are needed for the simulator.
 
 Docker alternative: run `docker compose --profile tools run --rm seed`, then `docker compose up api`. The API is bound to localhost for this local demonstration.
 

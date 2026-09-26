@@ -22,6 +22,8 @@ def test_seeded_metrics_reconcile_to_cash(tmp_path):
     assert quality["utm_completeness"] < 1
     assert quality["lifecycle_integrity"] == 0.9
     assert result["spend_cents"] == 1340000  # Includes invalid but real paid campaign spend.
+    assert result["paid_leads"] == 144
+    assert result["cost_per_lead_cents"] == round(1340000 / 144)
     assert result["net_cash_roas"] == round(1050000 / 1340000, 4)
     assert len(executive_brief(connection)["observations"]) >= 1
     stages = {row["stage"]: row["people"] for row in funnel(connection)}

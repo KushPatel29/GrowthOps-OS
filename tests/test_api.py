@@ -58,3 +58,9 @@ def test_signed_webhook_and_customer_lookup(tmp_path, monkeypatch):
             "content": "video_hook_03",
         })
         assert invalid.status_code == 422
+        executive = client.get("/metrics/executive").json()
+        assert executive["period"] == "all_time_synthetic"
+        assert executive["metrics"]["leads"] == 8
+        assert client.get("/metrics/funnel").json()[0]["stage"] == "lead"
+        assert client.get("/metrics/attribution/lead_creation").status_code == 200
+        assert client.get("/metrics/attribution/unsupported").status_code == 422

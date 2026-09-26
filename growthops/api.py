@@ -6,12 +6,16 @@ import hashlib
 import hmac
 import os
 from contextlib import asynccontextmanager
+from typing import Literal
 
 from fastapi import FastAPI, Header, HTTPException, Request
 from pydantic import ValidationError
 
 from growthops.db import connect, initialize
 from growthops.campaign_links import LinkRequest, build_link
+from growthops.attribution import summary as attribution_summary
+from growthops.funnel import funnel
+from growthops.report import executive_brief
 from growthops.workflow import EventConflict, PaymentEvent, process_payment
 
 
@@ -45,6 +49,36 @@ def campaign_link(request: LinkRequest) -> dict:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
+    finally:
+        connection.close()
+
+
+@app.get("/metrics/executive")
+def executive_metrics() -> dict:
+    connection = connect(database_path())
+    try:
+        initialize(connection)
+        return {"period": "all_time_synthetic", **executive_brief(connection)}
+    finally:
+        connection.close()
+
+
+@app.get("/metrics/funnel")
+def funnel_metrics() -> list[dict]:
+    connection = connect(database_path())
+    try:
+        initialize(connection)
+        return funnel(connection)
+    finally:
+        connection.close()
+
+
+@app.get("/metrics/attribution/{model}")
+def attribution_metrics(model: Literal["first_touch", "lead_creation", "last_non_direct", "u_shaped"]) -> list[dict]:
+    connection = connect(database_path())
+    try:
+        initialize(connection)
+        return attribution_summary(connection, model)
     finally:
         connection.close()
 
