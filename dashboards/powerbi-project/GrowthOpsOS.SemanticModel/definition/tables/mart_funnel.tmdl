@@ -1,6 +1,11 @@
 table mart_funnel
 	lineageTag: 8230744c-7288-4bc2-bf39-01ec1bfe8784
 
+	/// People counted at each funnel stage; use with stage on the visual axis.
+	measure 'Funnel People' = SUM('mart_funnel'[people])
+		formatString: #,##0
+		lineageTag: f2fdd842-f849-4f0f-9bc3-1314213a50e5
+
 	column stage
 		dataType: string
 		lineageTag: 01b84c17-ab07-41e0-91c0-a57c7a12593f
@@ -32,4 +37,4 @@ table mart_funnel
 				  Source = Table.FromRows(Json.Document(Binary.Decompress(Binary.FromText("XY1BDoMgEEXvMmtCkCrUsxhiqLIwnYK1qOntywBNky7+5r8/b4YB0NkZGDQpshXA/I5o2ACPJ1JFSKQaBG8bpYHQZBHHWwh3R5eXFFUW6odtjM7PedBS6kBVRVjXsMXdL/GdQEcanRe97IoEw8vN4xk86YkXg5Z9Max2Ibn+ooaL3NspLoeN+fP1H27OuzOjvmoFl2DMBw==", BinaryEncoding.Base64), Compression.Deflate)), let _t = ((type nullable text) meta [Serialized.Text = true]) in type table [stage = nullable text, ordinal = nullable text, people = nullable text, from_previous_rate = nullable text]),
 				  #"Changed column type" = Table.TransformColumnTypes(Source, {{"ordinal", Int64.Type}, {"people", Int64.Type}, {"from_previous_rate", type number}})
 				in
-				  #"Changed column type"
+				  #"Changed column type"\n

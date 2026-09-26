@@ -20,6 +20,6 @@ CTA B produces 140 leads from 500 visitors versus A's 100 from 500. Its lead rat
 
 ## Engineering evidence and limits
 
-The API's signed payment event persists an idempotency claim and workflow step status before applying simulated CRM and access changes. A partial-failure test retries without creating a second payment or entitlement. The dbt marts are rebuilt from generated CSV seeds in DuckDB and compared to the SQLite reference. CI runs Python checks, dbt data tests, and parity verification. The HTML dashboard renders the analyst story; generated mart CSVs are ready for Power BI import, but no native Power BI report is present.
+The API's signed payment event persists an idempotency claim and workflow step status before applying simulated CRM and access changes. A partial-failure test retries without creating a second payment or entitlement. The dbt marts are rebuilt from generated CSV seeds in DuckDB and compared to the SQLite reference. CI runs Python checks, dbt data tests, and parity verification. The HTML and Streamlit dashboards render the analyst story; an editable Power BI project and Excel dashboard provide the same synthetic evidence in native BI formats.
 
 Production use would require real source contracts, authentication, credential rotation, privacy review, provider sandbox tests, scheduled ingestion, freshness monitoring, renewal state, and persistent deployment. None is inferred from the local simulation.

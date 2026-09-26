@@ -1,6 +1,16 @@
 table mart_measurement_health
 	lineageTag: 7a31c4bb-8ce8-4f5a-b341-c913c402e82e
 
+	measure 'UTM Completeness' = DIVIDE(SUM('mart_measurement_health'[touches_with_utm]), SUM('mart_measurement_health'[eligible_touches]))
+		formatString: 0.0%
+		displayFolder: Measurement
+		lineageTag: 47702b36-7264-4828-b70d-835eb153e1ea
+
+	measure 'Campaign Registry Coverage' = DIVIDE(SUM('mart_measurement_health'[registered_touches]), SUM('mart_measurement_health'[eligible_touches]))
+		formatString: 0.0%
+		displayFolder: Measurement
+		lineageTag: d2f772e4-ed8b-4c71-8061-0d2205259e03
+
 	column eligible_touches
 		dataType: int64
 		lineageTag: 61ba9adb-2f53-4951-b436-d99969bfc4d2
@@ -68,4 +78,4 @@ table mart_measurement_health
 				  Source = Table.FromRows(Json.Document(Binary.Decompress(Binary.FromText("i45WMjY2VdJRMjY0BpJGZhYg0ggkYmRiACQNwQRIgQGMMDJXio0FAA==", BinaryEncoding.Base64), Compression.Deflate)), let _t = ((type nullable text) meta [Serialized.Text = true]) in type table [eligible_touches = nullable text, touches_with_utm = nullable text, registered_touches = nullable text, owned_contacts = nullable text, contacts = nullable text, duplicate_contact_rows = nullable text, unmatched_payments = nullable text, payments = nullable text, paid_contact_count = nullable text, valid_paid_journeys = nullable text]),
 				  #"Changed column type" = Table.TransformColumnTypes(Source, {{"eligible_touches", Int64.Type}, {"touches_with_utm", Int64.Type}, {"registered_touches", Int64.Type}, {"owned_contacts", Int64.Type}, {"contacts", Int64.Type}, {"duplicate_contact_rows", Int64.Type}, {"unmatched_payments", Int64.Type}, {"payments", Int64.Type}, {"paid_contact_count", Int64.Type}, {"valid_paid_journeys", Int64.Type}})
 				in
-				  #"Changed column type"
+				  #"Changed column type"\n

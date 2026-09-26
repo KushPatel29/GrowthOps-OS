@@ -1,6 +1,34 @@
 table mart_campaign_performance
 	lineageTag: 1918ebad-1a83-426e-97b3-f90924ab54ef
 
+	measure 'Campaign Cash USD' = DIVIDE(SUM('mart_campaign_performance'[net_cash_cents]), 100)
+		formatString: "$"#,0
+
+	measure 'Paid Spend USD' = DIVIDE(CALCULATE(SUM('mart_campaign_performance'[spend_cents]), 'mart_campaign_performance'[medium] IN {"paid_search", "paid_social"}), 100)
+		formatString: "$"#,0
+		displayFolder: Acquisition
+		lineageTag: b9dae14a-44ab-4412-a8ae-4b25725aed30
+
+	measure 'Paid Leads' = CALCULATE(SUM('mart_campaign_performance'[leads]), 'mart_campaign_performance'[medium] IN {"paid_search", "paid_social"})
+		formatString: #,0
+		displayFolder: Acquisition
+		lineageTag: ffd52fbc-d531-4a79-a6f7-8fd8872d0f57
+
+	measure 'Paid CPL USD' = DIVIDE([Paid Spend USD], [Paid Leads])
+		formatString: "$"#,0.00
+		displayFolder: Acquisition
+		lineageTag: b2113b59-a7f0-4af0-aa55-005b360744f2
+
+	measure 'Paid Net Cash USD' = DIVIDE(CALCULATE(SUM('mart_campaign_performance'[net_cash_cents]), 'mart_campaign_performance'[medium] IN {"paid_search", "paid_social"}), 100)
+		formatString: "$"#,0
+		displayFolder: Acquisition
+		lineageTag: 38effb11-22cb-4bf0-817b-d41a4bf60531
+
+	measure 'Paid Cash ROAS' = DIVIDE([Paid Net Cash USD], [Paid Spend USD])
+		formatString: 0.00"x"
+		displayFolder: Acquisition
+		lineageTag: 9f444e3b-83e7-4f97-8d7b-d32e08ca4e24
+
 	column campaign_id
 		dataType: string
 		lineageTag: c28e3d0b-99d5-4ca4-817e-4f3b93644a40
@@ -43,9 +71,6 @@ table mart_campaign_performance
 		summarizeBy: none
 		sourceColumn: net_cash_cents
 
-	measure 'Campaign Cash USD' = DIVIDE(SUM('mart_campaign_performance'[net_cash_cents]), 100)
-		formatString: "$"#,0
-
 	partition mart_campaign_performance = m
 		mode: import
 		source =
@@ -53,4 +78,4 @@ table mart_campaign_performance
 				  Source = Table.FromRows(Json.Document(Binary.Decompress(Binary.FromText("ZZDRCoMwDEX/xWeFaXXMVx/2EyLStVlX0GbUdrK/X+qkIi003HsDhyR9n927orPIZZaTpPLmWo4LCs0ncmV7oUeivlGpgmrKLRryPjOwLhM4B5byk8HVgBxh5jpQzoC6iYAveucfUCivJVBr9wFgFTdajB9qYIJgbUQoRDURweLqXtT6+7gIcCtC3LBkEcYiZAbHiyd6I7fpg01Oca0SQnWcQmoLwlEWhUED++DHH4Yf", BinaryEncoding.Base64), Compression.Deflate)), let _t = ((type nullable text) meta [Serialized.Text = true]) in type table [campaign_id = nullable text, source = nullable text, medium = nullable text, spend_cents = nullable text, leads = nullable text, mqls = nullable text, net_cash_cents = nullable text]),
 				  #"Changed column type" = Table.TransformColumnTypes(Source, {{"spend_cents", Int64.Type}, {"leads", Int64.Type}, {"mqls", Int64.Type}, {"net_cash_cents", Int64.Type}})
 				in
-				  #"Changed column type"
+				  #"Changed column type"\n

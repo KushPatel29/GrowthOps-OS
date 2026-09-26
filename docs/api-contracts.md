@@ -38,7 +38,7 @@ Accepts `campaign_id`, HTTPS `destination_url`, and snake-case `content`. Looks 
 
 `GET /ops/migration` returns the legacy-to-current contact audit and issue list. Run `python -m growthops.migration --apply-safe-repairs` explicitly to fill only null owner/source values from matched legacy records; the API does not expose this mutation.
 
-`GET /dashboard` serves the local Executive Pulse page backed by those endpoints. The root URL redirects to it. The page is a reference UI for the synthetic scenario; generated Power BI import marts are documented in [the handoff](power-bi-handoff.md), while a native report remains a target artifact.
+`GET /dashboard` serves the local Executive Pulse page backed by those endpoints. The root URL redirects to it. The page is a reference UI for the synthetic scenario; generated Power BI import marts and the editable native project are documented in [the handoff](power-bi-handoff.md).
 
 ## Target endpoints (not implemented)
 
