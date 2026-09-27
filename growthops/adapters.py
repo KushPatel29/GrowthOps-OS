@@ -25,7 +25,7 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Callable, Protocol
 from urllib import error, request
 
-from growthops.config import Settings
+from growthops.config import ConfigError, Settings
 
 if TYPE_CHECKING:
     from growthops.workflow import PaymentEvent
@@ -154,9 +154,14 @@ def build_adapters(settings: Settings, transport: Transport = urllib_transport) 
     if settings.crm_adapter == "hubspot":
         crm = HubSpotCRM(settings.hubspot_access_token, timeout, transport)
     if settings.access_adapter == "webhook":
-        access = SignedWebhook("access", settings.access_webhook_url, settings.webhook_secret, timeout, transport)
+        if not settings.access_webhook_secret:
+            raise ConfigError("GROWTHOPS_ACCESS_WEBHOOK_SECRET is required for the access bridge")
+        access = SignedWebhook("access", settings.access_webhook_url, settings.access_webhook_secret,
+                               timeout, transport)
     if settings.messaging_adapter == "webhook":
-        messaging = SignedWebhook("messaging", settings.messaging_webhook_url, settings.webhook_secret,
+        if not settings.messaging_webhook_secret:
+            raise ConfigError("GROWTHOPS_MESSAGING_WEBHOOK_SECRET is required for the messaging bridge")
+        messaging = SignedWebhook("messaging", settings.messaging_webhook_url, settings.messaging_webhook_secret,
                                   timeout, transport)
     return Adapters(crm, access, messaging)
 

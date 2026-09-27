@@ -1,12 +1,6 @@
 table mart_content_performance
 	lineageTag: c3e7179c-9de0-463a-9b5d-19a8ddfe3d52
 
-	column topic
-		dataType: string
-		lineageTag: 521bd4e3-86bc-5e5b-a340-0d3fb10d7bfd
-		summarizeBy: none
-		sourceColumn: topic
-
 	measure 'Influenced Cash USD' = DIVIDE(SUM('mart_content_performance'[influenced_net_cash_cents]), 100)
 		formatString: "$"#,0
 		displayFolder: Content
@@ -76,7 +70,7 @@ table mart_content_performance
 		mode: import
 		source =
 				let
-				  Source = Table.FromRows(Json.Document(Binary.Decompress(Binary.FromText("jZddb9s2FIb/CpGrDWgGHn6I5HXXoTfDhq1YMRS9kCXaVqNIhiQ3878fz6EkN7QZO4BpW1L45D0f72G+fHn43tS+f+Tw8O7h8/7Etv2xq/0wss1x6Fh/nNhP/vALg5/D/VP4etz48Om56erRT+GTUoXm4V3rIqwAQoQ3IXEFrnCl61Jz/Hn4+m4lmnD9096zuhmr/rsfTqwq25aN1dAcZqp5TR3L1o9EMQqZUiBAKCRYJNJV0LgIblIgXv+9H7qm27EhbNp0nvVbVrL3H/6IPJ1TKZQD3FtoxBRRmCTdZyRXRYqU4fqvvvW7ckLqFOQ23ab/L+JkIu80Tv45CgSD4RGOVoMMa1ExfscP2riEBcj6LWaP9Qc/RGTcdE5iHig0pSzopJRhRFXMZFgQqsWFOHzon7I9+sdNOfqaHYamIpW+HOr+pYvQ4jVzfgh3dLKgkFKBFBhCA4tGfCmbauT4J30su7pdork51js/sX7zzVdT089Mcb1urOQ/lI1AmEF99HdYIso0qvoukaBzKg1QZULBF5pAbYA4irK0qUh7n0h7XaS2VOjgdOxHZMBC1JTXtBXpofdtPyLwpZn22PaHwY/jcfCzwExIgzwq0SgKMLCSmoNCjN9Ap/rw1r/9cWDbZhinpVb7bmT7ZuGp17hwI4YTjKZuUNTqSpNIqpgYYCKKVB8G+q+yGT2lz4+ryFlz1Ta+m8ZZarZinSHTkoQCCqhaLU5dR9s3HQBsriO11HFrIHPFaPK5ZCis/CKJ7o6wgsvENRSho3ZHXEEmQAuflQmbKiNn+Oz9U3tiz34KQRqDunJiz+U0BQuKjZh1HMkFFYKVlEJ7rlO3Ii8k8htDiuf8G2xBzg2moATi6vhickQr0nkh9Ns0kZ0WSnMbi8NSb5DHuKUHyQMuxyHe/7vqB18FYxkDdGCdf6HczYWZzZ0kFaDORkpTSSxlCe4ieXCXrQnItQIoTS6qqBuBJKroBAtUQ5o+hP45g8qgbLd/nJrqCa1tu11KBrJMq6k6BY/tZ9aokm5CXlSMuc9LIXvS4DTmRGFXf1OUQJgzCSqtG3roIyWHlV3o9snvQif2i76ctSlO7uLw1zWsuvjc8QBpPCm/N+MpsnYGwVziQJCLf56bns45qXULe/OMIbKOBlLS9pJip5cpr+fkFenopZHy9lQSubQFu4rnQVzjAWPhAc35lMVvng1F3lzAUC8Ek4knzwVHBR+NLeWJ24dfkRu5nCasoN1j54t5MnB6/YBRN01F5MrRCZIjYiDXUpTXMO7OY5nLHSKMW8+55866QqIj96d90z0hqelYHZTVixaZTZEwjg4JMv6v8mq0zYyv/wM=", BinaryEncoding.Base64), Compression.Deflate)), let _t = ((type nullable text) meta [Serialized.Text = true]) in type table [content_id = nullable text, title = nullable text, platform = nullable text, topic = nullable text, views = nullable text, clicks = nullable text, engaged_leads = nullable text, mqls = nullable text, calls_booked = nullable text, customers = nullable text, influenced_net_cash_cents = nullable text]),
-				  #"Changed column type" = Table.TransformColumnTypes(Source, {{"content_id", type text}, {"title", type text}, {"platform", type text}, {"topic", type text}, {"views", Int64.Type}, {"clicks", Int64.Type}, {"engaged_leads", Int64.Type}, {"mqls", Int64.Type}, {"calls_booked", Int64.Type}, {"customers", Int64.Type}, {"influenced_net_cash_cents", Int64.Type}})
+				  Source = Table.FromRows(Json.Document(Binary.Decompress(Binary.FromText("hdBLCsMgEAbgqwTXLeg8orlALxGyKXFRaCPUpJDbN2oo1UYq/DKgfMxM34vXbbTuLKU4iYtbptE+G7/62T58c7feu6lR29Pqlnm52q0CGf924TJFWIYjhtOHhTqLGUscWaXpwKWudNu6qzO3Sy5S6EQXIebCpbrLmavTGoDNkUulq+ouZC4Cxz0g7LPjHhnzRWKdpIxkHUlQ7T+S62SbkSZ1iXEHYWLY80PqOmkyUsnUJho6Noc3", BinaryEncoding.Base64), Compression.Deflate)), let _t = ((type nullable text) meta [Serialized.Text = true]) in type table [content_id = nullable text, title = nullable text, platform = nullable text, views = nullable text, clicks = nullable text, engaged_leads = nullable text, mqls = nullable text, calls_booked = nullable text, customers = nullable text, influenced_net_cash_cents = nullable text]),
+				  #"Changed column type" = Table.TransformColumnTypes(Source, {{"content_id", type text}, {"title", type text}, {"platform", type text}, {"views", Int64.Type}, {"clicks", Int64.Type}, {"engaged_leads", Int64.Type}, {"mqls", Int64.Type}, {"calls_booked", Int64.Type}, {"customers", Int64.Type}, {"influenced_net_cash_cents", Int64.Type}})
 				in
 				  #"Changed column type"

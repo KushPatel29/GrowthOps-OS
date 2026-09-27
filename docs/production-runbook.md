@@ -17,14 +17,21 @@ checksum-verified embedding model, so nothing is downloaded at runtime.
 
 ## First deployment
 
-1. `cp .env.example .env`, generate secrets with
+1. `cp .env.example .env`, generate independent secrets with
    `python -c "import secrets; print(secrets.token_urlsafe(48))"` and fill them in.
+   Set a dashboard password of at least 16 characters when using the configured database.
+   Use different values for `GROWTHOPS_WEBHOOK_SECRET`, `GROWTHOPS_ACCESS_WEBHOOK_SECRET`,
+   and `GROWTHOPS_MESSAGING_WEBHOOK_SECRET`; configure each receiving bridge with its matching key.
 2. `docker compose run --rm api python -m growthops.ops check-config`: it prints the
    settings with secrets masked and exits non-zero if production is unsafe.
-3. Load data. For the synthetic demo: `docker compose --profile tools run --rm seed`
-   (production refuses `GROWTHOPS_DATA_MODE=synthetic`; live ingestion jobs write the
-   same tables).
+3. Load data. For a local synthetic rehearsal, set `GROWTHOPS_ENV=development` and
+   `GROWTHOPS_DATA_MODE=synthetic`, then run `docker compose --profile tools run --rm seed`.
+   For a real deployment, keep `GROWTHOPS_ENV=production` and `GROWTHOPS_DATA_MODE=live`,
+   configure real CRM, access and messaging adapters, and ingest live source data.
+   Never run the seed command against the production volume.
 4. `docker compose up -d`, then check `curl -s localhost:8000/ready`.
+   The API builds marts before the dashboard starts; the dashboard only reads the
+   existing database. A missing or stale source makes `/ready` report the issue.
 5. Point the payment provider bridge at `POST /webhooks/payments` with the shared
    secret. Each request must send `X-GrowthOps-Timestamp` (Unix seconds) and
    `X-GrowthOps-Signature` = hex HMAC-SHA256 of `"{timestamp}.{raw body}"`.

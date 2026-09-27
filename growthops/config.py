@@ -14,6 +14,7 @@ from __future__ import annotations
 import os
 from datetime import datetime, time, timedelta, timezone
 from typing import Literal
+from urllib.parse import urlsplit
 
 from pydantic import BaseModel, Field
 
@@ -22,6 +23,15 @@ DEMO_WEBHOOK_SECRET = "local-demo-secret"
 
 def _list(name: str) -> list[str]:
     return [item.strip() for item in os.getenv(name, "").split(",") if item.strip()]
+
+
+def _https_url(value: str) -> bool:
+    try:
+        parsed = urlsplit(value)
+        return (parsed.scheme == "https" and bool(parsed.hostname) and parsed.port != 0
+                and not parsed.username and not parsed.password and not parsed.fragment)
+    except ValueError:
+        return False
 
 
 class ConfigError(RuntimeError):
@@ -45,8 +55,10 @@ class Settings(BaseModel):
     hubspot_access_token: str = ""
     access_adapter: Literal["simulated", "webhook"] = "simulated"
     access_webhook_url: str = ""
+    access_webhook_secret: str = ""
     messaging_adapter: Literal["simulated", "webhook"] = "simulated"
     messaging_webhook_url: str = ""
+    messaging_webhook_secret: str = ""
     adapter_timeout_seconds: float = Field(default=10, gt=0, le=60)
 
     alert_webhook_url: str = ""
@@ -78,13 +90,30 @@ class Settings(BaseModel):
             issues.append("GROWTHOPS_API_KEYS must list at least one key of 24+ characters")
         if len(self.ops_token) < 24:
             issues.append("GROWTHOPS_OPS_TOKEN must be set (24+ characters) to allow operator replay")
+        # A simulated adapter reports success without touching a provider.
+        # Never acknowledge a live payment as fulfilled under that setup.
+        if self.crm_adapter == "simulated":
+            issues.append("GROWTHOPS_CRM_ADAPTER=hubspot is required in production")
+        if self.access_adapter == "simulated":
+            issues.append("GROWTHOPS_ACCESS_ADAPTER=webhook is required in production")
+        if self.messaging_adapter == "simulated":
+            issues.append("GROWTHOPS_MESSAGING_ADAPTER=webhook is required in production")
         if self.crm_adapter == "hubspot" and not self.hubspot_access_token:
             issues.append("HUBSPOT_ACCESS_TOKEN is required when GROWTHOPS_CRM_ADAPTER=hubspot")
-        if self.access_adapter == "webhook" and not self.access_webhook_url.startswith("https://"):
+        if self.access_adapter == "webhook" and not _https_url(self.access_webhook_url):
             issues.append("GROWTHOPS_ACCESS_WEBHOOK_URL must be an https URL when GROWTHOPS_ACCESS_ADAPTER=webhook")
-        if self.messaging_adapter == "webhook" and not self.messaging_webhook_url.startswith("https://"):
+        if self.access_adapter == "webhook" and (
+            len(self.access_webhook_secret) < 32 or self.access_webhook_secret == self.webhook_secret
+        ):
+            issues.append("GROWTHOPS_ACCESS_WEBHOOK_SECRET must be 32+ characters and distinct from the payment secret")
+        if self.messaging_adapter == "webhook" and not _https_url(self.messaging_webhook_url):
             issues.append("GROWTHOPS_MESSAGING_WEBHOOK_URL must be an https URL when GROWTHOPS_MESSAGING_ADAPTER=webhook")
-        if self.alert_webhook_url and not self.alert_webhook_url.startswith("https://"):
+        if self.messaging_adapter == "webhook" and (
+            len(self.messaging_webhook_secret) < 32 or self.messaging_webhook_secret in
+            (self.webhook_secret, self.access_webhook_secret)
+        ):
+            issues.append("GROWTHOPS_MESSAGING_WEBHOOK_SECRET must be 32+ characters and distinct from other secrets")
+        if self.alert_webhook_url and not _https_url(self.alert_webhook_url):
             issues.append("GROWTHOPS_ALERT_WEBHOOK_URL must be an https URL")
         if self.data_mode == "synthetic":
             issues.append("GROWTHOPS_DATA_MODE=synthetic: production must run on live sources")
@@ -96,14 +125,20 @@ class Settings(BaseModel):
 
     def redacted(self) -> dict:
         """Settings for logs and `ops check-config`, with secrets masked."""
-        secret = {"webhook_secret", "api_keys", "ops_token", "hubspot_access_token"}
+        secret = {"webhook_secret", "api_keys", "ops_token", "hubspot_access_token",
+                  "access_webhook_secret", "messaging_webhook_secret"}
         data = self.model_dump(mode="json")
         for key in secret:
             if data.get(key):
                 data[key] = "***" if isinstance(data[key], str) else [f"***{len(data[key])} keys"]
         for key in ("alert_webhook_url", "access_webhook_url", "messaging_webhook_url"):
             if data.get(key):
-                data[key] = data[key].split("/")[2] + "/***"
+                # Webhook paths and even URL userinfo can contain credentials.
+                try:
+                    host = urlsplit(data[key]).hostname or "<invalid-host>"
+                except ValueError:
+                    host = "<invalid-host>"
+                data[key] = host + "/***"
         return data
 
 
@@ -124,8 +159,10 @@ def get_settings() -> Settings:
         "hubspot_access_token": env.get("HUBSPOT_ACCESS_TOKEN", ""),
         "access_adapter": env.get("GROWTHOPS_ACCESS_ADAPTER", "simulated"),
         "access_webhook_url": env.get("GROWTHOPS_ACCESS_WEBHOOK_URL", ""),
+        "access_webhook_secret": env.get("GROWTHOPS_ACCESS_WEBHOOK_SECRET", ""),
         "messaging_adapter": env.get("GROWTHOPS_MESSAGING_ADAPTER", "simulated"),
         "messaging_webhook_url": env.get("GROWTHOPS_MESSAGING_WEBHOOK_URL", ""),
+        "messaging_webhook_secret": env.get("GROWTHOPS_MESSAGING_WEBHOOK_SECRET", ""),
         "adapter_timeout_seconds": env.get("GROWTHOPS_ADAPTER_TIMEOUT_SECONDS", 10),
         "alert_webhook_url": env.get("GROWTHOPS_ALERT_WEBHOOK_URL", ""),
         "alert_min_priority": env.get("GROWTHOPS_ALERT_MIN_PRIORITY", 45),

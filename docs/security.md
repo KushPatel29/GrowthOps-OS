@@ -6,7 +6,7 @@
 | API access | Read, ops, CRM, ask and docs routes need an API key (`X-API-Key` or `Authorization: Bearer`), compared in constant time; several keys are allowed for rotation | `request_context` middleware |
 | Operator actions | Dead-letter replay needs a separate operator token | `POST /ops/events/{id}/replay` |
 | Webhooks | HMAC-SHA256 over `"{timestamp}.{body}"` with a tolerance window, so captured requests cannot be replayed; event and payment IDs are idempotent, and a reused ID with a different payload is rejected (409) | `verify_signature`, `workflow.process_payment` |
-| Outbound calls | HTTPS URLs required; bearer token for HubSpot; signed, idempotent requests to bridges; timeouts on every call | `growthops/adapters.py`, `config.problems()` |
+| Outbound calls | HTTPS URLs required; bearer token for HubSpot; access and messaging bridges use separate signing secrets from the inbound payment webhook; idempotent requests and timeouts on every call | `growthops/adapters.py`, `config.problems()` |
 | Responses | Security headers (`nosniff`, `DENY` framing, `no-referrer`, `no-store`); unhandled errors return a request ID, never a traceback | middleware |
 | Ask your data | No language model and no API key; nothing typed is executed; SQL and prompt-injection patterns, personal-data requests and forecasts are refused before retrieval; answers only come from governed functions or cited documents | `growthops/ask_data.py`, question contract in CI |
 | Supply chain | Embedding model archive and files are SHA-256 pinned and extracted by allow-list; `pip-audit` and Dependabot in CI; GitHub Actions from their official publishers | `growthops/embeddings.py`, CI |

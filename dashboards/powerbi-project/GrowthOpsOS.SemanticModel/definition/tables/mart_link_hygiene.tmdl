@@ -73,6 +73,18 @@ table mart_link_hygiene
 		displayFolder: Tracking
 		lineageTag: 5c6a0db9-87a9-5497-a609-e531c9025795
 
+	/// Last-30-day clicks on links with missing, unregistered or off-taxonomy tracking.
+	measure 'Defective recent clicks' = CALCULATE(SUM('mart_link_hygiene'[recent_clicks]), FILTER('mart_link_hygiene', 'mart_link_hygiene'[missing_utm] || 'mart_link_hygiene'[unregistered_campaign] || 'mart_link_hygiene'[off_taxonomy]))
+		formatString: #,0
+		displayFolder: Tracking
+		lineageTag: 0c93ef7d-2532-4b4c-964a-562703f95be0
+
+	/// Share of audited short links with any tracking defect.
+	measure 'Link defect rate' = DIVIDE([Links with defects], COUNTROWS('mart_link_hygiene'))
+		formatString: 0.0%
+		displayFolder: Tracking
+		lineageTag: ce77da13-9907-4c38-a381-af54b07c5382
+
 	partition mart_link_hygiene = m
 		mode: import
 		source =

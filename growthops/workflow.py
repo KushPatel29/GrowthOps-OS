@@ -19,7 +19,7 @@ from collections import Counter
 from datetime import datetime, timedelta, timezone
 from typing import Callable, Literal
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from growthops.adapters import Adapters, ProviderError, call_step
 
@@ -43,16 +43,18 @@ def utcnow() -> str:
 
 
 class PaymentEvent(BaseModel):
-    event_id: str = Field(min_length=1)
+    model_config = ConfigDict(extra="forbid")
+
+    event_id: str = Field(min_length=1, max_length=128)
     event_type: Literal["payment.succeeded"]
-    payment_id: str = Field(min_length=1)
-    customer_id: str = Field(min_length=1)
-    deal_id: str | None = None
-    amount_cents: int = Field(gt=0)
+    payment_id: str = Field(min_length=1, max_length=128)
+    customer_id: str = Field(min_length=1, max_length=128)
+    deal_id: str | None = Field(default=None, max_length=128)
+    amount_cents: int = Field(gt=0, le=100_000_000_000)
     paid_at: datetime
     payment_type: Literal["new", "installment", "renewal"] = "new"
-    subscription_id: str | None = None
-    product_id: str | None = None
+    subscription_id: str | None = Field(default=None, max_length=128)
+    product_id: str | None = Field(default=None, max_length=128)
 
     @field_validator("paid_at")
     @classmethod

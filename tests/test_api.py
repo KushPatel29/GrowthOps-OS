@@ -4,7 +4,7 @@ import json
 
 from fastapi.testclient import TestClient
 
-from growthops.api import app
+from growthops.api import MAX_WEBHOOK_BYTES, app
 
 
 def _signed(body: dict, secret: bytes = b"test-secret") -> tuple[bytes, dict]:
@@ -30,6 +30,22 @@ def test_webhook_security_idempotency_and_lookup(db_path, monkeypatch):
         assert client.post("/webhooks/payments", content=reuse, headers=reuse_headers).status_code == 409
         trace = client.get("/ops/events/evt-api-1").json()
         assert trace["deliveries"] == 2 and len(trace["attempts_log"]) == 4
+
+
+def test_webhook_rejects_oversized_and_unexpected_payloads(db_path, monkeypatch):
+    monkeypatch.setenv("GROWTHOPS_DATABASE", str(db_path))
+    monkeypatch.setenv("GROWTHOPS_WEBHOOK_SECRET", "test-secret")
+    event = {"event_id": "evt-bounded", "event_type": "payment.succeeded",
+             "payment_id": "pay-bounded", "customer_id": "c-000002",
+             "amount_cents": 32000, "paid_at": "2026-09-26T00:00:00Z"}
+    with TestClient(app) as client:
+        too_large, headers = _signed({**event, "padding": "x" * MAX_WEBHOOK_BYTES})
+        assert client.post("/webhooks/payments", content=too_large, headers=headers).status_code == 413
+        extra, headers = _signed({**event, "unexpected": "ignored by old parser"})
+        assert client.post("/webhooks/payments", content=extra, headers=headers).status_code == 422
+        long_id, headers = _signed({**event, "event_id": "e" * 129})
+        assert client.post("/webhooks/payments", content=long_id, headers=headers).status_code == 422
+        assert client.get("/ops/events/evt-bounded").status_code == 404
 
 
 def test_campaign_links_enforce_taxonomy(db_path, monkeypatch):

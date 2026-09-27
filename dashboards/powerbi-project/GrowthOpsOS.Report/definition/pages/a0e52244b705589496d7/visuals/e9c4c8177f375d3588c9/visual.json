@@ -1,0 +1,59 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.7.0/schema.json",
+  "name": "e9c4c8177f375d3588c9",
+  "position": {
+    "x": 650,
+    "y": 20,
+    "z": 1002,
+    "width": 295,
+    "height": 110,
+    "tabOrder": 1002
+  },
+  "visual": {
+    "visualType": "cardVisual",
+    "query": {
+      "queryState": {
+        "Data": {
+          "projections": [
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "mart_paid_efficiency_daily"
+                    }
+                  },
+                  "Property": "Paid Activity CPL USD"
+                }
+              },
+              "queryRef": "mart_paid_efficiency_daily.Paid Activity CPL USD",
+              "nativeQueryRef": "Paid Activity CPL USD"
+            }
+          ]
+        }
+      }
+    },
+    "visualContainerObjects": {
+      "title": [
+        {
+          "properties": {
+            "text": {
+              "expr": {
+                "Literal": {
+                  "Value": "'Cost per lead (USD)'"
+                }
+              }
+            },
+            "show": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

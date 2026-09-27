@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hmac
 import os
+import sqlite3
 import tempfile
 from datetime import date, timedelta
 from pathlib import Path
@@ -17,9 +18,10 @@ from growthops.attribution import MODELS, summary as attribution_summary
 from growthops.brief import period_brief
 from growthops.campaign_links import audit_short_links
 from growthops.email_analytics import deliverability, email_performance, list_source_mix, newsletter_pipeline, type_summary
+from growthops.embeddings import model_ready, runtime_available
 from growthops.hubspot import audit as hubspot_audit
 from growthops.performance import daily_update, paid_efficiency
-from growthops.db import connect
+from growthops.db import connect_readonly
 from growthops.diagnostics import detect, incident_recall, series as metric_series
 from growthops.experiments import analyze as experiment_analysis
 from growthops.funnel import funnel, funnel_by_campaign
@@ -40,7 +42,6 @@ GOOD, CRITICAL = "#0ca30c", "#d03b3b"
 st.set_page_config(page_title="GrowthOps OS · ScaleLab", page_icon="📈", layout="wide")
 st.markdown("""<style>
   .block-container {max-width: 1280px; padding-top: 1.6rem}
-  .scope {font-size: .78rem; font-weight: 700; letter-spacing: .08em; opacity: .75}
   div[data-testid="stMetric"] {border: 1px solid rgba(137,135,129,.35); border-radius: 8px; padding: 12px 14px}
 </style>""", unsafe_allow_html=True)
 
@@ -53,7 +54,15 @@ def demo_database() -> str:
         if not Path(configured).exists():
             st.error("The configured database does not exist yet. Run the seed or ingestion job first.")
             st.stop()
-        build(configured)  # refresh the SQL views; never modifies source tables
+        try:
+            connection = connect_readonly(configured)
+            try:
+                connection.execute("SELECT 1 FROM mart_growth_daily LIMIT 1").fetchone()
+            finally:
+                connection.close()
+        except sqlite3.DatabaseError:
+            st.error("The configured database is not ready. Build the marts before starting the dashboard.")
+            st.stop()
         return configured
     database = str(Path(tempfile.mkdtemp(prefix="growthops-")) / "sample.db")
     seed(database)
@@ -64,6 +73,9 @@ def demo_database() -> str:
 def require_password() -> None:
     """Optional shared-password gate for a private deployment (GROWTHOPS_DASHBOARD_PASSWORD)."""
     expected = os.getenv("GROWTHOPS_DASHBOARD_PASSWORD", "")
+    if os.getenv("GROWTHOPS_DASHBOARD_DATABASE") and len(expected) < 16:
+        st.error("A configured database requires a dashboard password of at least 16 characters.")
+        st.stop()
     if not expected or st.session_state.get("authenticated"):
         return
     supplied = st.text_input("Password", type="password")
@@ -77,7 +89,7 @@ def require_password() -> None:
 
 @st.cache_data(show_spinner="Running the analytics…", ttl=900)
 def load_case(database: str) -> dict:
-    connection = connect(database)
+    connection = connect_readonly(database)
     try:
         episodes = detect(connection)
         brief = period_brief(connection)
@@ -187,8 +199,7 @@ database = demo_database()
 case = load_case(database)
 kpis, quality = case["summary"]["metrics"], case["summary"]["measurement_health"]
 
-st.markdown(f'<span class="scope">SYNTHETIC PORTFOLIO CASE · SCALELAB · DATA THROUGH {AS_OF:%d %b %Y}</span>',
-            unsafe_allow_html=True)
+st.caption(f"**SYNTHETIC PORTFOLIO CASE · SCALELAB · DATA THROUGH {AS_OF:%d %b %Y}**")
 st.title("GrowthOps OS")
 st.caption("Acquisition → CRM → cash → access → renewal for a fictional creator-led B2B education company. "
            "Fifteen months of generated data with planted incidents; the analytics have to find them.")
@@ -565,17 +576,20 @@ with tabs[8]:
 
 with tabs[9]:
     st.subheader("Ask your data")
+    # Community Cloud does not bake a model into its image. Stay local and usable
+    # without a first-question network download; the Docker image preloads MiniLM.
+    retrieval_mode = "hybrid" if runtime_available() and model_ready() else "keyword"
     st.caption("Keyless and local, like Ask Your Data: questions are matched to governed metrics and documented "
-               "definitions by hybrid retrieval (BM25 + a local MiniLM model). Every number comes from a tested "
-               "function, every definition from the metric catalog, and anything else is refused. Nothing typed is "
-               "executed as SQL and no text leaves the machine.")
+               f"definitions by {'hybrid BM25 + MiniLM' if retrieval_mode == 'hybrid' else 'BM25 keyword'} retrieval. "
+               "Every number comes from a tested function, every definition from the metric catalog, and anything "
+               "else is refused. Nothing typed is executed as SQL and no text leaves the machine.")
     st.caption("Try: " + " · ".join(("Did anyone pay and not get into the community?", "What does a lead cost on Google?",
                                      "Is our email going to junk?", "How is cost per MQL calculated?")))
     question = st.text_input("Question", placeholder="Which revenue number is right?")
     if question:
-        connection = connect(database)
+        connection = connect_readonly(database)
         try:
-            response = ask_data(connection, question)
+            response = ask_data(connection, question, mode=retrieval_mode)
         finally:
             connection.close()
         (st.warning if response["route"] == "refused" else st.markdown)(response["answer"].replace("$", r"\$"))

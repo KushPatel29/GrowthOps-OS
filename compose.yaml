@@ -39,6 +39,9 @@ services:
               "--server.address", "0.0.0.0", "--server.headless", "true", "--browser.gatherUsageStats", "false"]
     environment:
       GROWTHOPS_DASHBOARD_DATABASE: /data/growthops.db
+    depends_on:
+      api:
+        condition: service_healthy
     ports:
       - "127.0.0.1:8501:8501"
     healthcheck:

@@ -31,6 +31,24 @@ table mart_platform_comparison
 		summarizeBy: none
 		sourceColumn: warehouse_net_cash_cents
 
+	/// Conversion value reported by advertising platforms under their attribution rules.
+	measure 'Platform reported value USD' = DIVIDE(SUM('mart_platform_comparison'[reported_value_cents]), 100)
+		formatString: "$"#,0
+		displayFolder: Reconciliation
+		lineageTag: 7791d465-9fc8-4ed9-9553-ddbd5e9bb9eb
+
+	/// Net collected cash attributed in the warehouse for the same platform cohort.
+	measure 'Warehouse net cash USD' = DIVIDE(SUM('mart_platform_comparison'[warehouse_net_cash_cents]), 100)
+		formatString: "$"#,0
+		displayFolder: Reconciliation
+		lineageTag: 95d3dcca-5825-4bda-998f-2f315d8d0fa2
+
+	/// Platform-reported conversion value less warehouse net cash; definitions differ and this is not an accounting variance.
+	measure 'Platform value gap USD' = [Platform reported value USD] - [Warehouse net cash USD]
+		formatString: "$"#,0
+		displayFolder: Reconciliation
+		lineageTag: e1befe44-e6c2-4747-8882-a63c1bd55a38
+
 	partition mart_platform_comparison = m
 		mode: import
 		source =

@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import hmac
 import logging
+import re
 import sqlite3
 import time
 import uuid
@@ -51,6 +52,7 @@ logger = logging.getLogger("growthops.api")
 PROTECTED_PREFIXES = ("/metrics", "/ops", "/crm", "/campaign-links", "/ask", "/docs", "/redoc", "/openapi.json")
 SECURITY_HEADERS = {"X-Content-Type-Options": "nosniff", "X-Frame-Options": "DENY",
                     "Referrer-Policy": "no-referrer", "Cache-Control": "no-store"}
+MAX_WEBHOOK_BYTES = 128 * 1024
 
 
 def database_path() -> str:
@@ -86,13 +88,19 @@ def _authorized(request: Request, keys: list[str]) -> bool:
 @app.middleware("http")
 async def request_context(request: Request, call_next):
     """Request ID, API-key check, access log, latency metrics and security headers for every request."""
-    rid = request.headers.get("x-request-id") or uuid.uuid4().hex[:16]
+    candidate = request.headers.get("x-request-id", "")
+    rid = candidate if re.fullmatch(r"[A-Za-z0-9_.:-]{1,64}", candidate) else uuid.uuid4().hex[:16]
     token = request_id.set(rid)
     started = time.perf_counter()
     settings = get_settings()
     try:
         protected = request.url.path.startswith(PROTECTED_PREFIXES)
-        if protected and (settings.production or settings.api_keys) and not _authorized(request, settings.api_keys):
+        # Lifespan normally blocks an unsafe production start. Keep the same
+        # fail-closed behavior if a server disables ASGI lifespan or settings
+        # change while the process is running.
+        if settings.production and settings.problems():
+            response = JSONResponse({"detail": "server configuration unavailable"}, status_code=503)
+        elif protected and (settings.production or settings.api_keys) and not _authorized(request, settings.api_keys):
             response = JSONResponse({"detail": "missing or invalid API key"}, status_code=401)
         else:
             try:
@@ -300,7 +308,17 @@ def verify_signature(body: bytes, signature: str, timestamp: str, settings) -> b
 @app.post("/webhooks/payments", status_code=202)
 async def payment_webhook(request: Request, x_growthops_signature: str = Header(default=""),
                           x_growthops_timestamp: str = Header(default="")) -> dict:
-    body = await request.body()
+    # Read in bounded chunks: Content-Length is optional and cannot be trusted
+    # as the sole limit. This caps memory and HMAC work before parsing JSON.
+    length = request.headers.get("content-length", "")
+    if length.isdecimal() and (len(length) > 20 or int(length) > MAX_WEBHOOK_BYTES):
+        raise HTTPException(status_code=413, detail="webhook payload too large")
+    payload = bytearray()
+    async for chunk in request.stream():
+        if len(payload) + len(chunk) > MAX_WEBHOOK_BYTES:
+            raise HTTPException(status_code=413, detail="webhook payload too large")
+        payload.extend(chunk)
+    body = bytes(payload)
     settings = get_settings()
     if not verify_signature(body, x_growthops_signature, x_growthops_timestamp, settings):
         METRICS.increment("webhook_rejected")

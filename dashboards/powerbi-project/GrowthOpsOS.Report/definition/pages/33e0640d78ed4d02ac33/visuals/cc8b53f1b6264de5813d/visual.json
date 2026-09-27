@@ -59,17 +59,17 @@
             },
             {
               "field": {
-                "Column": {
+                "Measure": {
                   "Expression": {
                     "SourceRef": {
                       "Entity": "mart_campaign_performance"
                     }
                   },
-                  "Property": "spend_cents"
+                  "Property": "Campaign Spend USD"
                 }
               },
-              "queryRef": "mart_campaign_performance.spend_cents",
-              "nativeQueryRef": "spend_cents"
+              "queryRef": "mart_campaign_performance.Campaign Spend USD",
+              "nativeQueryRef": "Campaign Spend USD"
             },
             {
               "field": {
@@ -101,17 +101,17 @@
             },
             {
               "field": {
-                "Column": {
+                "Measure": {
                   "Expression": {
                     "SourceRef": {
                       "Entity": "mart_campaign_performance"
                     }
                   },
-                  "Property": "net_cash_cents"
+                  "Property": "Campaign Cash USD"
                 }
               },
-              "queryRef": "mart_campaign_performance.net_cash_cents",
-              "nativeQueryRef": "net_cash_cents"
+              "queryRef": "mart_campaign_performance.Campaign Cash USD",
+              "nativeQueryRef": "Campaign Cash USD"
             }
           ]
         }

@@ -101,17 +101,17 @@
             },
             {
               "field": {
-                "Column": {
+                "Measure": {
                   "Expression": {
                     "SourceRef": {
                       "Entity": "mart_content_performance"
                     }
                   },
-                  "Property": "influenced_net_cash_cents"
+                  "Property": "Influenced Cash USD"
                 }
               },
-              "queryRef": "mart_content_performance.influenced_net_cash_cents",
-              "nativeQueryRef": "influenced_net_cash_cents"
+              "queryRef": "mart_content_performance.Influenced Cash USD",
+              "nativeQueryRef": "Influenced Cash USD"
             }
           ]
         }

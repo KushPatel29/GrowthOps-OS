@@ -1,0 +1,77 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.7.0/schema.json",
+  "name": "62093b1bad9b5ab3abbf",
+  "position": {
+    "x": 20,
+    "y": 470,
+    "z": 2001,
+    "width": 600,
+    "height": 190,
+    "tabOrder": 2001
+  },
+  "visual": {
+    "visualType": "clusteredBarChart",
+    "query": {
+      "queryState": {
+        "Category": {
+          "projections": [
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "mart_email_performance"
+                    }
+                  },
+                  "Property": "email_type"
+                }
+              },
+              "queryRef": "mart_email_performance.email_type",
+              "nativeQueryRef": "email_type"
+            }
+          ]
+        },
+        "Y": {
+          "projections": [
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "mart_email_performance"
+                    }
+                  },
+                  "Property": "Human open rate"
+                }
+              },
+              "queryRef": "mart_email_performance.Human open rate",
+              "nativeQueryRef": "Human open rate"
+            }
+          ]
+        }
+      }
+    },
+    "visualContainerObjects": {
+      "title": [
+        {
+          "properties": {
+            "text": {
+              "expr": {
+                "Literal": {
+                  "Value": "'Human open rate by email type'"
+                }
+              }
+            },
+            "show": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

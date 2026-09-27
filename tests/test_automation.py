@@ -7,7 +7,7 @@ import pytest
 
 from growthops.adapters import Adapters, HubSpotCRM, ProviderError, SignedWebhook, build_adapters
 from growthops.alerts import deliver
-from growthops.config import get_settings
+from growthops.config import ConfigError, get_settings
 from growthops.worker import run_once
 from growthops.workflow import MAX_ATTEMPTS, PaymentEvent, process_payment, run_due
 
@@ -65,8 +65,12 @@ def test_build_adapters_follows_settings(monkeypatch):
     monkeypatch.setenv("HUBSPOT_ACCESS_TOKEN", "pat")
     monkeypatch.setenv("GROWTHOPS_ACCESS_ADAPTER", "webhook")
     monkeypatch.setenv("GROWTHOPS_ACCESS_WEBHOOK_URL", "https://bridge.test/access")
+    with pytest.raises(ConfigError, match="ACCESS_WEBHOOK_SECRET"):
+        build_adapters(get_settings())
+    monkeypatch.setenv("GROWTHOPS_ACCESS_WEBHOOK_SECRET", "access-secret")
     adapters = build_adapters(get_settings())
     assert isinstance(adapters.crm, HubSpotCRM) and isinstance(adapters.access, SignedWebhook)
+    assert adapters.access.secret == "access-secret"
     assert not adapters.simulated
 
 

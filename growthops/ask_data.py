@@ -280,11 +280,13 @@ INTENTS = (
            "UTM tracking and cash over "
            "recent weeks, with the campaign or page that drove each change.",
            ("What changed this week?", "Why did lead quality drop?", "anything unusual lately",
+            "biggest changes this month",
             "what should I look at this morning"), _what_changed),
     Intent("automation_health", "Payment to access automation",
            "Payment to access automation: buyers who paid but did not get into the community, access grants, payment "
            "webhooks, CRM update, onboarding, retries and the dead-letter queue.",
            ("Did every buyer get community access?", "Are payment webhooks failing?",
+            "did an access outage stop people getting in",
             "how many events are in the dead letter queue", "customers who paid but have no access"), _automation),
     Intent("experiment_cash_per_visitor", "CTA experiment result",
            "The call to action (CTA) A/B split test: which variant is winning on lead rate, MQL per lead, cash per visitor, "
@@ -297,6 +299,7 @@ INTENTS = (
            "Stage-to-stage conversion and drop-off: lead to MQL, booked call, show rate, opportunity, close rate "
            "from calls to wins, and payment. Where people are lost.",
            ("Where does the funnel drop off?", "lead to MQL conversion rate", "conversion by funnel stage",
+            "what percent of MQLs book a call",
             "close rate from booked call to won deal"), _funnel),
     Intent("paid_campaign_net_cash", "Best and worst paid campaigns",
            "Paid campaigns ranked by net cash returned per dollar of ad spend (ROAS by campaign), to decide where to "
@@ -307,14 +310,18 @@ INTENTS = (
            "Ad efficiency by platform for the last 30 days: ad CPM, ad click-through rate (CTR), CPC, cost per lead "
            "(CPL), cost per MQL and cost per booked discovery call on Meta, Google and LinkedIn ads.",
            ("What is our cost per lead?", "cost per booked call on Meta", "CPL and CPM by platform",
+            "compare LinkedIn spend with Meta campaigns",
             "how much does an MQL cost us"), _paid_efficiency),
     Intent("measurement_health", "Tracking and data quality",
            "Measurement health: whether UTM tagging can be trusted, UTM completeness, campaign registry match, CRM owner "
            "coverage, duplicate contacts, and cash with no campaign attached (untracked).",
-           ("How clean is our tracking?", "are UTMs missing", "data quality score", "untracked revenue"), _tracking),
+           ("How clean is our tracking?", "are UTMs missing", "data quality score", "untracked revenue",
+            "can we trust UTM tagging", "how many contacts are missing an owner",
+            "cash with no campaign attached"), _tracking),
     Intent("net_collected_cash", "Cash and refunds", "Money actually collected: gross cash, refunds given to customers, net collected cash after refunds, versus "
            "CRM bookings.",
-           ("What is net cash after refunds?", "how much money did we collect", "total refunds"), _cash),
+           ("What is net cash after refunds?", "how much money did we collect", "total refunds",
+            "booked revenue versus collected cash across systems"), _cash),
     Intent("email_performance", "Email performance",
            "Email campaign engagement: newsletter, webinar invite, promo and nurture open rate on human opens, email "
            "click rate and click-to-open.",
@@ -325,7 +332,8 @@ INTENTS = (
            ("Are our emails landing in spam?", "email bounce rate", "sending domain problems"), _deliverability),
     Intent("link_hygiene", "Short-link and UTM tagging",
            "Bitly-style short links checked against the campaign registry: missing, unregistered or off-taxonomy UTMs.",
-           ("Are our short links tagged correctly?", "bitly links missing UTMs", "which links are broken"), _links),
+           ("Are our short links tagged correctly?", "bitly links missing UTMs", "which links are broken",
+            "is the Instagram bio link tracked"), _links),
     Intent("crm_hubspot_audit", "CRM (HubSpot) hygiene",
            "HubSpot-mapped CRM audit: duplicates merged on email, lifecycle stage errors, owners, marketing contacts.",
            ("How clean is HubSpot?", "contacts with the wrong lifecycle stage", "CRM duplicates and owner gaps"), _crm),
@@ -334,7 +342,8 @@ INTENTS = (
            ("Give me the daily update", "how did yesterday go", "morning summary for the team"), _daily),
     Intent("content_pipeline", "Content to pipeline",
            "Which YouTube content topics influence customers and cash, not just views.",
-           ("Which videos drive buyers?", "best content topic by revenue", "does YouTube content produce customers"),
+           ("Which videos drive buyers?", "best content topic by revenue", "does YouTube content produce customers",
+            "do mindset videos make money"),
            _content),
     Intent("attribution_models", "Attribution model comparison",
            "Net cash credit by campaign under first touch, lead creation, last non-direct, U-shaped and linear models.",

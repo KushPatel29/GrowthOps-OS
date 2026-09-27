@@ -25,6 +25,12 @@ table mart_revenue_bridge
 		summarizeBy: none
 		sourceColumn: cents
 
+	/// Value of each booked-to-net-cash reconciliation step, read at the individual step grain.
+	measure 'Revenue bridge step USD' = DIVIDE(SUM('mart_revenue_bridge'[cents]), 100)
+		formatString: "$"#,0
+		displayFolder: Reconciliation
+		lineageTag: cd69c256-7d3b-46fb-813f-fef308775685
+
 	partition mart_revenue_bridge = m
 		mode: import
 		source =

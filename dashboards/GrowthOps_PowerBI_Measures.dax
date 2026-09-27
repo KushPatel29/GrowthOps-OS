@@ -1,15 +1,6 @@
-// Manual-import reference matching the 18 measures in GrowthOpsOS.pbip.
-// Add each line to its named table after importing the nine synthetic CSV marts.
-
-// mart_revenue
-Booked USD = DIVIDE(SUM('mart_revenue'[booked_cents]), 100)
-Gross USD = DIVIDE(SUM('mart_revenue'[gross_collected_cents]), 100)
-Refunds USD = DIVIDE(SUM('mart_revenue'[refunds_cents]), 100)
-Net USD = DIVIDE(SUM('mart_revenue'[net_collected_cents]), 100)
-
-// mart_growth_daily
-Daily Cash USD = DIVIDE(SUM('mart_growth_daily'[net_cash_cents]), 100)
-Daily Spend USD = DIVIDE(SUM('mart_growth_daily'[spend_cents]), 100)
+// Readable reference for the 43 measures in GrowthOpsOS.pbip.
+// The editable PBIP semantic model is the source of truth.
+// Create each measure on the table named in its section.
 
 // mart_campaign_performance
 Campaign Cash USD = DIVIDE(SUM('mart_campaign_performance'[net_cash_cents]), 100)
@@ -18,15 +9,64 @@ Paid Leads = CALCULATE(SUM('mart_campaign_performance'[leads]), 'mart_campaign_p
 Paid CPL USD = DIVIDE([Paid Spend USD], [Paid Leads])
 Paid Net Cash USD = DIVIDE(CALCULATE(SUM('mart_campaign_performance'[net_cash_cents]), 'mart_campaign_performance'[medium] IN {"paid_search", "paid_social"}), 100)
 Paid Cash ROAS = DIVIDE([Paid Net Cash USD], [Paid Spend USD])
+Campaign Spend USD = DIVIDE(SUM('mart_campaign_performance'[spend_cents]), 100)
 
-// mart_funnel and mart_content_performance
-Funnel People = SUM('mart_funnel'[people])
+// mart_content_performance
 Influenced Cash USD = DIVIDE(SUM('mart_content_performance'[influenced_net_cash_cents]), 100)
+
+// mart_email_performance
+Emails delivered = SUM('mart_email_performance'[delivered])
+Human open rate = DIVIDE(SUM('mart_email_performance'[human_opens]), [Emails delivered])
+Reported open rate = DIVIDE(SUM('mart_email_performance'[opens]), [Emails delivered])
+Email click rate = DIVIDE(SUM('mart_email_performance'[clicks]), [Emails delivered])
+Click-to-open rate = DIVIDE(SUM('mart_email_performance'[clicks]), SUM('mart_email_performance'[human_opens]))
+Bounce rate = DIVIDE(SUM('mart_email_performance'[bounces]), SUM('mart_email_performance'[sends]))
+Complaint rate = DIVIDE(SUM('mart_email_performance'[spam_complaints]), [Emails delivered])
+
+// mart_experiment_variants
+Experiment Net Cash USD = DIVIDE(SUM('mart_experiment_variants'[net_cash_cents]), 100)
+
+// mart_funnel
+Funnel People = SUM('mart_funnel'[people])
+
+// mart_growth_daily
+Daily Cash USD = DIVIDE(SUM('mart_growth_daily'[net_cash_cents]), 100)
+Daily Spend USD = DIVIDE(SUM('mart_growth_daily'[spend_cents]), 100)
+
+// mart_link_hygiene
+Links with defects = COUNTROWS(FILTER('mart_link_hygiene', 'mart_link_hygiene'[missing_utm] || 'mart_link_hygiene'[unregistered_campaign] || 'mart_link_hygiene'[off_taxonomy]))
+Recent clicks on defective links share = DIVIDE(CALCULATE(SUM('mart_link_hygiene'[recent_clicks]), FILTER('mart_link_hygiene', 'mart_link_hygiene'[missing_utm] || 'mart_link_hygiene'[unregistered_campaign] || 'mart_link_hygiene'[off_taxonomy])), SUM('mart_link_hygiene'[recent_clicks]))
+Defective recent clicks = CALCULATE(SUM('mart_link_hygiene'[recent_clicks]), FILTER('mart_link_hygiene', 'mart_link_hygiene'[missing_utm] || 'mart_link_hygiene'[unregistered_campaign] || 'mart_link_hygiene'[off_taxonomy]))
+Link defect rate = DIVIDE([Links with defects], COUNTROWS('mart_link_hygiene'))
 
 // mart_measurement_health
 UTM Completeness = DIVIDE(SUM('mart_measurement_health'[touches_with_utm]), SUM('mart_measurement_health'[eligible_touches]))
 Campaign Registry Coverage = DIVIDE(SUM('mart_measurement_health'[registered_touches]), SUM('mart_measurement_health'[eligible_touches]))
 
-// mart_renewal_risk; risk levels are computed relative to the sample snapshot date.
+// mart_paid_efficiency_daily
+Paid Activity Spend USD = DIVIDE(SUM('mart_paid_efficiency_daily'[spend_cents]), 100)
+Paid Activity Leads = SUM('mart_paid_efficiency_daily'[leads])
+Paid Activity CPL USD = DIVIDE([Paid Activity Spend USD], [Paid Activity Leads])
+Cost per MQL USD = DIVIDE([Paid Activity Spend USD], SUM('mart_paid_efficiency_daily'[mqls]))
+Cost per booked call USD = DIVIDE([Paid Activity Spend USD], SUM('mart_paid_efficiency_daily'[calls_booked]))
+CPM USD = DIVIDE([Paid Activity Spend USD] * 1000, SUM('mart_paid_efficiency_daily'[impressions]))
+CTR = DIVIDE(SUM('mart_paid_efficiency_daily'[clicks]), SUM('mart_paid_efficiency_daily'[impressions]))
+CPC USD = DIVIDE([Paid Activity Spend USD], SUM('mart_paid_efficiency_daily'[clicks]))
+
+// mart_platform_comparison
+Platform reported value USD = DIVIDE(SUM('mart_platform_comparison'[reported_value_cents]), 100)
+Warehouse net cash USD = DIVIDE(SUM('mart_platform_comparison'[warehouse_net_cash_cents]), 100)
+Platform value gap USD = [Platform reported value USD] - [Warehouse net cash USD]
+
+// mart_renewal_risk
 High Risk Renewals = CALCULATE(COUNTROWS('mart_renewal_risk'), 'mart_renewal_risk'[risk_level] = "high")
 Due Soon Renewals = CALCULATE(COUNTROWS('mart_renewal_risk'), 'mart_renewal_risk'[risk_level] = "medium")
+
+// mart_revenue
+Booked USD = DIVIDE(SUM('mart_revenue'[booked_cents]), 100)
+Gross USD = DIVIDE(SUM('mart_revenue'[gross_collected_cents]), 100)
+Refunds USD = DIVIDE(SUM('mart_revenue'[refunds_cents]), 100)
+Net USD = DIVIDE(SUM('mart_revenue'[net_collected_cents]), 100)
+
+// mart_revenue_bridge
+Revenue bridge step USD = DIVIDE(SUM('mart_revenue_bridge'[cents]), 100)

@@ -1,9 +1,9 @@
 """Export verified dbt marts for Power BI and re-embed them in the editable PBIP project.
 
 ``export`` writes one CSV per governed mart. ``refresh_pbip`` rewrites each TMDL
-table's embedded import partition from those CSVs, appends any new columns (with
+table's embedded import partition from those CSVs, aligns source columns (with
 deterministic lineage tags) and registers new tables, while leaving every
-hand-authored measure and existing column untouched. Run both after a dbt build
+hand-authored measure and calculated column untouched. Run both after a dbt build
 so the Power BI model always carries the same numbers as the warehouse.
 """
 
@@ -13,7 +13,9 @@ import argparse
 import base64
 import csv
 import json
+import os
 import re
+import tempfile
 import uuid
 import zlib
 from pathlib import Path
@@ -43,21 +45,21 @@ PAID, EMAIL, LINKS = "'mart_paid_efficiency_daily'", "'mart_email_performance'",
 # table -> (name, DAX, format string, display folder, description). Added when missing; never overwritten.
 MEASURES = {
     "mart_paid_efficiency_daily": (
-        ("Paid spend USD", f"DIVIDE(SUM({PAID}[spend_cents]), 100)", '"$"#,0', "Paid efficiency",
+        ("Paid Activity Spend USD", f"DIVIDE(SUM({PAID}[spend_cents]), 100)", '"$"#,0', "Paid efficiency",
          "Paid media spend in the filter context, in dollars."),
-        ("Paid leads", f"SUM({PAID}[leads])", "#,0", "Paid efficiency",
+        ("Paid Activity Leads", f"SUM({PAID}[leads])", "#,0", "Paid efficiency",
          "Leads created by paid campaigns (activity basis)."),
-        ("CPL USD", "DIVIDE([Paid spend USD], [Paid leads])", '"$"#,0.00', "Paid efficiency",
+        ("Paid Activity CPL USD", "DIVIDE([Paid Activity Spend USD], [Paid Activity Leads])", '"$"#,0.00', "Paid efficiency",
          "Cost per lead: paid spend / paid leads in the same window."),
-        ("Cost per MQL USD", f"DIVIDE([Paid spend USD], SUM({PAID}[mqls]))", '"$"#,0.00', "Paid efficiency",
+        ("Cost per MQL USD", f"DIVIDE([Paid Activity Spend USD], SUM({PAID}[mqls]))", '"$"#,0.00', "Paid efficiency",
          "Paid spend / MQLs reached in the window by paid-created leads."),
-        ("Cost per booked call USD", f"DIVIDE([Paid spend USD], SUM({PAID}[calls_booked]))", '"$"#,0.00',
+        ("Cost per booked call USD", f"DIVIDE([Paid Activity Spend USD], SUM({PAID}[calls_booked]))", '"$"#,0.00',
          "Paid efficiency", "Paid spend / discovery calls booked in the window by paid-created leads (CPDM)."),
-        ("CPM USD", f"DIVIDE([Paid spend USD] * 1000, SUM({PAID}[impressions]))", '"$"#,0.00', "Paid efficiency",
+        ("CPM USD", f"DIVIDE([Paid Activity Spend USD] * 1000, SUM({PAID}[impressions]))", '"$"#,0.00', "Paid efficiency",
          "Cost per thousand impressions."),
         ("CTR", f"DIVIDE(SUM({PAID}[clicks]), SUM({PAID}[impressions]))", "0.00%", "Paid efficiency",
          "Ad clicks / impressions."),
-        ("CPC USD", f"DIVIDE([Paid spend USD], SUM({PAID}[clicks]))", '"$"#,0.00', "Paid efficiency",
+        ("CPC USD", f"DIVIDE([Paid Activity Spend USD], SUM({PAID}[clicks]))", '"$"#,0.00', "Paid efficiency",
          "Paid spend / ad clicks."),
     ),
     "mart_email_performance": (
@@ -93,20 +95,27 @@ def export(warehouse_database: str, output: str = "data/powerbi") -> dict[str, i
     import duckdb  # Installed with the optional warehouse dependency.
 
     destination = Path(output)
-    destination.mkdir(parents=True, exist_ok=True)
+    destination.parent.mkdir(parents=True, exist_ok=True)
     connection = duckdb.connect(warehouse_database, read_only=True)
     try:
         counts = {}
-        for mart in MARTS:
-            ordering = f" ORDER BY {ORDER_BY[mart]}" if mart in ORDER_BY else ""
-            result = connection.execute(f"SELECT * FROM {mart}{ordering}")
-            columns = [item[0] for item in result.description]
-            rows = result.fetchall()
-            with (destination / f"{mart}.csv").open("w", encoding="utf-8-sig", newline="") as file:
-                writer = csv.writer(file)
-                writer.writerow(columns)
-                writer.writerows(rows)
-            counts[mart] = len(rows)
+        # Stage the entire snapshot before replacing versioned CSVs. A missing
+        # dbt mart must never leave a half-refreshed dashboard data directory.
+        with tempfile.TemporaryDirectory(prefix=".growthops-bi-", dir=destination.parent) as temporary:
+            staging = Path(temporary)
+            for mart in MARTS:
+                ordering = f" ORDER BY {ORDER_BY[mart]}" if mart in ORDER_BY else ""
+                result = connection.execute(f"SELECT * FROM {mart}{ordering}")
+                columns = [item[0] for item in result.description]
+                rows = result.fetchall()
+                with (staging / f"{mart}.csv").open("w", encoding="utf-8-sig", newline="") as file:
+                    writer = csv.writer(file)
+                    writer.writerow(columns)
+                    writer.writerows(rows)
+                counts[mart] = len(rows)
+            destination.mkdir(parents=True, exist_ok=True)
+            for mart in MARTS:
+                os.replace(staging / f"{mart}.csv", destination / f"{mart}.csv")
         return counts
     finally:
         connection.close()
@@ -197,6 +206,13 @@ def refresh_pbip(csv_dir: str = "dashboards/powerbi-data", project: Path = PROJE
         types = {column: existing.get(column) or _infer_type(column, [row[i] for row in rows])
                  for i, column in enumerate(columns)}
         text = text.split("\tpartition ", 1)[0].rstrip("\n") + "\n\n"
+        # A removed mart field must not linger as a sourceColumn in TMDL: Desktop
+        # cannot bind it after the import partition's table schema changes.
+        for obsolete in sorted(set(existing) - set(columns)):
+            pattern = rf"(?ms)^\tcolumn {re.escape(obsolete)}\n.*?(?=^\t(?:column |measure |partition |///)|\Z)"
+            text, removed = re.subn(pattern, "", text)
+            if removed != 1:
+                raise ValueError(f"Cannot remove obsolete column {mart}.{obsolete}: found {removed} blocks")
         missing = [column for column in columns if column not in existing]
         if missing:
             blocks = "".join(_column_block(mart, column, types[column]) for column in missing)
@@ -207,8 +223,14 @@ def refresh_pbip(csv_dir: str = "dashboards/powerbi-data", project: Path = PROJE
         text = text.rstrip("\n") + "\n\n" + additions + _partition(mart, columns, rows, types)
         path.write_text(text, encoding="utf-8")
         refreshed[mart] = len(rows)
-    _, daily = _read_csv(Path(csv_dir) / "mart_growth_daily.csv")
-    (tables_dir / "dim_date.tmdl").write_text(_date_table(daily[0][0], daily[-1][0]), encoding="utf-8")
+    dates = []
+    for table, date_column in DATE_KEYS.items():
+        columns, rows = _read_csv(Path(csv_dir) / f"{table}.csv")
+        date_index = columns.index(date_column)
+        dates.extend(row[date_index] for row in rows if row[date_index])
+    if not dates:
+        raise ValueError("Cannot build dim_date: the date-keyed marts have no dates")
+    (tables_dir / "dim_date.tmdl").write_text(_date_table(min(dates), max(dates)), encoding="utf-8")
     (project / "relationships.tmdl").write_text(_relationships(), encoding="utf-8")
     model = project / "model.tmdl"
     text = model.read_text(encoding="utf-8")

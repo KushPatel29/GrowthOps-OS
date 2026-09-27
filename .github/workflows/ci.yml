@@ -70,7 +70,7 @@ jobs:
         run: |
           python -m growthops.export_bi --refresh-pbip
           python -m growthops.export_excel
-          git diff --exit-code -- dashboards/ || (echo "::error::BI artifacts are stale. Run export_bi --refresh-pbip and export_excel." && exit 1)
+          git diff --exit-code -- dashboards/ ':(exclude)dashboards/GrowthOps_OS_Excel_Dashboard.xlsx' || (echo "::error::Power BI artifacts are stale. Run export_bi --refresh-pbip." && exit 1)
 
   docker:
     runs-on: ubuntu-latest
@@ -81,7 +81,7 @@ jobs:
         run: cp .env.example .env && docker compose config --quiet
       - name: Build the image (downloads and verifies the embedding model)
         run: docker build -t growthops-os .
-      - name: Production container refuses unsafe settings, then serves safely
+      - name: Production refuses unsafe settings; synthetic API serves behind a key
         run: |
           docker volume create gdata
           docker run --rm -v gdata:/data growthops-os python -m growthops.seed --database /data/growthops.db --scale 0.2
@@ -90,11 +90,11 @@ jobs:
             echo "::error::production accepted unsafe defaults"; exit 1
           fi
           docker run -d --name api -p 8000:8000 -v gdata:/data --read-only --tmpfs /tmp \
-            -e GROWTHOPS_ENV=production -e GROWTHOPS_DATA_MODE=live \
-            -e GROWTHOPS_WEBHOOK_SECRET=$(openssl rand -hex 32) -e GROWTHOPS_API_KEYS=ci-key-0123456789abcdefghij \
-            -e GROWTHOPS_OPS_TOKEN=$(openssl rand -hex 16) growthops-os
+            -e GROWTHOPS_ENV=development -e GROWTHOPS_DATA_MODE=synthetic \
+            -e GROWTHOPS_WEBHOOK_SECRET=$(openssl rand -hex 32) \
+            -e GROWTHOPS_API_KEYS=ci-key-0123456789abcdefghij growthops-os
           for i in $(seq 1 30); do curl -fs localhost:8000/health && break; sleep 2; done
-          curl -fs localhost:8000/ready | python -c "import json,sys; body=json.load(sys.stdin); assert body['status']=='ready', body"
+          curl -fs localhost:8000/ready | python -c "import json,sys; body=json.load(sys.stdin); assert body['status']=='ready' and not body['stale_sources'], body"
           test "$(curl -s -o /dev/null -w '%{http_code}' localhost:8000/metrics/funnel)" = "401"
           curl -fs -H "X-API-Key: ci-key-0123456789abcdefghij" "localhost:8000/ask?q=What%20does%20a%20lead%20cost%20on%20Google" \
             | python -c "import json,sys; body=json.load(sys.stdin); assert body['retrieval_mode']=='hybrid' and body['route']=='metric', body"

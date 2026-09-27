@@ -1,0 +1,143 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.7.0/schema.json",
+  "name": "c8f87514fbf95f8c9213",
+  "position": {
+    "x": 650,
+    "y": 160,
+    "z": 2002,
+    "width": 605,
+    "height": 500,
+    "tabOrder": 2002
+  },
+  "visual": {
+    "visualType": "tableEx",
+    "query": {
+      "queryState": {
+        "Values": {
+          "projections": [
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "mart_email_performance"
+                    }
+                  },
+                  "Property": "subject"
+                }
+              },
+              "queryRef": "mart_email_performance.subject",
+              "nativeQueryRef": "subject"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "mart_email_performance"
+                    }
+                  },
+                  "Property": "email_type"
+                }
+              },
+              "queryRef": "mart_email_performance.email_type",
+              "nativeQueryRef": "email_type"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "mart_email_performance"
+                    }
+                  },
+                  "Property": "sending_domain"
+                }
+              },
+              "queryRef": "mart_email_performance.sending_domain",
+              "nativeQueryRef": "sending_domain"
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "mart_email_performance"
+                    }
+                  },
+                  "Property": "Emails delivered"
+                }
+              },
+              "queryRef": "mart_email_performance.Emails delivered",
+              "nativeQueryRef": "Emails delivered"
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "mart_email_performance"
+                    }
+                  },
+                  "Property": "Human open rate"
+                }
+              },
+              "queryRef": "mart_email_performance.Human open rate",
+              "nativeQueryRef": "Human open rate"
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "mart_email_performance"
+                    }
+                  },
+                  "Property": "Email click rate"
+                }
+              },
+              "queryRef": "mart_email_performance.Email click rate",
+              "nativeQueryRef": "Email click rate"
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "mart_email_performance"
+                    }
+                  },
+                  "Property": "Complaint rate"
+                }
+              },
+              "queryRef": "mart_email_performance.Complaint rate",
+              "nativeQueryRef": "Complaint rate"
+            }
+          ]
+        }
+      }
+    },
+    "visualContainerObjects": {
+      "title": [
+        {
+          "properties": {
+            "text": {
+              "expr": {
+                "Literal": {
+                  "Value": "'Email performance by send'"
+                }
+              }
+            },
+            "show": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

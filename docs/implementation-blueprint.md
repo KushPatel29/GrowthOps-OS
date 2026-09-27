@@ -122,7 +122,7 @@ versioned JSON evidence object produced by deterministic queries. A human-author
 
 ## Docker services and release sequence (target)
 
-`api` handles signed webhooks and read-only operations queries; `worker` retries durable tasks; `postgres` stores operational state; `warehouse`/dbt job models analytics; `scheduler` runs freshness and executive-brief jobs. Local Docker Compose can run API, worker, and Postgres; managed deployments replace container-local state with persistent services. Secrets come from environment or secret manager, never committed files.
+`api` handles signed webhooks and read-only operations queries; `worker` retries durable tasks; `postgres` is the target operational store for multi-host scale; `warehouse`/dbt jobs model analytics; `scheduler` runs freshness and executive-brief jobs. The implemented local Docker Compose stack runs API, worker, and dashboard against a persistent SQLite volume. Managed deployments would replace that single-host store with PostgreSQL and separate warehouse services. Secrets come from environment or a secret manager, never committed files.
 
 1. **Measurement foundation:** event taxonomy, UTM registry, synthetic source generator, CRM migration audit, quality checks. Exit: known defects are surfaced and metric definitions are agreed.
 2. **Acquisition-to-cash model:** identity, lifecycle, payment reconciliation, first/lead-creation/last touch cash attribution, dbt marts. Exit: cash and attributed cash reconcile; unresolved records are explicit.

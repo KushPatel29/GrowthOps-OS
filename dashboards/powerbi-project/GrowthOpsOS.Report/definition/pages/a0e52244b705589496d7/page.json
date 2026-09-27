@@ -1,0 +1,8 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/page/2.1.0/schema.json",
+  "name": "a0e52244b705589496d7",
+  "displayName": "Paid efficiency - Synthetic",
+  "displayOption": "FitToPage",
+  "width": 1280,
+  "height": 720
+}

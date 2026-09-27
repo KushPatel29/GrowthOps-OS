@@ -2,7 +2,7 @@
 
 **Marketing measurement, revenue reconciliation and lifecycle automation for a creator-led B2B business.**
 
-[![tests](https://img.shields.io/badge/tests-78%20passing-brightgreen)](.github/workflows/ci.yml)
+[![GrowthOps checks](https://github.com/KushPatel29/GrowthOps-OS/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/KushPatel29/GrowthOps-OS/actions/workflows/ci.yml)
 [![guardrail eval](https://img.shields.io/badge/guardrail%20eval-30%2F30-brightgreen)](evals/narrative_guardrail_cases.json)
 
 [**Live dashboard**](https://growthops-os.streamlit.app/) · [Case study](docs/case-study.md) · [Metric catalog](docs/metric-catalog.md) · [API](docs/api-contracts.md)
@@ -54,7 +54,7 @@ if it ever stops doing so.
 | SQL modelling and analytics engineering: dbt staging → intermediate → marts with data tests | [`warehouse/dbt`](warehouse/dbt), verified against the Python reference in CI |
 | BI delivery: Streamlit, Power BI (PBIP/TMDL) and a formula-driven Excel workbook, all rebuilt from the same marts | [`dashboards/`](dashboards), [`export_bi.py`](growthops/export_bi.py), [`export_excel.py`](growthops/export_excel.py) |
 | Lifecycle automation: payment → CRM → access, idempotency, retries, dead letters, operator replay | [`workflow.py`](growthops/workflow.py), [`api.py`](growthops/api.py) |
-| Keyless, local AI: ask-your-data answers from governed metrics or cited definitions via hybrid retrieval (BM25 + local MiniLM, the same design as Ask Your Data), refuses the rest, and is held to an 83-question contract with zero wrong answers; no language model, no API key | [`ask_data.py`](growthops/ask_data.py), [`retrieval.py`](growthops/retrieval.py), [`evals/ask_questions.json`](evals/ask_questions.json) |
+| Keyless, local AI: ask-your-data answers from governed metrics or cited definitions using BM25, with local MiniLM added when its verified model is preloaded; it refuses unsupported questions and is held to an 83-question contract with zero wrong answers; no language model, no API key | [`ask_data.py`](growthops/ask_data.py), [`retrieval.py`](growthops/retrieval.py), [`evals/ask_questions.json`](evals/ask_questions.json) |
 | Evidence-bound narrative: a validator rejects invented numbers, dates or causal claims in any draft; 30-case eval set | [`narrator.py`](growthops/narrator.py), [`evals/`](evals/narrative_guardrail_cases.json) |
 | Production operation: fail-fast config, API keys, replay-safe signed webhooks, readiness and Prometheus metrics, migrations, verified backups, a worker for retries, alerts and the daily update, provider adapters (HubSpot, signed webhooks), non-root read-only containers | [runbook](docs/production-runbook.md), [security](docs/security.md), [`worker.py`](growthops/worker.py), [`adapters.py`](growthops/adapters.py) |
 
@@ -98,7 +98,7 @@ service levels, alerts, backups and incidents, and names when to move to Postgre
 ```bash
 python -m pip install -e ".[dev,warehouse]" -r requirements.txt
 python -m streamlit run streamlit_app.py            # the dashboard (generates data on start)
-python -m pytest                                    # 78 tests, about 50 seconds
+python -m pytest                                    # full local test suite
 ```
 
 Full pipeline, as CI runs it:

@@ -87,17 +87,17 @@
             },
             {
               "field": {
-                "Column": {
+                "Measure": {
                   "Expression": {
                     "SourceRef": {
                       "Entity": "mart_experiment_variants"
                     }
                   },
-                  "Property": "net_cash_cents"
+                  "Property": "Experiment Net Cash USD"
                 }
               },
-              "queryRef": "mart_experiment_variants.net_cash_cents",
-              "nativeQueryRef": "net_cash_cents"
+              "queryRef": "mart_experiment_variants.Experiment Net Cash USD",
+              "nativeQueryRef": "Experiment Net Cash USD"
             },
             {
               "field": {

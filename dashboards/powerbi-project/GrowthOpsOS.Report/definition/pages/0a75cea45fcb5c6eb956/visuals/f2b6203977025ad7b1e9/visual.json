@@ -1,0 +1,59 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.7.0/schema.json",
+  "name": "f2b6203977025ad7b1e9",
+  "position": {
+    "x": 965,
+    "y": 20,
+    "z": 1003,
+    "width": 295,
+    "height": 110,
+    "tabOrder": 1003
+  },
+  "visual": {
+    "visualType": "cardVisual",
+    "query": {
+      "queryState": {
+        "Data": {
+          "projections": [
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "mart_link_hygiene"
+                    }
+                  },
+                  "Property": "Recent clicks on defective links share"
+                }
+              },
+              "queryRef": "mart_link_hygiene.Recent clicks on defective links share",
+              "nativeQueryRef": "Recent clicks on defective links share"
+            }
+          ]
+        }
+      }
+    },
+    "visualContainerObjects": {
+      "title": [
+        {
+          "properties": {
+            "text": {
+              "expr": {
+                "Literal": {
+                  "Value": "'Share of recent clicks affected'"
+                }
+              }
+            },
+            "show": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

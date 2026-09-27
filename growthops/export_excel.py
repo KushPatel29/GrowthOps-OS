@@ -12,12 +12,12 @@ import argparse
 import csv
 import re
 import zipfile
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from pathlib import Path
 
 from openpyxl import Workbook
 from openpyxl.chart import BarChart, LineChart, Reference
-from openpyxl.formatting.rule import CellIsRule
+from openpyxl.formatting.rule import CellIsRule, FormulaRule
 from openpyxl.styles import Alignment, Font, PatternFill, Protection
 from openpyxl.utils import get_column_letter
 from openpyxl.workbook.defined_name import DefinedName
@@ -170,22 +170,22 @@ def build(output: Path = OUTPUT) -> Path:
 
     net_col = _col(daily_h, "net_cash_cents")
     spend_col = _col(daily_h, "spend_cents")
-    cash_chart = LineChart()
-    cash_chart.title, cash_chart.y_axis.title = "Daily net cash (cents, event date)", "cents"
-    cash_chart.add_data(Reference(workbook["Daily"], min_col=daily_h.index("net_cash_cents") + 1, min_row=1,
-                                  max_row=daily_n), titles_from_data=True)
-    cash_chart.set_categories(Reference(workbook["Daily"], min_col=1, min_row=2, max_row=daily_n))
-    cash_chart.series[0].graphicalProperties.line.solidFill = BLUE
-    cash_chart.height, cash_chart.width = 7.5, 24
-    dashboard.add_chart(cash_chart, "A17")
-
     analysis["A1"] = "Period analysis"
     analysis["A1"].font = Font(size=16, bold=True)
-    analysis["A2"] = "Edit the yellow dates; every value compares the window with the equally long window before it."
+    analysis["A2"] = "Edit the yellow dates to compare with the equally long prior window."
     analysis["A2"].font = Font(italic=True, color=MUTED)
     analysis["A4"], analysis["B4"] = "Start date", date(2026, 9, 19)
     analysis["A5"], analysis["B5"] = "End date", date(2026, 9, 25)
     analysis["A6"], analysis["B6"] = "Days in window", "=B5-B4+1"
+    analysis["A7"], analysis["B7"] = "Selected dates", (
+        '=IF(OR(NOT(ISNUMBER(B4)),NOT(ISNUMBER(B5))),"Enter dates",'
+        'IF(B5<B4,"End before start",IF(OR(B4<FirstDataDate,B5>LastDataDate),"Outside data","Ready")))'
+    )
+    analysis["C7"], analysis["D7"] = "Prior dates", (
+        '=IF(B7<>"Ready","Check selected",IF(B4-B6<FirstDataDate,"Prior outside data","Ready"))'
+    )
+    analysis.conditional_formatting.add("B7", FormulaRule(formula=['B7<>"Ready"'], font=Font(color=RED, bold=True)))
+    analysis.conditional_formatting.add("D7", FormulaRule(formula=['D7<>"Ready"'], font=Font(color=RED, bold=True)))
     for cell in (analysis["B4"], analysis["B5"]):
         cell.fill, cell.number_format = INPUT, "yyyy-mm-dd"
     analysis["A8"], analysis["B8"], analysis["C8"], analysis["D8"] = "Metric", "Selected window", "Prior window", "Change"
@@ -198,14 +198,47 @@ def build(output: Path = OUTPUT) -> Path:
             ("Deals won", "closed_won_deals", 1, "#,##0"), ("Net cash (USD)", "net_cash_cents", 100, MONEY)), start=9):
         values = f"Daily!${_col(daily_h, column)}$2:${_col(daily_h, column)}${daily_n}"
         analysis.cell(offset, 1, label)
-        analysis.cell(offset, 2, f'=SUMIFS({values},{days},">="&$B$4,{days},"<="&$B$5)/{divisor}').number_format = fmt
-        analysis.cell(offset, 3, f'=SUMIFS({values},{days},">="&($B$4-$B$6),{days},"<="&($B$4-1))/{divisor}').number_format = fmt
-        change = analysis.cell(offset, 4, f'=IF(C{offset}=0,"n.a.",B{offset}/C{offset}-1)')
+        analysis.cell(offset, 2, f'=IF($B$7<>"Ready","n.a.",SUMIFS({values},{days},">="&$B$4,{days},"<="&$B$5)/{divisor})').number_format = fmt
+        analysis.cell(offset, 3, f'=IF($D$7<>"Ready","n.a.",SUMIFS({values},{days},">="&($B$4-$B$6),{days},"<="&($B$4-1))/{divisor})').number_format = fmt
+        change = analysis.cell(offset, 4, f'=IFERROR(IF(C{offset}=0,"n.a.",B{offset}/C{offset}-1),"n.a.")')
         change.number_format = "+0%;-0%;0%"
     analysis.conditional_formatting.add("D9:D14", CellIsRule(operator="lessThan", formula=["0"], font=Font(color=RED)))
     analysis.column_dimensions["A"].width = 22
     for column in "BCD":
         analysis.column_dimensions[column].width = 16
+    analysis.column_dimensions["D"].width = 22
+
+    # A traceable monthly cash series is clearer than plotting hundreds of daily points.
+    daily_sheet = workbook["Daily"]
+    first_day = min(daily_sheet.cell(row, 1).value for row in range(2, daily_n + 1))
+    last_day = max(daily_sheet.cell(row, 1).value for row in range(2, daily_n + 1))
+    analysis["F3"], analysis["G3"], analysis["H3"] = "Month starting", "Net cash (USD)", "Month"
+    for cell in (analysis["F3"], analysis["G3"], analysis["H3"]):
+        cell.font, cell.fill = Font(bold=True), HEADER
+    month = first_day.replace(day=1)
+    month_starts = []
+    while month <= last_day:
+        month_starts.append(month)
+        month = (month.replace(day=28) + timedelta(days=4)).replace(day=1)
+    for index, month in enumerate(month_starts):
+        row = index + 4
+        analysis.cell(row, 6, month).number_format = "mmm yyyy"
+        analysis.cell(row, 7,
+            f'=SUMIFS(Daily!${net_col}$2:${net_col}${daily_n},{days},">="&F{row},'
+            f'{days},"<"&DATE(YEAR(F{row}),MONTH(F{row})+1,1))/100'
+        ).number_format = MONEY
+        analysis.cell(row, 8, month.strftime("%b %Y"))
+    analysis.column_dimensions["F"].width = 18
+    analysis.column_dimensions["G"].width = 18
+    analysis.column_dimensions["H"].width = 15
+    cash_chart = LineChart()
+    cash_chart.title, cash_chart.y_axis.title = "Net cash by month (USD, event date)", "USD"
+    cash_chart.add_data(Reference(analysis, min_col=7, min_row=3, max_row=len(month_starts) + 3), titles_from_data=True)
+    cash_chart.set_categories(Reference(analysis, min_col=8, min_row=4, max_row=len(month_starts) + 3))
+    cash_chart.series[0].graphicalProperties.line.solidFill = BLUE
+    cash_chart.legend = None
+    cash_chart.height, cash_chart.width = 7.5, 24
+    dashboard.add_chart(cash_chart, "A17")
 
     audit["A1"] = "Reconciliation checks (every difference must be zero)"
     audit["A1"].font = Font(size=14, bold=True)
@@ -219,7 +252,6 @@ def build(output: Path = OUTPUT) -> Path:
         ("Bridge: booked + deltas − gross", "=SUM(Bridge!D2:D6)-Bridge!D7"),
         ("Bridge: gross + refunds − net", "=Bridge!D7+Bridge!D8-Bridge!D9"),
         ("Bridge net − revenue net", "=Bridge!D9-Revenue!D2"),
-        ("Experiment exposures are unique (dbt test)", "=0"),
     ]
     for offset, (label, formula) in enumerate(checks, start=3):
         audit.cell(offset, 1, label)
@@ -245,8 +277,9 @@ def build(output: Path = OUTPUT) -> Path:
         audit.cell(offset, 1, label)
         audit.cell(offset, 2, formula)
         audit.cell(offset, 3, f'=IF(B{offset}=0,"✓ Reconciled","✗ Investigate")')
-    audit.cell(first_extra + len(extra) + 1, 1, "All checks reconciled").font = Font(bold=True)
-    audit.cell(first_extra + len(extra) + 1, 2, f"=SUMPRODUCT(ABS(B3:B{first_extra + len(extra) - 1}))=0")
+    last_check = first_extra + len(extra) - 1
+    audit.cell(last_check + 2, 1, "All checks reconciled").font = Font(bold=True)
+    audit.cell(last_check + 2, 2, '=IF(SUM(' + ",".join(f"ABS(B{row})" for row in range(3, last_check + 1)) + ')=0,"Yes","No")')
 
     _marketing_sheet(marketing, paid_h, paid_n, email_h, email_n, links_h, links_n)
     _definitions_sheet(definitions)
@@ -270,8 +303,7 @@ def _marketing_sheet(sheet, paid_h, paid_n, email_h, email_n, links_h, links_n) 
     """Paid, email and link KPIs for the window chosen on the Period analysis sheet, and the window before it."""
     sheet["A1"] = "Marketing KPIs for the selected window"
     sheet["A1"].font = Font(size=16, bold=True)
-    sheet["A2"] = ("Window dates come from the yellow cells on Period analysis. Activity basis: events are dated "
-                   "when they happened and credited to the campaign that created the lead.")
+    sheet["A2"] = "Dates come from Period analysis. Paid activity uses event dates."
     sheet["A2"].font = Font(italic=True, color=MUTED)
     for column, title in zip("ABCD", ("Metric", "Selected window", "Prior window", "Change")):
         sheet[f"{column}4"] = title
@@ -283,16 +315,18 @@ def _marketing_sheet(sheet, paid_h, paid_n, email_h, email_n, links_h, links_n) 
         values = f"'Paid daily'!${_col(paid_h, column)}$2:${_col(paid_h, column)}${paid_n}"
         dates = f"'Paid daily'!$A$2:$A${paid_n}"
         lo, hi = windows[col]
-        return f'SUMIFS({values},{dates},">="&{lo},{dates},"<="&{hi})'
+        gate = "'Period analysis'!$B$7" if col == "B" else "'Period analysis'!$D$7"
+        return f'IF({gate}<>"Ready","n.a.",SUMIFS({values},{dates},">="&{lo},{dates},"<="&{hi}))'
 
     def email_sum(column: str, col: str) -> str:
         values = f"Email!${_col(email_h, column)}$2:${_col(email_h, column)}${email_n}"
         dates = f"Email!${_col(email_h, 'sent_date')}$2:${_col(email_h, 'sent_date')}${email_n}"
         lo, hi = windows[col]
-        return f'SUMIFS({values},{dates},">="&{lo},{dates},"<="&{hi})'
+        gate = "'Period analysis'!$B$7" if col == "B" else "'Period analysis'!$D$7"
+        return f'IF({gate}<>"Ready","n.a.",SUMIFS({values},{dates},">="&{lo},{dates},"<="&{hi}))'
 
     rows = [
-        ("Paid spend (USD)", lambda c: f"={paid_sum('spend_cents', c)}/100", MONEY),
+        ("Paid spend (USD)", lambda c: f"=IFERROR({paid_sum('spend_cents', c)}/100,\"n.a.\")", MONEY),
         ("Paid leads", lambda c: f"={paid_sum('leads', c)}", "#,##0"),
         ("CPL (USD)", lambda c: f"=IFERROR({c}5/{c}6,\"n.a.\")", '"$"#,##0.00'),
         ("Paid MQLs", lambda c: f"={paid_sum('mqls', c)}", "#,##0"),
@@ -327,7 +361,7 @@ def _marketing_sheet(sheet, paid_h, paid_n, email_h, email_n, links_h, links_n) 
     sheet["A24"], sheet["B24"] = "Share of last-30-day link clicks on defective links", \
         f"=IFERROR(SUMPRODUCT({defective}*{recent})/SUM({recent}),\"n.a.\")"
     sheet["B24"].number_format = "0%"
-    sheet["A26"] = "Email bounce above 2% or complaints above 0.1% turn red. Cash lags leads, so no window ROAS here."
+    sheet["A26"] = "Email bounce >2% or complaints >0.1% turn red. Cash lags leads; no window ROAS."
     sheet["A26"].font = Font(italic=True, color=MUTED)
     sheet.column_dimensions["A"].width = 44
     for column in "BCD":
@@ -357,12 +391,18 @@ def _protect(workbook: Workbook, analysis, daily_n: int) -> None:
     """Named, validated date inputs; every other cell locked against accidental edits (no password)."""
     workbook.defined_names["StartDate"] = DefinedName("StartDate", attr_text="'Period analysis'!$B$4")
     workbook.defined_names["EndDate"] = DefinedName("EndDate", attr_text="'Period analysis'!$B$5")
-    validation = DataValidation(type="date", operator="between", formula1=f"MIN(Daily!$A$2:$A${daily_n})",
-                                formula2=f"MAX(Daily!$A$2:$A${daily_n})", showErrorMessage=True,
-                                errorTitle="Date outside the data",
-                                error="Pick a date inside the data range shown on the Daily sheet.")
-    analysis.add_data_validation(validation)
-    validation.add("B4:B5")
+    workbook.defined_names["FirstDataDate"] = DefinedName("FirstDataDate", attr_text=f"MIN(Daily!$A$2:$A${daily_n})")
+    workbook.defined_names["LastDataDate"] = DefinedName("LastDataDate", attr_text=f"MAX(Daily!$A$2:$A${daily_n})")
+    validations = (
+        ("B4", 'AND(ISNUMBER(B4),B4>=FirstDataDate,B4<=LastDataDate)'),
+        ("B5", 'AND(ISNUMBER(B5),B5>=B4,B5<=LastDataDate)'),
+    )
+    for address, formula in validations:
+        validation = DataValidation(type="custom", formula1=formula, showErrorMessage=True,
+                                    errorTitle="Invalid reporting window",
+                                    error="Choose ordered dates inside the available data.")
+        analysis.add_data_validation(validation)
+        validation.add(address)
     for cell in (analysis["B4"], analysis["B5"]):
         cell.protection = Protection(locked=False)
     for sheet in workbook.worksheets:

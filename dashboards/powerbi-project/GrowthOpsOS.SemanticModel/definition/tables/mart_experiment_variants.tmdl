@@ -73,11 +73,17 @@ table mart_experiment_variants
 		summarizeBy: none
 		sourceColumn: net_cash_per_visitor_cents
 
+	/// Net collected cash attributed to each experiment variant, in dollars.
+	measure 'Experiment Net Cash USD' = DIVIDE(SUM('mart_experiment_variants'[net_cash_cents]), 100)
+		formatString: "$"#,0
+		displayFolder: Experiments
+		lineageTag: 6e560a4f-c325-5310-a5c4-80ce1bb3154b
+
 	partition mart_experiment_variants = m
 		mode: import
 		source =
 				let
-				  Source = Table.FromRows(Json.Document(Binary.Decompress(Binary.FromText("dU5BCsIwEPzKknMpScw2pkc9+AMvpZS1lCqmjcSA9PduquDF7mFmdnZgp2lEn6gbY3ila/fwNItidYj5GOYUg6/hEMIdCJ4pUhrGBXrynu8btnWomFAbRqUlY5V3tZM8rGQpK3Sr0DpzZbDUoi22ylyYzxRvNKcaTkOCaYFPCr6pv6Z1Jr+ze5uLIDLmb8aYXxHn1CqUyyFEx0q07Rs=", BinaryEncoding.Base64), Compression.Deflate)), let _t = ((type nullable text) meta [Serialized.Text = true]) in type table [experiment_id = nullable text, variant_id = nullable text, label = nullable text, cta_text = nullable text, visitors = nullable text, leads = nullable text, mqls = nullable text, customers = nullable text, net_cash_cents = nullable text, lead_rate = nullable text, mql_per_lead = nullable text, net_cash_per_visitor_cents = nullable text]),
+				  Source = Table.FromRows(Json.Document(Binary.Decompress(Binary.FromText("i45WSi5JjE8vyi8vyYgvyEnMU9IBiyQCaaf8/GyFRIXikqLEktT0SoXkxJwc3MKmBgZA0hBMmoMIIzDfyMzAACxmoGcEJs1BUqZGBnoGSrE6uKxPAtLuqSUKuZUKEEkFqCRWQajVJiDSGOIKIGFmjLDZAkIZmhhD3QSyPRYA", BinaryEncoding.Base64), Compression.Deflate)), let _t = ((type nullable text) meta [Serialized.Text = true]) in type table [experiment_id = nullable text, variant_id = nullable text, label = nullable text, cta_text = nullable text, visitors = nullable text, leads = nullable text, mqls = nullable text, customers = nullable text, net_cash_cents = nullable text, lead_rate = nullable text, mql_per_lead = nullable text, net_cash_per_visitor_cents = nullable text]),
 				  #"Changed column type" = Table.TransformColumnTypes(Source, {{"experiment_id", type text}, {"variant_id", type text}, {"label", type text}, {"cta_text", type text}, {"visitors", Int64.Type}, {"leads", Int64.Type}, {"mqls", Int64.Type}, {"customers", Int64.Type}, {"net_cash_cents", Int64.Type}, {"lead_rate", type number}, {"mql_per_lead", type number}, {"net_cash_per_visitor_cents", type number}})
 				in
 				  #"Changed column type"

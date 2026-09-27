@@ -291,8 +291,63 @@ MIGRATIONS: tuple[tuple[int, str], ...] = (
     );
     CREATE INDEX IF NOT EXISTS idx_ask_log_time ON ask_log(asked_at);
     """),
+    # Version 3 records the additive upgrade of databases created by the
+    # original local simulator. SQLite has no ADD COLUMN IF NOT EXISTS, so
+    # _upgrade_legacy_columns performs the introspection before SCHEMA runs.
+    (3, "SELECT 1;"),
 )
 SCHEMA_VERSION = MIGRATIONS[-1][0]
+
+
+# Older releases already created these tables without the newer fields. The
+# full SCHEMA script creates indexes on some new fields, so ALTERs must happen
+# before it runs. Keep table and column names fixed here; no user input is
+# interpolated into schema statements.
+LEGACY_COLUMNS: dict[str, dict[str, str]] = {
+    "campaigns": {
+        "platform": "TEXT NOT NULL DEFAULT 'unknown'",
+        "landing_page": "TEXT",
+        "launched_on": "TEXT",
+        "ended_on": "TEXT",
+    },
+    "content_items": {"topic": "TEXT NOT NULL DEFAULT 'systems'"},
+    "contacts": {"created_at": "TEXT"},
+    "touches": {"landing_page": "TEXT", "sim_true_campaign_id": "TEXT"},
+    "deals": {"product_id": "TEXT REFERENCES products(product_id)", "created_at": "TEXT"},
+    "payments": {
+        "payment_type": "TEXT NOT NULL DEFAULT 'new' CHECK (payment_type IN ('new','installment','renewal'))",
+        "subscription_id": "TEXT",
+        "product_id": "TEXT",
+    },
+    "processed_events": {
+        "trace_id": "TEXT",
+        "payload_json": "TEXT",
+        "next_attempt_at": "TEXT",
+        "deliveries": "INTEGER NOT NULL DEFAULT 1",
+    },
+}
+
+
+def _upgrade_legacy_columns(connection: sqlite3.Connection) -> None:
+    """Add fields absent from an existing simulator database, preserving rows.
+
+    An immediate transaction serializes concurrent API/worker starts, so a
+    second process sees the columns added by the first instead of racing an
+    ALTER TABLE. Fresh databases have no matching tables and are unchanged.
+    """
+    connection.execute("BEGIN IMMEDIATE")
+    try:
+        for table, columns in LEGACY_COLUMNS.items():
+            present = {row[1] for row in connection.execute(f'PRAGMA table_info("{table}")')}
+            if not present:
+                continue
+            for column, definition in columns.items():
+                if column not in present:
+                    connection.execute(f'ALTER TABLE "{table}" ADD COLUMN "{column}" {definition}')
+        connection.commit()
+    except Exception:
+        connection.rollback()
+        raise
 
 
 def connect(path: str | Path) -> sqlite3.Connection:
@@ -316,8 +371,25 @@ def connect(path: str | Path) -> sqlite3.Connection:
     return connection
 
 
+def connect_readonly(path: str | Path) -> sqlite3.Connection:
+    """Open an existing SQLite store for dashboards without schema or data writes."""
+    uri = Path(path).resolve().as_uri() + "?mode=ro"
+    connection = sqlite3.connect(uri, uri=True, timeout=30, isolation_level=None)
+    connection.row_factory = sqlite3.Row
+    connection.execute("PRAGMA foreign_keys = ON")
+    connection.execute("PRAGMA busy_timeout = 30000")
+    connection.execute("PRAGMA query_only = ON")
+    return connection
+
+
 def initialize(connection: sqlite3.Connection) -> None:
     """Create the base schema and apply any pending migrations."""
+    current = schema_version(connection)
+    if current == SCHEMA_VERSION:
+        return
+    if current is not None and current > SCHEMA_VERSION:
+        raise RuntimeError(f"database schema version {current} is newer than supported {SCHEMA_VERSION}")
+    _upgrade_legacy_columns(connection)
     connection.executescript(SCHEMA)
     connection.execute(
         "CREATE TABLE IF NOT EXISTS schema_migrations (version INTEGER PRIMARY KEY, applied_at TEXT NOT NULL)")
@@ -327,7 +399,9 @@ def initialize(connection: sqlite3.Connection) -> None:
     for version, sql in MIGRATIONS:
         if version in applied:
             continue
-        connection.executescript(f"BEGIN IMMEDIATE;\n{sql}\nINSERT INTO schema_migrations VALUES ({version}, '{now}');\nCOMMIT;")
+        connection.executescript(
+            f"BEGIN IMMEDIATE;\n{sql}\nINSERT OR IGNORE INTO schema_migrations VALUES ({version}, '{now}');\nCOMMIT;"
+        )
 
 
 def schema_version(connection: sqlite3.Connection) -> int | None:

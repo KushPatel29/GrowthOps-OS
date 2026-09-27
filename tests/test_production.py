@@ -8,8 +8,9 @@ import pytest
 from fastapi.testclient import TestClient
 
 from growthops.api import app
+from growthops.adapters import Adapters
 from growthops.config import ConfigError, get_settings
-from growthops.db import SCHEMA_VERSION, connect, initialize, schema_version
+from growthops.db import LEGACY_COLUMNS, SCHEMA_VERSION, connect, connect_readonly, initialize, schema_version
 from growthops.freshness import check as freshness_check
 from growthops.observability import METRICS
 from growthops.ops import backup, restore, verify
@@ -18,6 +19,11 @@ KEY = "k" * 32
 SAFE = {
     "GROWTHOPS_ENV": "production", "GROWTHOPS_DATA_MODE": "live", "GROWTHOPS_WEBHOOK_SECRET": "s" * 40,
     "GROWTHOPS_API_KEYS": f"{KEY},{'j' * 32}", "GROWTHOPS_OPS_TOKEN": "o" * 32, "GROWTHOPS_LOG_FORMAT": "text",
+    "GROWTHOPS_CRM_ADAPTER": "hubspot", "HUBSPOT_ACCESS_TOKEN": "test-provider-token",
+    "GROWTHOPS_ACCESS_ADAPTER": "webhook", "GROWTHOPS_ACCESS_WEBHOOK_URL": "https://access.example.test/action",
+    "GROWTHOPS_ACCESS_WEBHOOK_SECRET": "a" * 40,
+    "GROWTHOPS_MESSAGING_ADAPTER": "webhook", "GROWTHOPS_MESSAGING_WEBHOOK_URL": "https://mail.example.test/action",
+    "GROWTHOPS_MESSAGING_WEBHOOK_SECRET": "m" * 40,
 }
 
 
@@ -35,10 +41,36 @@ def test_production_refuses_unsafe_defaults(monkeypatch, db_path):
     with pytest.raises(ConfigError):
         with TestClient(app):
             pass
-    _production(monkeypatch, db_path, GROWTHOPS_CRM_ADAPTER="hubspot")
+    _production(monkeypatch, db_path, HUBSPOT_ACCESS_TOKEN="")
     assert get_settings().problems() == ["HUBSPOT_ACCESS_TOKEN is required when GROWTHOPS_CRM_ADAPTER=hubspot"]
+    _production(monkeypatch, db_path, GROWTHOPS_CRM_ADAPTER="simulated",
+                GROWTHOPS_ACCESS_ADAPTER="simulated", GROWTHOPS_MESSAGING_ADAPTER="simulated")
+    assert len([issue for issue in get_settings().problems() if "required in production" in issue]) == 3
+    with pytest.raises(ConfigError):
+        with TestClient(app):
+            pass
+    client_without_lifespan = TestClient(app)
+    try:
+        assert client_without_lifespan.get("/health").status_code == 503
+    finally:
+        client_without_lifespan.close()
+    _production(monkeypatch, db_path)
     redacted = json.dumps(get_settings().redacted())
-    assert "s" * 40 not in redacted and KEY not in redacted
+    assert all(secret not in redacted for secret in ("s" * 40, "a" * 40, "m" * 40, KEY))
+
+
+def test_production_requires_separate_bridge_secrets(monkeypatch, db_path):
+    _production(monkeypatch, db_path, GROWTHOPS_ACCESS_WEBHOOK_SECRET=SAFE["GROWTHOPS_WEBHOOK_SECRET"],
+                GROWTHOPS_MESSAGING_WEBHOOK_SECRET=SAFE["GROWTHOPS_WEBHOOK_SECRET"])
+    problems = get_settings().problems()
+    assert any("ACCESS_WEBHOOK_SECRET" in issue for issue in problems)
+    assert any("MESSAGING_WEBHOOK_SECRET" in issue for issue in problems)
+    with pytest.raises(ConfigError):
+        with TestClient(app):
+            pass
+    _production(monkeypatch, db_path, GROWTHOPS_ACCESS_WEBHOOK_URL="https://user:password@access.example.test/key")
+    assert any("ACCESS_WEBHOOK_URL" in issue for issue in get_settings().problems())
+    assert "password" not in json.dumps(get_settings().redacted())
 
 
 def test_production_api_requires_keys_and_reports_readiness(monkeypatch, db_path):
@@ -50,6 +82,8 @@ def test_production_api_requires_keys_and_reports_readiness(monkeypatch, db_path
         assert client.get("/openapi.json").status_code == 401
         ok = client.get("/metrics/funnel", headers={"X-API-Key": KEY, "X-Request-ID": "req-123"})
         assert ok.status_code == 200 and ok.headers["X-Request-ID"] == "req-123"
+        invalid_id = client.get("/health", headers={"X-Request-ID": "bad id"})
+        assert invalid_id.headers["X-Request-ID"] != "bad id"
         assert ok.headers["X-Content-Type-Options"] == "nosniff"
         assert client.get("/metrics/funnel", headers={"Authorization": f"Bearer {'j' * 32}"}).status_code == 200
         assert client.get("/dashboard").status_code == 404
@@ -72,6 +106,9 @@ def _sign(body: bytes, secret: str, timestamp: int | None) -> dict:
 
 def test_production_webhook_requires_fresh_timestamped_signature(monkeypatch, db_path):
     _production(monkeypatch, db_path)
+    # Signature and replay policy are under test here; provider transport is
+    # exercised separately in test_automation.py.
+    monkeypatch.setattr("growthops.api.build_adapters", lambda settings: Adapters())
     body = json.dumps({"event_id": "evt-prod-1", "event_type": "payment.succeeded", "payment_id": "pay-prod-1",
                        "customer_id": "c-000002", "amount_cents": 32000,
                        "paid_at": "2026-09-26T00:00:00Z"}).encode()
@@ -106,6 +143,66 @@ def test_migrations_upgrade_an_old_database_once(tmp_path):
     assert connection.execute("SELECT COUNT(*) FROM contacts").fetchone()[0] == 1  # data kept
     assert connection.execute("PRAGMA journal_mode").fetchone()[0] == "wal"
     connection.close()
+
+
+def test_migrations_upgrade_original_full_schema_before_creating_new_indexes(tmp_path):
+    """A pre-upgrade database has existing tables without the new indexed fields."""
+    path = tmp_path / "original.db"
+    legacy = sqlite3.connect(path)
+    legacy.executescript("""
+        CREATE TABLE campaigns (campaign_id TEXT PRIMARY KEY, source TEXT NOT NULL,
+            medium TEXT NOT NULL, campaign_name TEXT NOT NULL, spend_cents INTEGER NOT NULL,
+            registry_valid INTEGER NOT NULL);
+        CREATE TABLE content_items (content_id TEXT PRIMARY KEY, title TEXT NOT NULL,
+            platform TEXT NOT NULL, published_at TEXT NOT NULL, views INTEGER NOT NULL,
+            clicks INTEGER NOT NULL, offer_id TEXT NOT NULL);
+        CREATE TABLE contacts (contact_id TEXT PRIMARY KEY, email TEXT NOT NULL, legacy_id TEXT,
+            owner_id TEXT, original_source TEXT, current_stage TEXT NOT NULL);
+        CREATE TABLE touches (touch_id TEXT PRIMARY KEY, contact_id TEXT NOT NULL,
+            campaign_id TEXT, occurred_at TEXT NOT NULL, touch_type TEXT NOT NULL, utm_source TEXT);
+        CREATE TABLE deals (deal_id TEXT PRIMARY KEY, contact_id TEXT NOT NULL,
+            amount_cents INTEGER NOT NULL, stage TEXT NOT NULL, closed_at TEXT);
+        CREATE TABLE payments (payment_id TEXT PRIMARY KEY, deal_id TEXT, customer_id TEXT NOT NULL,
+            amount_cents INTEGER NOT NULL, status TEXT NOT NULL, paid_at TEXT NOT NULL);
+        CREATE TABLE processed_events (event_id TEXT PRIMARY KEY, event_type TEXT NOT NULL,
+            payment_id TEXT NOT NULL, customer_id TEXT NOT NULL, payload_sha256 TEXT NOT NULL,
+            status TEXT NOT NULL, attempts INTEGER NOT NULL DEFAULT 0, last_error TEXT,
+            received_at TEXT NOT NULL, claimed_at TEXT, completed_at TEXT);
+        INSERT INTO contacts VALUES ('c-old', 'old@example.test', NULL, NULL, NULL, 'lead');
+        INSERT INTO deals VALUES ('deal-old', 'c-old', 5000, 'closed_won', '2026-01-01');
+        INSERT INTO payments VALUES ('pay-old', 'deal-old', 'c-old', 5000, 'succeeded', '2026-01-01');
+        INSERT INTO processed_events VALUES ('evt-old', 'payment.succeeded', 'pay-old', 'c-old',
+            'digest', 'completed', 1, NULL, '2026-01-01', NULL, '2026-01-01');
+    """)
+    legacy.close()
+    connection = connect(path)
+    initialize(connection)
+    initialize(connection)
+    assert schema_version(connection) == SCHEMA_VERSION
+    for table, columns in LEGACY_COLUMNS.items():
+        present = {row[1] for row in connection.execute(f'PRAGMA table_info("{table}")')}
+        assert set(columns) <= present, table
+    assert connection.execute("SELECT email FROM contacts WHERE contact_id='c-old'").fetchone()[0] == "old@example.test"
+    assert connection.execute("SELECT payment_type FROM payments WHERE payment_id='pay-old'").fetchone()[0] == "new"
+    assert connection.execute("SELECT deliveries FROM processed_events WHERE event_id='evt-old'").fetchone()[0] == 1
+    assert connection.execute("PRAGMA integrity_check").fetchone()[0] == "ok"
+    connection.execute("INSERT INTO schema_migrations VALUES (?, 'future')", (SCHEMA_VERSION + 1,))
+    with pytest.raises(RuntimeError, match="newer than supported"):
+        initialize(connection)
+    connection.close()
+
+
+def test_readonly_dashboard_connection_does_not_create_or_modify_store(db_path, tmp_path):
+    with pytest.raises(sqlite3.OperationalError):
+        connect_readonly(tmp_path / "absent.db")
+    connection = connect_readonly(db_path)
+    try:
+        assert connection.execute("SELECT COUNT(*) FROM contacts").fetchone()[0] > 0
+        assert connection.execute("PRAGMA query_only").fetchone()[0] == 1
+        with pytest.raises(sqlite3.OperationalError, match="readonly"):
+            connection.execute("INSERT INTO contacts (contact_id,email,current_stage) VALUES ('x','x@y.test','lead')")
+    finally:
+        connection.close()
 
 
 def test_backup_verify_and_restore_round_trip(db_path, tmp_path):

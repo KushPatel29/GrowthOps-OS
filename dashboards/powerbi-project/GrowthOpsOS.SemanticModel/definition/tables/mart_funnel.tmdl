@@ -34,7 +34,7 @@ table mart_funnel
 		mode: import
 		source =
 				let
-				  Source = Table.FromRows(Json.Document(Binary.Decompress(Binary.FromText("RY/RDsIgDEX/hefFACujfMuyLLjxsIgwFV38e2lZ4kNTwj3llHEUMfhVdEJRweD62sXUjeL+iPWoa4FSpjZ50SgVZ4uPcb7mfAs0SiMK3cAMDBL/jC8lpJUpYIGWTFlAx1Te9/ws77SVbw1Io5RzzCAAtJdifoV1PnKq92SBHpnojW2u3W+ksJRpy5mz0Ax+KdvHF94B+Td4AucKz5DCwTF5VZNLMEZM0w8=", BinaryEncoding.Base64), Compression.Deflate)), let _t = ((type nullable text) meta [Serialized.Text = true]) in type table [stage = nullable text, ordinal = nullable text, people = nullable text, from_previous_rate = nullable text]),
+				  Source = Table.FromRows(Json.Document(Binary.Decompress(Binary.FromText("XY1BDsIgFETvwrohgBTkLIQ0WFg0ImBFG28vHzAmLobFvOF9rVHw1qEJ0RrGSX2RmTS63QMUAAiUBHMqZEOrDWG5pHT18O9UI/pC/LAtxUfXBhwyBmIoUs5pL8+4lXcFM2hkWyg2d0lID++WI0XQA+8GyVQ3ZLuBXH4RxaT1di3by5Z2+fwPdx/90ZAaWoIZMuYD", BinaryEncoding.Base64), Compression.Deflate)), let _t = ((type nullable text) meta [Serialized.Text = true]) in type table [stage = nullable text, ordinal = nullable text, people = nullable text, from_previous_rate = nullable text]),
 				  #"Changed column type" = Table.TransformColumnTypes(Source, {{"stage", type text}, {"ordinal", Int64.Type}, {"people", Int64.Type}, {"from_previous_rate", type number}})
 				in
 				  #"Changed column type"

@@ -1,0 +1,59 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.7.0/schema.json",
+  "name": "80a09314a7f05228bd4f",
+  "position": {
+    "x": 335,
+    "y": 20,
+    "z": 1001,
+    "width": 295,
+    "height": 110,
+    "tabOrder": 1001
+  },
+  "visual": {
+    "visualType": "cardVisual",
+    "query": {
+      "queryState": {
+        "Data": {
+          "projections": [
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "mart_paid_efficiency_daily"
+                    }
+                  },
+                  "Property": "Paid Activity Leads"
+                }
+              },
+              "queryRef": "mart_paid_efficiency_daily.Paid Activity Leads",
+              "nativeQueryRef": "Paid Activity Leads"
+            }
+          ]
+        }
+      }
+    },
+    "visualContainerObjects": {
+      "title": [
+        {
+          "properties": {
+            "text": {
+              "expr": {
+                "Literal": {
+                  "Value": "'Paid leads (activity basis)'"
+                }
+              }
+            },
+            "show": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,101 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.7.0/schema.json",
+  "name": "726d0eedd08c5f49a7a3",
+  "position": {
+    "x": 650,
+    "y": 160,
+    "z": 2001,
+    "width": 605,
+    "height": 500,
+    "tabOrder": 2001
+  },
+  "visual": {
+    "visualType": "tableEx",
+    "query": {
+      "queryState": {
+        "Values": {
+          "projections": [
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "mart_revenue_bridge"
+                    }
+                  },
+                  "Property": "ordinal"
+                }
+              },
+              "queryRef": "mart_revenue_bridge.ordinal",
+              "nativeQueryRef": "ordinal"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "mart_revenue_bridge"
+                    }
+                  },
+                  "Property": "step"
+                }
+              },
+              "queryRef": "mart_revenue_bridge.step",
+              "nativeQueryRef": "step"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "mart_revenue_bridge"
+                    }
+                  },
+                  "Property": "kind"
+                }
+              },
+              "queryRef": "mart_revenue_bridge.kind",
+              "nativeQueryRef": "kind"
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "mart_revenue_bridge"
+                    }
+                  },
+                  "Property": "Revenue bridge step USD"
+                }
+              },
+              "queryRef": "mart_revenue_bridge.Revenue bridge step USD",
+              "nativeQueryRef": "Revenue bridge step USD"
+            }
+          ]
+        }
+      }
+    },
+    "visualContainerObjects": {
+      "title": [
+        {
+          "properties": {
+            "text": {
+              "expr": {
+                "Literal": {
+                  "Value": "'Booked-to-net cash bridge (USD)'"
+                }
+              }
+            },
+            "show": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

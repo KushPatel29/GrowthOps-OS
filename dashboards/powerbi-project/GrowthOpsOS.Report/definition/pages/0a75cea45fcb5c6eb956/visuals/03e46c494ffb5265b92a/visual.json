@@ -1,0 +1,77 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.7.0/schema.json",
+  "name": "03e46c494ffb5265b92a",
+  "position": {
+    "x": 20,
+    "y": 160,
+    "z": 2000,
+    "width": 600,
+    "height": 500,
+    "tabOrder": 2000
+  },
+  "visual": {
+    "visualType": "clusteredBarChart",
+    "query": {
+      "queryState": {
+        "Category": {
+          "projections": [
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "mart_link_hygiene"
+                    }
+                  },
+                  "Property": "channel"
+                }
+              },
+              "queryRef": "mart_link_hygiene.channel",
+              "nativeQueryRef": "channel"
+            }
+          ]
+        },
+        "Y": {
+          "projections": [
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "mart_link_hygiene"
+                    }
+                  },
+                  "Property": "Defective recent clicks"
+                }
+              },
+              "queryRef": "mart_link_hygiene.Defective recent clicks",
+              "nativeQueryRef": "Defective recent clicks"
+            }
+          ]
+        }
+      }
+    },
+    "visualContainerObjects": {
+      "title": [
+        {
+          "properties": {
+            "text": {
+              "expr": {
+                "Literal": {
+                  "Value": "'Recent clicks on defective links by channel'"
+                }
+              }
+            },
+            "show": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}
