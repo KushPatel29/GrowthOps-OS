@@ -87,6 +87,10 @@ MEASURES = {
     ),
 }
 PROJECT = Path("dashboards/powerbi-project/GrowthOpsOS.SemanticModel/definition")
+REPORT = Path("dashboards/powerbi-project/GrowthOpsOS.Report/definition")
+VISUAL_SCHEMA = "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.7.0/schema.json"
+PAGE_SCHEMA = "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/page/2.1.0/schema.json"
+MARKETING_PAGE = "Paid, email and tracking - Synthetic"
 M_TYPES = {"int64": "Int64.Type", "double": "type number", "dateTime": "type date", "string": "type text",
            "boolean": "type logical"}
 
@@ -194,6 +198,73 @@ def _relationships() -> str:
                    f"\ttoColumn: dim_date.Date\n\n" for table, column in DATE_KEYS.items())
 
 
+def _id(*parts: str) -> str:
+    return uuid.uuid5(uuid.NAMESPACE_URL, "growthops-pbir:" + ":".join(parts)).hex[:20]
+
+
+def _field(kind: str, table: str, name: str) -> dict:
+    return {"field": {kind: {"Expression": {"SourceRef": {"Entity": table}}, "Property": name}},
+            "queryRef": f"{table}.{name}", "nativeQueryRef": name}
+
+
+def _visual(page: str, key: str, visual_type: str, position: tuple[int, int, int, int, int], title: str,
+            roles: dict[str, list[dict]]) -> dict:
+    x, y, width, height, z = position
+    literal = lambda value: {"expr": {"Literal": {"Value": value}}}  # noqa: E731
+    return {
+        "$schema": VISUAL_SCHEMA,
+        "name": _id(page, key),
+        "position": {"x": x, "y": y, "z": z, "width": width, "height": height, "tabOrder": z},
+        "visual": {
+            "visualType": visual_type,
+            "query": {"queryState": {role: {"projections": fields} for role, fields in roles.items()}},
+            "visualContainerObjects": {"title": [{"properties": {"text": literal(f"'{title}'"),
+                                                                 "show": literal("true")}}]},
+        },
+    }
+
+
+def write_marketing_page(report: Path = REPORT) -> str:
+    """A report page over the paid, email and link tables, generated in the same PBIR shape as the other pages."""
+    page = _id("page", "marketing")
+    paid, email, links = "mart_paid_efficiency_daily", "mart_email_performance", "mart_link_hygiene"
+    cards = [(paid, "CPL USD", "Cost per lead"), (paid, "Cost per MQL USD", "Cost per MQL"),
+             (paid, "Cost per booked call USD", "Cost per booked call"), (paid, "CTR", "Ad CTR"),
+             (email, "Human open rate", "Email human open rate"), (email, "Bounce rate", "Email bounce rate")]
+    visuals = [_visual(page, f"card-{index}", "cardVisual", (20 + index * 207, 20, 195, 120, 5000 + index), title,
+                       {"Data": [_field("Measure", table, measure)]})
+               for index, (table, measure, title) in enumerate(cards)]
+    visuals.append(_visual(page, "cost-per-call", "clusteredBarChart", (20, 160, 610, 270, 1000),
+                           "Cost per booked call by paid campaign (USD)",
+                           {"Category": [_field("Column", paid, "campaign_id")],
+                            "Y": [_field("Measure", paid, "Cost per booked call USD")]}))
+    visuals.append(_visual(page, "email-trend", "lineChart", (650, 160, 610, 270, 2000),
+                           "Email human open rate and bounce rate by week",
+                           {"Category": [_field("Column", "dim_date", "Week start")],
+                            "Y": [_field("Measure", email, "Human open rate"), _field("Measure", email, "Bounce rate")]}))
+    visuals.append(_visual(page, "links", "tableEx", (20, 450, 1240, 250, 3000), "Short links against the registry",
+                           {"Values": [_field("Column", links, name) for name in (
+                               "link_id", "channel", "utm_source", "utm_medium", "utm_campaign", "missing_utm",
+                               "unregistered_campaign", "off_taxonomy", "recent_clicks")]}))
+    folder = report / "pages" / page
+    if folder.exists():
+        for old in (folder / "visuals").glob("*/visual.json"):
+            old.unlink()
+    for visual in visuals:
+        target = folder / "visuals" / visual["name"] / "visual.json"
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(json.dumps(visual, indent=2) + "\n", encoding="utf-8")
+    (folder / "page.json").write_text(json.dumps({"$schema": PAGE_SCHEMA, "name": page, "displayName": MARKETING_PAGE,
+                                                  "displayOption": "FitToPage", "width": 1280, "height": 720},
+                                                 indent=2) + "\n", encoding="utf-8")
+    pages_file = report / "pages" / "pages.json"
+    pages = json.loads(pages_file.read_text(encoding="utf-8"))
+    if page not in pages["pageOrder"]:
+        pages["pageOrder"].append(page)
+        pages_file.write_text(json.dumps(pages, indent=2) + "\n", encoding="utf-8")
+    return page
+
+
 def refresh_pbip(csv_dir: str = "dashboards/powerbi-data", project: Path = PROJECT) -> dict[str, int]:
     tables_dir = project / "tables"
     refreshed = {}
@@ -238,6 +309,8 @@ def refresh_pbip(csv_dir: str = "dashboards/powerbi-data", project: Path = PROJE
     text = re.sub(r"annotation PBI_QueryOrder = \[.*?\]", "annotation PBI_QueryOrder = " + json.dumps(names), text)
     text = re.sub(r"(ref table \w+\n?)+", "".join(f"ref table {name}\n" for name in names), text)
     model.write_text(text, encoding="utf-8")
+    if project == PROJECT:
+        write_marketing_page()
     return refreshed
 
 
