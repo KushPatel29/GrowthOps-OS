@@ -232,7 +232,9 @@ with tabs[0]:
             ("Paid spend", "spend_cents", usd), ("Leads", "leads", "{:,}".format),
             ("MQLs", "mqls", "{:,}".format), ("Calls booked", "calls_booked", "{:,}".format),
             ("Deals won", "closed_won_deals", "{:,}".format), ("Net cash", "net_cash_cents", usd))):
-        col.metric(label, formatter(current[key]), f"{change[key]:+.0%}" if change[key] is not None else None,
+        # Rounded before signing, so a tiny fall shows "+0%" and not a red "-0%".
+        col.metric(label, formatter(current[key]),
+                   f"{round(change[key], 2) + 0.0:+.0%}" if change[key] is not None else None,
                    delta_color="off" if key == "spend_cents" else "normal")
     st.caption("Cash is dated by payment and refund. The prior week contained the enrollment-deadline launch, "
                "so week-over-week cash is expected to fall.")
