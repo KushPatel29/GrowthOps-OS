@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import sqlite3
+from datetime import datetime, timezone
 from pathlib import Path
 
 
@@ -257,15 +258,80 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_processed_payment ON processed_events(paym
 """
 
 
+# Changes after the base schema, applied once each in order and recorded in schema_migrations.
+MIGRATIONS: tuple[tuple[int, str], ...] = (
+    (2, """
+    CREATE TABLE IF NOT EXISTS alert_log (
+      alert_key TEXT PRIMARY KEY,
+      first_sent_at TEXT NOT NULL,
+      last_sent_at TEXT NOT NULL,
+      sends INTEGER NOT NULL DEFAULT 1,
+      channel TEXT NOT NULL,
+      status TEXT NOT NULL CHECK (status IN ('sent','dry_run','failed')),
+      payload_json TEXT NOT NULL
+    );
+    CREATE TABLE IF NOT EXISTS job_runs (
+      job TEXT NOT NULL,
+      run_key TEXT NOT NULL,
+      started_at TEXT NOT NULL,
+      finished_at TEXT,
+      status TEXT NOT NULL CHECK (status IN ('running','succeeded','failed')),
+      detail TEXT,
+      PRIMARY KEY (job, run_key)
+    );
+    CREATE TABLE IF NOT EXISTS ask_log (
+      ask_id TEXT PRIMARY KEY,
+      asked_at TEXT NOT NULL,
+      question TEXT NOT NULL,
+      route TEXT NOT NULL CHECK (route IN ('certified','metric','definition','refused')),
+      target TEXT,
+      score REAL,
+      retrieval_mode TEXT NOT NULL,
+      latency_ms INTEGER NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_ask_log_time ON ask_log(asked_at);
+    """),
+)
+SCHEMA_VERSION = MIGRATIONS[-1][0]
+
+
 def connect(path: str | Path) -> sqlite3.Connection:
-    path = Path(path)
-    path.parent.mkdir(parents=True, exist_ok=True)
+    """Open the operational store with durable, concurrent-safe settings.
+
+    WAL lets the API, the worker and the dashboard read while one writer commits;
+    ``synchronous=NORMAL`` is the WAL setting SQLite recommends for durability
+    without an fsync on every commit.
+    """
+    in_memory = str(path) == ":memory:"
+    if not in_memory:
+        path = Path(path)
+        path.parent.mkdir(parents=True, exist_ok=True)
     connection = sqlite3.connect(path, timeout=30, isolation_level=None)
     connection.row_factory = sqlite3.Row
     connection.execute("PRAGMA foreign_keys = ON")
     connection.execute("PRAGMA busy_timeout = 30000")
+    if not in_memory:
+        connection.execute("PRAGMA journal_mode = WAL")
+        connection.execute("PRAGMA synchronous = NORMAL")
     return connection
 
 
 def initialize(connection: sqlite3.Connection) -> None:
+    """Create the base schema and apply any pending migrations."""
     connection.executescript(SCHEMA)
+    connection.execute(
+        "CREATE TABLE IF NOT EXISTS schema_migrations (version INTEGER PRIMARY KEY, applied_at TEXT NOT NULL)")
+    now = datetime.now(timezone.utc).isoformat()
+    connection.execute("INSERT OR IGNORE INTO schema_migrations VALUES (1, ?)", (now,))
+    applied = {row[0] for row in connection.execute("SELECT version FROM schema_migrations")}
+    for version, sql in MIGRATIONS:
+        if version in applied:
+            continue
+        connection.executescript(f"BEGIN IMMEDIATE;\n{sql}\nINSERT INTO schema_migrations VALUES ({version}, '{now}');\nCOMMIT;")
+
+
+def schema_version(connection: sqlite3.Connection) -> int | None:
+    try:
+        return connection.execute("SELECT MAX(version) FROM schema_migrations").fetchone()[0]
+    except sqlite3.OperationalError:
+        return None

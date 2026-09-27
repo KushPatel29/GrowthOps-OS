@@ -1,17 +1,61 @@
+# Production-shaped local stack: API, background worker and dashboard sharing one data volume.
+#   cp .env.example .env   # then fill in the secrets
+#   docker compose --profile tools run --rm seed      # synthetic demo data (skip for live data)
+#   docker compose up -d
+x-app: &app
+  build: .
+  image: growthops-os:0.3.0
+  env_file: .env
+  volumes:
+    - growthops-data:/data
+  read_only: true
+  tmpfs:
+    - /tmp
+  security_opt:
+    - no-new-privileges:true
+  cap_drop: [ALL]
+  restart: unless-stopped
+
 services:
   api:
-    build: .
-    environment:
-      GROWTHOPS_DATABASE: /app/data/growthops-sample.db
-      GROWTHOPS_WEBHOOK_SECRET: ${GROWTHOPS_WEBHOOK_SECRET:-local-demo-secret}
-    volumes:
-      - ./data:/app/data
+    <<: *app
     ports:
       - "127.0.0.1:8000:8000"
 
+  worker:
+    <<: *app
+    command: ["python", "-m", "growthops.worker"]
+    healthcheck:
+      test: ["CMD", "python", "-m", "growthops.worker", "--healthcheck", "300"]
+      interval: 60s
+      start_period: 120s
+    depends_on:
+      api:
+        condition: service_healthy
+
+  dashboard:
+    <<: *app
+    command: ["python", "-m", "streamlit", "run", "streamlit_app.py", "--server.port", "8501",
+              "--server.address", "0.0.0.0", "--server.headless", "true", "--browser.gatherUsageStats", "false"]
+    environment:
+      GROWTHOPS_DASHBOARD_DATABASE: /data/growthops.db
+    ports:
+      - "127.0.0.1:8501:8501"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8501/_stcore/health', timeout=4)"]
+      interval: 30s
+
   seed:
-    build: .
+    <<: *app
     profiles: ["tools"]
-    command: ["python", "-m", "growthops.seed", "--database", "/app/data/growthops-sample.db"]
-    volumes:
-      - ./data:/app/data
+    restart: "no"
+    command: ["python", "-m", "growthops.seed", "--database", "/data/growthops.db"]
+
+  backup:
+    <<: *app
+    profiles: ["tools"]
+    restart: "no"
+    command: ["python", "-m", "growthops.ops", "backup", "--output", "/data/backups"]
+
+volumes:
+  growthops-data:

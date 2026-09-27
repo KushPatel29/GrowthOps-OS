@@ -1,0 +1,27 @@
+table dim_date
+	lineageTag: 144f1f97-a48c-52a8-a3c6-f6ce9f9b9cd1
+	dataCategory: Time
+
+	column Date
+		dataType: dateTime
+		isKey
+		formatString: yyyy-mm-dd
+		lineageTag: c11b1549-89ad-5e60-8c72-1e216cf9ab52
+		summarizeBy: none
+		isNameInferred
+		sourceColumn: [Date]
+
+	column Month = FORMAT('dim_date'[Date], "yyyy-mm")
+		dataType: string
+		lineageTag: dec46e8b-7d57-5d0c-81f9-1a2d369268c2
+		summarizeBy: none
+
+	column 'Week start' = 'dim_date'[Date] - WEEKDAY('dim_date'[Date], 3)
+		dataType: dateTime
+		formatString: yyyy-mm-dd
+		lineageTag: eed5f76d-93d5-5b21-8ce0-6e2c2d4ee832
+		summarizeBy: none
+
+	partition dim_date = calculated
+		mode: import
+		source = CALENDAR(DATE(2025, 7, 1), DATE(2026, 12, 31))

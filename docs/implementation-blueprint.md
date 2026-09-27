@@ -1,6 +1,10 @@
 # GrowthOps OS implementation blueprint
 
-Status: **design contract plus a runnable local slice**. The code in `growthops/` implements a subset with SQLite and simulated adapters. `warehouse/dbt/` now implements a DuckDB dbt DAG for the local sources and marts; the BigQuery/PostgreSQL warehouse and provider architecture below remain targets. The exact current state is in [project status](../PROJECT_STATUS.md).
+Status: **design contract; much of it is now implemented.** `growthops/` runs the operational system on
+SQLite (WAL, migrations, backups) with provider adapters, a worker, alerts and the API; `warehouse/dbt/`
+implements the DuckDB dbt DAG; deployment is in `compose.yaml` and the [runbook](production-runbook.md). The
+39-table target schema and the BigQuery/PostgreSQL warehouse below remain targets for a larger business. The
+exact current state is in [project status](../PROJECT_STATUS.md).
 
 ## Product and evidence boundary
 
@@ -109,9 +113,12 @@ Critical tests: source ID uniqueness; valid taxonomy; nonnegative spend; payment
 
 Every monetary visual names its basis: booked deal value or net collected cash. A page warning appears when relevant quality thresholds fail. Filters: date cohort, channel, campaign, offer, content, product, and data-as-of time.
 
-## AI evaluation dataset (target)
+## AI evaluation dataset
 
-AI summaries consume only a versioned JSON evidence object produced by deterministic queries. A human-authored evaluation set will contain at least 30 synthetic scenarios: 10 straightforward changes, 10 conflicting or sparse-evidence cases, 5 data-quality failures, and 5 tempting but unsupported causal stories. Each case stores `input_evidence`, expected factual claims, forbidden claims, required caveat, and preferred investigation. Score factual support, numeric accuracy, citation to metric IDs, calibrated uncertainty, and actionability. A failed factual-support or numeric-accuracy check blocks the summary from the executive brief. No unconstrained warehouse querying by the model.
+Implemented without a language model: ask-your-data retrieves governed answers and cited definitions and is
+scored on `evals/ask_questions.json`; the narrative validator is scored on
+`evals/narrative_guardrail_cases.json`. The original target follows for reference. Summaries consume only a
+versioned JSON evidence object produced by deterministic queries. A human-authored evaluation set will contain at least 30 synthetic scenarios: 10 straightforward changes, 10 conflicting or sparse-evidence cases, 5 data-quality failures, and 5 tempting but unsupported causal stories. Each case stores `input_evidence`, expected factual claims, forbidden claims, required caveat, and preferred investigation. Score factual support, numeric accuracy, citation to metric IDs, calibrated uncertainty, and actionability. A failed factual-support or numeric-accuracy check blocks the summary from the executive brief. No unconstrained warehouse querying by the model.
 
 ## Docker services and release sequence (target)
 

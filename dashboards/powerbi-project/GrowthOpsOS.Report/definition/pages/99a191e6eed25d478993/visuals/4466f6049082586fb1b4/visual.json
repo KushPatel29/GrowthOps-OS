@@ -1,0 +1,77 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.7.0/schema.json",
+  "name": "4466f6049082586fb1b4",
+  "position": {
+    "x": 20,
+    "y": 160,
+    "z": 1000,
+    "width": 610,
+    "height": 270,
+    "tabOrder": 1000
+  },
+  "visual": {
+    "visualType": "clusteredBarChart",
+    "query": {
+      "queryState": {
+        "Category": {
+          "projections": [
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "mart_paid_efficiency_daily"
+                    }
+                  },
+                  "Property": "campaign_id"
+                }
+              },
+              "queryRef": "mart_paid_efficiency_daily.campaign_id",
+              "nativeQueryRef": "campaign_id"
+            }
+          ]
+        },
+        "Y": {
+          "projections": [
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "mart_paid_efficiency_daily"
+                    }
+                  },
+                  "Property": "Cost per booked call USD"
+                }
+              },
+              "queryRef": "mart_paid_efficiency_daily.Cost per booked call USD",
+              "nativeQueryRef": "Cost per booked call USD"
+            }
+          ]
+        }
+      }
+    },
+    "visualContainerObjects": {
+      "title": [
+        {
+          "properties": {
+            "text": {
+              "expr": {
+                "Literal": {
+                  "Value": "'Cost per booked call by paid campaign (USD)'"
+                }
+              }
+            },
+            "show": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

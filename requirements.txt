@@ -1,3 +1,6 @@
 -e .
 streamlit>=1.49,<2
 pandas>=2.2,<3
+onnxruntime>=1.29,<2
+tokenizers>=0.23.1,<1
+numpy>=1.26,<3
