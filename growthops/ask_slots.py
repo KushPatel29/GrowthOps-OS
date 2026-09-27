@@ -61,6 +61,14 @@ MEASURES: tuple[tuple[str, str], ...] = (
     ("spend", r"\b(ad |media |marketing )?spend\b|spent|ad budget|cost of ads|how much .*(spend|spent)"),
 )
 
+# How a measure is named back to the reader ("Understood as: Google · cost per lead"), never its internal id.
+MEASURE_LABELS = {
+    "cost_per_booked_call": "cost per booked call", "cost_per_mql": "cost per MQL", "cpl": "cost per lead",
+    "cpm": "CPM", "cpc": "CPC", "ctr": "CTR", "roas": "ROAS", "mql_rate": "MQL rate", "mqls": "MQLs",
+    "leads": "leads", "calls_booked": "booked calls", "deals_won": "deals won", "refunds": "refunds",
+    "gross_collected": "gross cash", "crm_booked": "CRM bookings", "net_cash": "net cash", "spend": "ad spend",
+}
+
 CAMPAIGN_IDS = tuple(campaign.campaign_id for campaign in CAMPAIGNS)
 
 
@@ -94,7 +102,7 @@ class Slots:
         if self.campaign:
             parts.append(self.campaign)
         if self.measure:
-            parts.append(self.measure.replace("_", " "))
+            parts.append(MEASURE_LABELS.get(self.measure, self.measure.replace("_", " ")))
         return " · ".join(parts)
 
 

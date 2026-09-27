@@ -119,7 +119,7 @@ def test_windowed_totals_equal_the_mart(connection):
     span = (last.replace(day=1).isoformat(), last.isoformat())
     expected = _mart(connection, "mqls", *span) / _mart(connection, "leads", *span)
     assert f"MQL rate (MQLs per lead) {expected:.1%}" in rate["answer"]
-    assert rate["understood"].startswith("last month · mql rate")
+    assert rate["understood"].startswith("last month · MQL rate")
 
 
 def test_platform_answers_equal_paid_efficiency(connection):
