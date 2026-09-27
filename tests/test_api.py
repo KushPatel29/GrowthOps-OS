@@ -94,3 +94,15 @@ def test_analytics_and_operations_endpoints(db_path, monkeypatch):
         assert client.get(f"/ops/customers/{stuck['customer_id']}").json()["diagnosis"] == "OK"
         page = client.get("/dashboard")
         assert page.status_code == 200 and "Synthetic scenario" in page.text
+
+
+def test_ask_answers_with_what_it_understood_and_serves_suggestions(db_path, monkeypatch):
+    monkeypatch.setenv("GROWTHOPS_DATABASE", str(db_path))
+    with TestClient(app) as client:
+        themes = client.get("/ask/suggestions").json()["themes"]
+        assert "Paid media" in themes and all(themes.values())
+        body = client.get("/ask", params={"q": "What does a lead cost on Google?"}).json()
+        assert body["metric_id"] == "paid_efficiency" and body["answer"].startswith("Google,")
+        assert "Google" in body["understood"] and body["follow_ups"]
+        refused = client.get("/ask", params={"q": "TikTok cost per lead"}).json()
+        assert refused["route"] == "refused" and "TikTok ads are not bought" in refused["answer"]

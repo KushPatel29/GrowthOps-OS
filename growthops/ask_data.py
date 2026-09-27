@@ -8,10 +8,17 @@ The same design as Ask Your Data, sized to this project. A question goes through
 3. **Retrieval**: hybrid BM25 + local MiniLM search over a curated corpus: one
    entry per governed answer (with example phrasings) and one passage per
    documented metric definition or policy section.
-4. **Answer or refuse**: a definition question returns the documented passage
+4. **Understand the details** (:mod:`growthops.ask_slots`): the time window
+   ("last week", "in August"), ad platform, campaign and measure the question
+   names, so "what does a lead cost on Google last month" answers exactly that.
+   A clear quantity question over a period ("how many leads last week") goes
+   straight to the windowed totals; an ad platform the business does not buy,
+   or a period the data does not cover, is refused rather than answered wrongly.
+5. **Answer or refuse**: a definition question returns the documented passage
    with its citation; a metric question runs that metric's fixed, tested
-   function and renders its values. Below the confidence threshold it refuses and
-   suggests the closest questions it can answer.
+   function with those details and renders its values, with follow-up questions.
+   Below the confidence threshold it refuses and suggests the closest questions
+   it can answer.
 
 There is no language model and no API key: every number comes from a governed
 function, every definition from a committed document. Each question is logged
@@ -31,10 +38,11 @@ import threading
 import time
 import uuid
 from collections.abc import Callable
-from dataclasses import dataclass
-from datetime import datetime, timedelta, timezone
+from dataclasses import dataclass, field
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
+from growthops.ask_slots import Slots, day_label, parse, resolve_window
 from growthops.retrieval import Entry, HybridIndex, resolve_mode, tokens
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -58,10 +66,52 @@ def _usd(cents: float) -> str:
     return f"{'-' if cents < 0 else ''}${abs(cents) / 100:,.0f}"
 
 
-# --- governed answers ------------------------------------------------------
-# Each returns (answer, source). Only these functions ever touch the database.
+@dataclass(frozen=True)
+class Context:
+    """What the question asked for, resolved against the data: slots plus the resolved window."""
+    slots: Slots = field(default_factory=Slots)
+    window: dict | None = None
+    as_of: date | None = None
+    first: date | None = None
 
-def _revenue_truth(connection):
+
+def data_range(connection: sqlite3.Connection) -> tuple[date, date]:
+    """The first and last complete day of the daily growth mart: every window is cut from this."""
+    first, last = connection.execute("SELECT MIN(day), MAX(day) FROM mart_growth_daily").fetchone()
+    return date.fromisoformat(first[:10]), date.fromisoformat(last[:10])
+
+
+def _window_or(ctx: Context | None, days: int) -> tuple[date, date, str]:
+    """The asked-for window, else the last `days` days of data, with how to say it."""
+    if ctx and ctx.window:
+        return ctx.window["start"], ctx.window["end"], ctx.window["label"]
+    end = ctx.as_of if ctx and ctx.as_of else None
+    if end is None:
+        raise ValueError("a window needs the data's as-of date")
+    start = end - timedelta(days=days - 1)
+    return start, end, f"{day_label(start)} to {day_label(end)} (the last {days} days)"
+
+
+def _pct(value: float | None, digits: int = 1) -> str:
+    return "n/a" if value is None else f"{value:.{digits}%}"
+
+
+def _change(now: float | None, before: float | None, rate: bool = False) -> str:
+    if now is None or before is None:
+        return ""
+    if rate:
+        return f" ({(now - before) * 100:+.1f} pts on the period before)"
+    if not before:
+        return ""
+    return f" ({(now - before) / abs(before):+.0%} on the period before)"
+
+
+# --- governed answers ------------------------------------------------------
+# Each takes (connection, context) and returns (answer, source). Only these
+# functions ever touch the database. A function that has no use for a detail
+# (a platform, a window) ignores it, and the answer says what period it covers.
+
+def _revenue_truth(connection, ctx=None):
     from growthops.reconciliation import four_numbers, platform_comparison
 
     numbers = four_numbers(connection)
@@ -73,7 +123,7 @@ def _revenue_truth(connection):
             "the number to run the business on."), "reconciliation bridges")
 
 
-def _what_changed(connection):
+def _what_changed(connection, ctx=None):
     from growthops.brief import findings
 
     top = [item for item in findings(connection) if item["category"] in ("growth", "tracking", "automation", "email")][:3]
@@ -82,7 +132,7 @@ def _what_changed(connection):
     return " ".join(f"{item['finding']} {item['why']}".rstrip(".") + "." for item in top), "diagnostics + workflow log"
 
 
-def _automation(connection):
+def _automation(connection, ctx=None):
     from growthops.workflow import health
 
     ops = health(connection)
@@ -92,7 +142,7 @@ def _automation(connection):
             "processed_events, workflow_step_attempts")
 
 
-def _experiment(connection):
+def _experiment(connection, ctx=None):
     from growthops.experiments import analyze
 
     comparison = analyze(connection, "cta_growth_plan")["comparison"]
@@ -104,7 +154,7 @@ def _experiment(connection):
             "experiment exposures, lifecycle, payments, refunds")
 
 
-def _renewals(connection):
+def _renewals(connection, ctx=None):
     from growthops.renewals import monitor
 
     risk = monitor(connection)
@@ -113,7 +163,7 @@ def _renewals(connection):
             "canceled."), "subscriptions, renewal attempts")
 
 
-def _funnel(connection):
+def _funnel(connection, ctx=None):
     from growthops.funnel import funnel
 
     stages = funnel(connection)
@@ -125,7 +175,7 @@ def _funnel(connection):
             f"{weakest['median_days_from_previous']} days)."), "lifecycle events")
 
 
-def _paid_campaigns(connection):
+def _paid_campaigns(connection, ctx=None):
     from growthops.report import campaign_performance
 
     rows = [row for row in campaign_performance(connection) if row["medium"].startswith("paid_") and row["spend_cents"]]
@@ -137,23 +187,130 @@ def _paid_campaigns(connection):
             "is descriptive, not incremental."), "campaign performance mart")
 
 
-def _paid_efficiency(connection):
+KPI_COLUMNS = {  # measure -> (label, mart column or None for a ratio, money?)
+    "spend": ("ad spend", "spend_cents", True),
+    "leads": ("leads", "leads", False),
+    "mqls": ("MQLs", "mqls", False),
+    "calls_booked": ("discovery calls booked", "calls_booked", False),
+    "deals_won": ("deals won", "closed_won_deals", False),
+    "gross_collected": ("gross cash collected", "gross_collected_cents", True),
+    "refunds": ("refunds", "refunds_cents", True),
+    "net_cash": ("net cash collected", "net_cash_cents", True),
+    "crm_booked": ("CRM bookings (closed-won value)", "booked_cents", True),
+    "mql_rate": ("MQL rate (MQLs per lead)", None, False),
+}
+KPI_MEASURES = frozenset(KPI_COLUMNS)
+
+
+def _period_totals(connection, start: date, end: date) -> dict:
+    row = connection.execute(
+        """SELECT COUNT(*) days, SUM(spend_cents) spend_cents, SUM(leads) leads, SUM(mqls) mqls,
+                  SUM(calls_booked) calls_booked, SUM(closed_won_deals) closed_won_deals,
+                  SUM(gross_collected_cents) gross_collected_cents, SUM(refunds_cents) refunds_cents,
+                  SUM(net_cash_cents) net_cash_cents, SUM(booked_cents) booked_cents
+           FROM mart_growth_daily WHERE day BETWEEN ? AND ?""", (start.isoformat(), end.isoformat())).fetchone()
+    totals = {key: value or 0 for key, value in dict(row).items()}
+    totals["mql_rate"] = totals["mqls"] / totals["leads"] if totals["leads"] else None
+    return totals
+
+
+def _kpi_value(totals: dict, measure: str) -> float | None:
+    column = KPI_COLUMNS[measure][1]
+    return totals["mql_rate"] if column is None else totals[column]
+
+
+def _kpi_text(measure: str, value: float | None, before: float | None) -> str:
+    label, _column, money = KPI_COLUMNS[measure]
+    if measure == "mql_rate":
+        return f"{label} {_pct(value)}{_change(value, before, rate=True)}"
+    shown = _usd(value) if money else f"{value:,}"
+    return f"{label} {shown}{_change(value, before)}"
+
+
+def _kpi_totals(connection, ctx=None):
+    """Totals for any period the data covers, against the same number of days before it."""
+    ctx = ctx or Context()
+    if not ctx.as_of:
+        first, as_of = data_range(connection)
+        ctx = Context(ctx.slots, ctx.window, as_of, first)
+    if ctx.window:
+        start, end, label = ctx.window["start"], ctx.window["end"], ctx.window["label"]
+    else:
+        start, end, label = ctx.first, ctx.as_of, f"all time ({day_label(ctx.first)} to {day_label(ctx.as_of)})"
+    days = (end - start).days + 1
+    now = _period_totals(connection, start, end)
+    prior_end, prior_start = start - timedelta(days=1), start - timedelta(days=days)
+    before = _period_totals(connection, prior_start, prior_end) if prior_start >= ctx.first else None
+    measure = ctx.slots.measure if ctx.slots.measure in KPI_MEASURES else None
+    order = [measure] if measure else []
+    order += [m for m in ("net_cash", "spend", "leads", "mqls", "mql_rate", "calls_booked", "deals_won")
+              if m not in order]
+    first_line = _kpi_text(order[0], _kpi_value(now, order[0]), before and _kpi_value(before, order[0]))
+    rest = "; ".join(_kpi_text(m, _kpi_value(now, m), before and _kpi_value(before, m)) for m in order[1:4])
+    note = "" if before else " There is no earlier period of the same length in the data to compare with."
+    clipped = " The data starts on 1 Jul 2025, so the period is cut to what exists." if (
+        ctx.window and ctx.window.get("clipped")) else ""
+    basis = (" Cash is dated by payment and refund, leads and MQLs by the day they happened, so the MQL rate is "
+             "an event-basis read of lead quality.") if measure in (None, "mql_rate", "mqls", "leads") else ""
+    return (f"{label[0].upper() + label[1:]}: {first_line}. Also {rest}.{note}{clipped}{basis}",
+            "mart_growth_daily (event dates)")
+
+
+def _paid_efficiency(connection, ctx=None):
     from growthops.performance import PLATFORM_LABELS, paid_efficiency
 
-    end = datetime.fromisoformat(connection.execute("SELECT MAX(spend_date) FROM ad_spend_daily").fetchone()[0]).date()
-    rows = paid_efficiency(connection, end - timedelta(days=29), end, by="platform")
-    parts = [f"{PLATFORM_LABELS.get(row['segment'], row['segment'])}: CPL {_usd(row['cost_per_lead_cents'] or 0)}, "
-             f"cost per MQL {_usd(row['cost_per_mql_cents'] or 0)}, cost per booked call "
-             f"{_usd(row['cost_per_booked_call_cents'] or 0)}, CTR {row['ctr']:.2%}, 30-day ROAS "
-             f"{row['net_cash_roas'] if row['net_cash_roas'] is not None else 'n/a'}x" for row in rows[:-1]]
+    ctx = ctx or Context()
+    if not ctx.as_of:
+        first, as_of = data_range(connection)
+        ctx = Context(ctx.slots, ctx.window, as_of, first)
+    start, end, label = _window_or(ctx, 30)
+    campaign, platform, measure = ctx.slots.campaign, ctx.slots.platform, ctx.slots.measure
+    rows = paid_efficiency(connection, start, end, by="campaign" if campaign else "platform")
     total = rows[-1]
-    return (f"Last 30 days to {end}: " + "; ".join(parts) + f". All paid: {_usd(total['spend_cents'])} spend, CPL "
-            f"{_usd(total['cost_per_lead_cents'])}, cost per MQL {_usd(total['cost_per_mql_cents'])}. Cash lags leads "
-            "by weeks, so 30-day ROAS understates.",
+    metrics = {
+        "cpl": ("cost per lead", "cost_per_lead_cents", _usd), "cost_per_mql": ("cost per MQL", "cost_per_mql_cents", _usd),
+        "cost_per_booked_call": ("cost per booked call", "cost_per_booked_call_cents", _usd),
+        "cpm": ("CPM", "cpm_cents", _usd), "cpc": ("CPC", "cpc_cents", _usd),
+        "ctr": ("CTR", "ctr", lambda v: _pct(v, 2)), "spend": ("spend", "spend_cents", _usd),
+        "leads": ("leads", "leads", lambda v: f"{v:,}"), "mqls": ("MQLs", "mqls", lambda v: f"{v:,}"),
+        "calls_booked": ("booked calls", "calls_booked", lambda v: f"{v:,}"),
+        "roas": ("net-cash ROAS", "net_cash_roas", lambda v: f"{v}x"),
+    }
+
+    def describe(row: dict, lead: str | None) -> str:
+        keys = ([lead] if lead in metrics else []) + [k for k in ("cpl", "cost_per_mql", "cost_per_booked_call",
+                                                                  "ctr", "spend", "roas") if k != lead]
+        parts = []
+        for key in keys:
+            name, field, fmt = metrics[key]
+            value = row.get(field)
+            parts.append(f"{name} {fmt(value) if value is not None else 'n/a'}")
+        return ", ".join(parts)
+
+    focus = None
+    if campaign:
+        focus = next((row for row in rows[:-1] if row["segment"] == campaign), None)
+        if focus is None:
+            return (f"{campaign} had no paid spend or paid-created leads from {label}.",
+                    "ad_spend_daily, lifecycle events (activity basis)")
+        name = campaign
+    elif platform:
+        focus = next((row for row in rows[:-1] if row["segment"] == platform), None)
+        name = PLATFORM_LABELS[platform]
+        if focus is None:
+            return f"{name} had no paid spend or paid-created leads from {label}.", "ad_spend_daily"
+    lag = " Cash lags leads by weeks, so a short-window ROAS understates." if (
+        measure == "roas" or not measure) else ""
+    if focus:
+        return ((f"{name}, {label}: {describe(focus, measure)}. All paid media for comparison: "
+                 f"{describe(total, measure)}.{lag}"),
+                "ad_spend_daily, lifecycle events (activity basis)")
+    parts = [f"{PLATFORM_LABELS.get(row['segment'], row['segment'])}: {describe(row, measure)}" for row in rows[:-1]]
+    return (f"{label[0].upper() + label[1:]}: " + "; ".join(parts) + f". All paid: {describe(total, measure)}.{lag}",
             "ad_spend_daily, lifecycle events (activity basis)")
 
 
-def _tracking(connection):
+def _tracking(connection, ctx=None):
     from growthops.report import measurement_health
 
     health = measurement_health(connection)
@@ -163,27 +320,35 @@ def _tracking(connection):
             "of net cash that cannot be credited to a campaign."), "measurement health")
 
 
-def _cash(connection):
+def _cash(connection, ctx=None):
     from growthops.report import metrics
 
+    if ctx and ctx.window:
+        return _kpi_totals(connection, Context(Slots(measure="net_cash"), ctx.window, ctx.as_of, ctx.first))
     values = metrics(connection)
     return ((f"Gross collected was {_usd(values['gross_collected_cents'])}; refunds were {_usd(values['refunds_cents'])}; "
             f"net collected cash was {_usd(values['net_collected_cents'])}. Closed-won deal value is a separate "
             f"{_usd(values['booked_revenue_cents'])} booking measure."), "payments, refunds, closed-won deals")
 
 
-def _email(connection):
+def _email(connection, ctx=None):
     from growthops.email_analytics import type_summary
 
-    since = datetime.fromisoformat(connection.execute("SELECT MAX(sent_at) FROM email_campaigns").fetchone()[0]).date()
-    rows = type_summary(connection, since - timedelta(days=89))
+    last = datetime.fromisoformat(connection.execute("SELECT MAX(sent_at) FROM email_campaigns").fetchone()[0]).date()
+    if ctx and ctx.window:
+        since, label = ctx.window["start"], ctx.window["label"]
+    else:
+        since, label = last - timedelta(days=89), "Last 90 days"
+    rows = [row for row in type_summary(connection, since) if row.get("delivered")]
+    if not rows:
+        return f"No emails were sent from {label}.", "email_campaigns"
     parts = [f"{row['email_type'].replace('_', ' ')}: human open {row['human_open_rate']:.1%}, click "
              f"{row['click_rate']:.2%}, click-to-open {row['click_to_open_rate']:.1%}" for row in rows]
-    return ("Last 90 days, on human opens (privacy-proxy machine opens excluded): " + "; ".join(parts) + ".",
-            "email_campaigns")
+    return (f"{label[0].upper() + label[1:]}, on human opens (privacy-proxy machine opens excluded): "
+            + "; ".join(parts) + ".", "email_campaigns")
 
 
-def _deliverability(connection):
+def _deliverability(connection, ctx=None):
     from growthops.email_analytics import deliverability_finding
 
     finding = deliverability_finding(connection)
@@ -192,7 +357,7 @@ def _deliverability(connection):
     return f"{finding['finding']} {finding['evidence']} Next: {finding['investigation']}", "email_campaigns"
 
 
-def _links(connection):
+def _links(connection, ctx=None):
     from growthops.campaign_links import audit_short_links
 
     audit = audit_short_links(connection)
@@ -202,7 +367,7 @@ def _links(connection):
             f"{audit['recent_days']} days."), "short_links, short_link_clicks, campaigns")
 
 
-def _crm(connection):
+def _crm(connection, ctx=None):
     from growthops.hubspot import audit
 
     crm = audit(connection)
@@ -213,13 +378,13 @@ def _crm(connection):
             "untouched leads could be set to non-marketing."), "contacts, deals, payments (HubSpot mapping)")
 
 
-def _daily(connection):
+def _daily(connection, ctx=None):
     from growthops.performance import daily_update
 
     return daily_update(connection)["text"], "mart_growth_daily, paid efficiency, brief"
 
 
-def _content(connection):
+def _content(connection, ctx=None):
     rows = connection.execute(
         """SELECT topic, SUM(views) views, SUM(customers) customers, SUM(influenced_net_cash_cents) cash
            FROM mart_content_performance GROUP BY topic ORDER BY cash DESC""").fetchall()
@@ -230,7 +395,7 @@ def _content(connection):
             "mart_content_performance")
 
 
-def _attribution(connection):
+def _attribution(connection, ctx=None):
     from growthops.attribution import MODELS, summary
 
     parts = []
@@ -242,7 +407,7 @@ def _attribution(connection):
             "attribution models")
 
 
-def _freshness(connection):
+def _freshness(connection, ctx=None):
     from growthops.freshness import check
 
     items = check(connection)
@@ -252,7 +417,7 @@ def _freshness(connection):
             + f"Latest records: {latest}.", "freshness check")
 
 
-def _list_mix(connection):
+def _list_mix(connection, ctx=None):
     from growthops.email_analytics import list_source_mix
 
     mix = list_source_mix(connection)
@@ -266,7 +431,7 @@ class Intent:
     title: str
     description: str
     phrasings: tuple[str, ...]
-    run: Callable[[sqlite3.Connection], tuple[str, str]]
+    run: Callable[..., tuple[str, str]]
 
 
 INTENTS = (
@@ -352,12 +517,66 @@ INTENTS = (
     Intent("data_freshness", "Data freshness", "Data freshness: whether the numbers are current and up to date, when each source (ads, payments, CRM, email) "
            "last synced or refreshed, and which are stale.",
            ("Is the data up to date?", "when was the data last refreshed", "are any sources stale"), _freshness),
+    Intent("kpi_totals", "Totals for a period",
+           # Quantities, not dates: the period is read by ask_slots, and date words here would pull in any
+           # question that mentions a week ("red flags in the last few weeks").
+           "Totals and counts: how many leads, MQLs, booked calls and deals were won; how much was spent on ads; "
+           "gross cash, refunds and net cash collected; the MQL rate; each against the period before.",
+           ("How many leads did we get last week?", "how much did we spend on ads", "total net cash collected",
+            "how many deals did we win", "number of MQLs and the MQL rate"),
+           _kpi_totals),
     Intent("list_source_mix", "List growth by source",
            "Email list and contact growth: new signups and subscribers in the last three months by acquisition source "
            "or channel (YouTube, Meta, Google, newsletter).",
            ("Where do new contacts come from?", "list growth by source", "acquisition source mix"), _list_mix),
 )
 INTENT_BY_ID = {intent.id: intent for intent in INTENTS}
+
+# What someone usually asks next. Each answer offers these as one-click follow-ups.
+FOLLOW_UPS: dict[str, tuple[str, ...]] = {
+    "revenue_truth": ("How is warehouse ROAS calculated?", "Which paid campaigns are best?",
+                      "What is net cash after refunds?"),
+    "anomaly_episodes": ("Why did lead quality drop?", "What was the MQL rate last month?",
+                         "Are our emails landing in spam?"),
+    "automation_health": ("Which renewals are at risk?", "Is the data up to date?"),
+    "experiment_cash_per_visitor": ("How is cash per visitor calculated?", "Where does the funnel drop off?"),
+    "renewal_risk": ("Did every buyer get community access?", "What is net cash after refunds?"),
+    "funnel_adjacent_conversion": ("What was the MQL rate last month?", "What does a booked call cost on Meta?",
+                                   "How did the CTA test do?"),
+    "paid_campaign_net_cash": ("What is the cost per MQL for meta_broad_v17?", "Compare attribution models",
+                               "What does a lead cost on Google?"),
+    "paid_efficiency": ("Which paid campaigns are best?", "How much did we spend on ads this month?",
+                        "How is cost per MQL calculated?"),
+    "measurement_health": ("Are our short links tagged correctly?", "How clean is HubSpot?"),
+    "net_collected_cash": ("Which revenue number is right?", "Net cash last month", "What changed this week?"),
+    "email_performance": ("Are our emails landing in spam?", "What does human open rate mean?"),
+    "email_deliverability": ("How is the newsletter performing?", "What changed this week?"),
+    "link_hygiene": ("How clean is our tracking?", "Where do new contacts come from?"),
+    "crm_hubspot_audit": ("How clean is our tracking?", "Which revenue number is right?"),
+    "daily_update": ("What changed this week?", "How many leads did we get last week?"),
+    "content_pipeline": ("Compare attribution models", "Where do new contacts come from?"),
+    "attribution_models": ("Which paid campaigns are best?", "Which revenue number is right?"),
+    "data_freshness": ("Give me the daily update", "What changed this week?"),
+    "kpi_totals": ("What changed this week?", "What does a lead cost on Google?", "Which revenue number is right?"),
+    "list_source_mix": ("Which videos drive buyers?", "How many leads did we get last week?"),
+}
+
+# Starter questions by theme, shown as one-click prompts. Every one is held by a test to reach a governed
+# answer with numbers in it, in both retrieval modes, so a suggestion can never lead to a refusal.
+SUGGESTIONS: dict[str, tuple[str, ...]] = {
+    "Revenue truth": ("Which revenue number is right?", "What is net cash after refunds?",
+                      "Net cash in August", "Compare attribution models"),
+    "Paid media": ("What does a lead cost on Google?", "What does a booked call cost on Meta?",
+                   "How much did we spend on ads this month?", "Which paid campaigns are best?"),
+    "Funnel and leads": ("How many leads did we get last week?", "What was the MQL rate last month?",
+                         "Where does the funnel drop off?", "How did the CTA test do?"),
+    "Email and tracking": ("Are our emails landing in spam?", "How is the newsletter performing?",
+                           "Are our short links tagged correctly?", "How clean is our tracking?"),
+    "Operations": ("What changed this week?", "Did every buyer get community access?",
+                   "Which renewals are at risk?", "Is the data up to date?"),
+    "Definitions": ("How is cost per MQL calculated?", "What does human open rate mean?",
+                    "How is warehouse ROAS calculated?"),
+}
 CERTIFIED = {" ".join(phrase.lower().rstrip("?").split()): intent.id for intent in INTENTS
              for phrase in intent.phrasings[:1]}
 TOPICS = tuple(intent.title for intent in INTENTS)
@@ -417,6 +636,43 @@ def _refuse(reason: str, hits=(), score=None, mode=None) -> dict:
     return {"route": "refused", "reason": reason, "target": None, "score": score, "hits": list(hits), "mode": mode}
 
 
+# Paid-media measures that name an efficiency figure, and the quantity words that mark a "how many / how much" question.
+# Pairs that give the same figure for the same question, so a near-tie between them is not a reason to refuse:
+# an undated cash question gets all-time net cash from either.
+EQUIVALENT = frozenset({frozenset({"net_collected_cash", "kpi_totals"})})
+
+PLATFORM_NAMES = {"tiktok": "TikTok", "tik tok": "TikTok", "snapchat": "Snapchat", "snap": "Snapchat",
+                  "x ads": "X", "bing": "Microsoft (Bing)", "microsoft ads": "Microsoft", "amazon ads": "Amazon"}
+
+# Answers that read the question's details (window, platform, campaign, measure); the rest are fixed views.
+SLOT_AWARE = frozenset({"kpi_totals", "paid_efficiency", "email_performance", "net_collected_cash"})
+EFFICIENCY_MEASURES = frozenset({"cpl", "cost_per_mql", "cost_per_booked_call", "cpm", "cpc", "ctr"})
+PAID_VOLUMES = frozenset({"spend", "leads", "mqls", "calls_booked"})  # counts a paid platform or campaign also has
+# "Why did leads drop last week" is a diagnosis, and "which campaign had the most leads" a ranking: neither is a total.
+DIAGNOSTIC = re.compile(r"\b(why|drop(ped|s)?|fell|fall(ing)?|spiked?|chang(e|ed|es)|unusual|anomal\w*|red flags?|"
+                        r"what happened|explain|going on)\b", re.IGNORECASE)
+BREAKDOWN = re.compile(r"\b(which|best|worst|top|most|least|rank\w*|by (campaign|platform|channel|source|topic))\b",
+                       re.IGNORECASE)
+RECONCILE = re.compile(r"\b(right|correct|true|match|matches|claim|claims|disagree|differ|reconcil\w*|versus|vs)\b",
+                       re.IGNORECASE)
+
+
+def _slot_route(text: str, slots: Slots) -> str | None:
+    """The governed answer a question's details decide on their own, when they are unambiguous.
+
+    Two patterns only. A quantity question over a named period ("how many leads last week") is the windowed
+    totals. An efficiency figure for a named platform or campaign ("CPL on Google", "cost per MQL for
+    meta_broad_v17") is paid efficiency. Anything else is left to retrieval, which knows the other answers.
+    """
+    if slots.window and slots.measure in KPI_MEASURES and not (slots.platform or slots.campaign) \
+            and not (RECONCILE.search(text) or DIAGNOSTIC.search(text) or BREAKDOWN.search(text)):
+        return "kpi_totals"
+    if (slots.platform or slots.campaign) and slots.measure in EFFICIENCY_MEASURES | PAID_VOLUMES \
+            and not RECONCILE.search(text):
+        return "paid_efficiency"
+    return None
+
+
 def route(question: str, mode: str | None = None) -> dict:
     """Decide how to answer, without touching the database."""
     text = " ".join(question.split())[:300]
@@ -428,24 +684,34 @@ def route(question: str, mode: str | None = None) -> dict:
         return _refuse("Personal data is not available here; answers are aggregate metrics only.")
     if FORECAST.search(text):
         return _refuse("GrowthOps reports measured results; it does not forecast.")
+    slots = parse(text)
+    if slots.untracked_platform:
+        return {**_refuse(f"{PLATFORM_NAMES.get(slots.untracked_platform, slots.untracked_platform.title())} ads are not bought or tracked here; paid media is "
+                          "Meta, Google and LinkedIn. Try “What does a lead cost on Google?”"), "slots": slots}
     certified = CERTIFIED.get(text.lower().rstrip("?").strip())
     if certified:
-        return {"route": "certified", "target": certified, "score": 1.0, "hits": [], "mode": "certified"}
+        return {"route": "certified", "target": certified, "score": 1.0, "hits": [], "mode": "certified",
+                "slots": slots}
+    decided = _slot_route(text, slots)
+    if decided and not DEFINITION.search(text):
+        return {"route": "metric", "target": decided, "score": 1.0, "hits": [], "mode": "slots", "slots": slots}
     idx = index(mode)
     if DEFINITION.search(text):
         passages = idx.search(text, k=3, kind="passage")
         if passages and passages[0].score >= PASSAGE_THRESHOLD[idx.mode]:
             return {"route": "definition", "target": passages[0].entry.id, "score": passages[0].score,
-                    "hits": passages, "mode": idx.mode}
+                    "hits": passages, "mode": idx.mode, "slots": slots}
     hits = idx.search(text, k=3, kind="intent")
-    ambiguous = len(hits) > 1 and hits[0].score - hits[1].score < AMBIGUITY_MARGIN[idx.mode]
+    ambiguous = len(hits) > 1 and hits[0].score - hits[1].score < AMBIGUITY_MARGIN[idx.mode] \
+        and frozenset((hits[0].entry.id, hits[1].entry.id)) not in EQUIVALENT
     # Keyword-only mode has no sense of paraphrase, so one shared word ("marketing") is not enough to answer.
     thin = idx.mode == "keyword" and hits and hits[0].matched_terms < min(2, len(set(tokens(text))))
     if hits and hits[0].score >= THRESHOLD[idx.mode] and not ambiguous and not thin:
-        return {"route": "metric", "target": hits[0].entry.id, "score": hits[0].score, "hits": hits, "mode": idx.mode}
+        return {"route": "metric", "target": hits[0].entry.id, "score": hits[0].score, "hits": hits, "mode": idx.mode,
+                "slots": slots}
     suggestion = f" Closest questions I can answer: {_suggest(hits)}." if hits else ""
-    return _refuse("I can't answer that from the governed metrics." + suggestion, hits,
-                   hits[0].score if hits else None, idx.mode)
+    return {**_refuse("I can't answer that from the governed metrics." + suggestion, hits,
+                      hits[0].score if hits else None, idx.mode), "slots": slots}
 
 
 def _log(connection: sqlite3.Connection, question: str, decision: dict, latency_ms: int) -> None:
@@ -462,10 +728,22 @@ def answer(connection: sqlite3.Connection, question: str, mode: str | None = Non
     started = time.perf_counter()
     decision = route(question, mode)
     retrieved = [{"id": hit.entry.id, "title": hit.entry.title, "score": hit.score} for hit in decision["hits"]]
+    slots = decision.get("slots") or Slots()
+    window = None
+    if decision["route"] in ("certified", "metric") and slots.window:
+        first, as_of = data_range(connection)
+        window = resolve_window(slots.window, as_of, first)
+        if window is None:
+            decision = {**_refuse(f"The data covers {day_label(first)} to {day_label(as_of)}; "
+                                  f"{slots.window['phrase']} is outside it.", mode=decision.get("mode")),
+                        "slots": slots}
+    follow_ups: list[str] = []
     if decision["route"] in ("certified", "metric"):
         intent = INTENT_BY_ID[decision["target"]]
-        text, source = intent.run(connection)
+        first, as_of = data_range(connection)
+        text, source = intent.run(connection, Context(slots, window, as_of, first))
         result = {"answer": text, "source": source, "metric_id": intent.id, "citations": []}
+        follow_ups = [q for q in FOLLOW_UPS.get(intent.id, ()) if q.lower().rstrip("?") != question.lower().rstrip("?")]
     elif decision["route"] == "definition":
         entry = decision["hits"][0].entry
         result = {"answer": f"{entry.title}: {entry.text}", "source": entry.meta["source"], "metric_id": None,
@@ -475,8 +753,23 @@ def answer(connection: sqlite3.Connection, question: str, mode: str | None = Non
                   "citations": []}
     latency = round((time.perf_counter() - started) * 1000)
     _log(connection, question, decision, latency)
+    if decision["route"] == "refused":
+        # A refusal still leaves somewhere to go: the closest answerable questions, else the starters.
+        follow_ups = [INTENT_BY_ID[hit.entry.id].phrasings[0] for hit in decision["hits"]
+                      if hit.entry.id in INTENT_BY_ID][:3] or [SUGGESTIONS[theme][0] for theme in list(SUGGESTIONS)[:3]]
+    # Say what was understood only where it shaped the answer; elsewhere it would imply a filter never applied.
+    shaped = decision.get("target") in SLOT_AWARE and decision["route"] in ("certified", "metric")
+    understood = slots.describe() if shaped else ""
+    if window and shaped:
+        understood = f"{understood} ({window['label']})" if understood else window["label"]
     return {**result, "route": decision["route"], "target": decision.get("target"), "confidence": decision.get("score"),
-            "retrieval_mode": decision.get("mode"), "retrieved": retrieved, "latency_ms": latency}
+            "retrieval_mode": decision.get("mode"), "retrieved": retrieved, "latency_ms": latency,
+            "understood": understood, "follow_ups": follow_ups}
+
+
+def suggestions() -> dict[str, list[str]]:
+    """The starter questions, by theme."""
+    return {theme: list(questions) for theme, questions in SUGGESTIONS.items()}
 
 
 def run_eval(mode: str | None = None, path: Path = EVAL_PATH) -> dict:
@@ -488,7 +781,15 @@ def run_eval(mode: str | None = None, path: Path = EVAL_PATH) -> dict:
         got = decision["target"] if decision["route"] != "refused" else "refuse"
         accepted = case["expect"] if isinstance(case["expect"], list) else [case["expect"]]
         verdict = "right" if got in accepted else "refused" if got == "refuse" else "wrong"
-        results.append({**case, "got": got, "verdict": verdict, "score": decision.get("score")})
+        # The right answer read for the wrong platform, measure or period is a wrong answer.
+        slots = decision.get("slots") or Slots()
+        read = {"platform": slots.platform, "campaign": slots.campaign, "measure": slots.measure,
+                "window": slots.window["kind"] if slots.window else None}
+        mismatched = {key: read[key] for key, value in case.get("expect_slots", {}).items() if read[key] != value}
+        if verdict == "right" and mismatched:
+            verdict = "wrong"
+        results.append({**case, "got": got, "verdict": verdict, "score": decision.get("score"),
+                        **({"slots_read": mismatched} if mismatched else {})})
     tally = {key: sum(item["verdict"] == key for item in results) for key in ("right", "wrong", "refused")}
     splits = {split: {key: sum(item["verdict"] == key for item in results if item.get("split") == split)
                       for key in ("right", "wrong", "refused")} for split in ("dev", "holdout")}

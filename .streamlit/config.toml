@@ -1,2 +1,7 @@
 [browser]
 gatherUsageStats = false
+
+[server]
+# Reload changed project modules (growthops/*) on a rerun. Without it Streamlit Community Cloud pulls a push
+# into a running process that still holds the old modules, and a new import name fails with ImportError.
+fileWatcherType = "poll"

@@ -17,3 +17,4 @@ warehouse/dbt/.user.yml
 # Power BI Desktop's machine-local state for an opened PBIP
 **/.pbi/localSettings.json
 **/.pbi/cache.abf
+.coverage

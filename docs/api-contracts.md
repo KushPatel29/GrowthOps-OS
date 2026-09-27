@@ -64,7 +64,8 @@ Accepts `campaign_id`, HTTPS `destination_url`, and snake-case `content`. Looks 
 |---|---|
 | `GET /ready` | 200 with `schema_version`, `stale_sources` and per-source freshness; 503 when the database is unreachable or the schema is not current |
 | `GET /metrics` | Prometheus text: `growthops_http_requests_total`, `growthops_http_request_seconds`, `growthops_webhook_{accepted,rejected}_total`, `growthops_workflow_events{status}`, `growthops_paid_without_access_customers`, `growthops_source_age_hours`, `growthops_source_stale` |
-| `GET /ask?q=` | Keyless answer: `answer`, `route` (`certified`, `metric`, `definition` or `refused`), `metric_id`, `citations`, `confidence`, `retrieval_mode`, `retrieved` and `latency_ms`. `q` is 1–300 characters |
+| `GET /ask?q=` | Keyless answer: `answer`, `route` (`certified`, `metric`, `definition` or `refused`), `metric_id`, `citations`, `confidence`, `retrieval_mode`, `retrieved`, `latency_ms`, `understood` (the period, platform, campaign and measure that shaped the answer, empty when none did) and `follow_ups` (questions to ask next; after a refusal, the closest answerable ones). `q` is 1–300 characters |
+| `GET /ask/suggestions` | Starter questions by theme (`themes`); every one reaches a governed answer |
 | `GET /ops/ask-usage?days=7` | Questions by route with average latency, from `ask_log` |
 
 ## Marketing operations endpoints

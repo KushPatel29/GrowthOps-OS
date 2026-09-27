@@ -27,6 +27,7 @@ from pydantic import ValidationError
 from growthops.adapters import build_adapters
 from growthops.ai_brief import generate as ai_brief
 from growthops.ask_data import answer as ask_data
+from growthops.ask_data import suggestions as ask_suggestions
 from growthops.ask_data import usage as ask_usage_summary
 from growthops.attribution import MODELS
 from growthops.attribution import summary as attribution_summary
@@ -435,8 +436,17 @@ def narrative() -> dict:
 
 @app.get("/ask")
 def ask(q: str = Query(min_length=1, max_length=300)) -> dict:
-    """Keyless, retrieval-grounded question answering over the governed metrics (see growthops.ask_data)."""
+    """Keyless, retrieval-grounded question answering over the governed metrics (see growthops.ask_data).
+
+    The response says what it understood (period, platform, campaign, measure) and offers follow-up questions.
+    """
     return _read(ask_data, q)
+
+
+@app.get("/ask/suggestions")
+def ask_suggestions_route() -> dict:
+    """Starter questions by theme; every one is held by a test to reach a governed answer."""
+    return {"themes": ask_suggestions()}
 
 
 @app.get("/ops/ask-usage")

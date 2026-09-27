@@ -14,6 +14,7 @@ import pandas as pd
 import streamlit as st
 
 from growthops.ask_data import answer as ask_data
+from growthops.ask_data import suggestions as ask_suggestions
 from growthops.attribution import MODELS
 from growthops.attribution import summary as attribution_summary
 from growthops.brief import period_brief
@@ -597,16 +598,42 @@ with tabs[9]:
                f"definitions by {'hybrid BM25 + MiniLM' if retrieval_mode == 'hybrid' else 'BM25 keyword'} retrieval. "
                "Every number comes from a tested function, every definition from the metric catalog, and anything "
                "else is refused. Nothing typed is executed as SQL and no text leaves the machine.")
-    st.caption("Try: Did anyone pay and not get into the community? · What does a lead cost on Google? · "
-               "Is our email going to junk? · How is cost per MQL calculated?")
-    question = st.text_input("Question", placeholder="Which revenue number is right?")
+    st.caption("It reads the details too: a period (“last week”, “in August”, “year to date”), an ad platform, a "
+               "campaign or a measure. Ask about an ad platform that is not bought, or a period the data does not "
+               "cover, and it says so instead of answering something else.")
+
+    def _ask(text: str) -> None:
+        st.session_state["ask_question"] = text
+
+    question = st.text_input("Question", key="ask_question", placeholder="How many leads did we get last week?")
+    if not question:
+        st.markdown("**Suggested questions**")
+        themes = list(ask_suggestions().items())
+        for row_start in range(0, len(themes), 3):
+            for column, (theme, questions) in zip(st.columns(3), themes[row_start:row_start + 3]):
+                with column:
+                    st.caption(theme.upper())
+                    for index, text in enumerate(questions):
+                        st.button(text, key=f"suggest-{theme}-{index}", on_click=_ask, args=(text,),
+                                  width="stretch")
     if question:
         connection = connect_readonly(database)
         try:
             response = ask_data(connection, question, mode=retrieval_mode)
         finally:
             connection.close()
+        if response["understood"]:
+            st.caption(f"Understood as: {response['understood']}")
         (st.warning if response["route"] == "refused" else st.markdown)(response["answer"].replace("$", r"\$"))
+        if response["citations"]:
+            st.caption("Cited: " + ", ".join(f"{c['title']} ({c['source']})" for c in response["citations"]))
+        if response["follow_ups"]:
+            st.markdown("**Ask next**" if response["route"] != "refused" else "**Questions I can answer**")
+            for column, (index, text) in zip(st.columns(len(response["follow_ups"])),
+                                             enumerate(response["follow_ups"])):
+                with column:
+                    st.button(text, key=f"follow-{index}", on_click=_ask, args=(text,), width="stretch")
+        st.button("Clear and show suggestions", key="ask-clear", on_click=_ask, args=("",))
         confidence = f"{response['confidence']:.2f}" if response["confidence"] is not None else "n/a"
         st.caption(f"Route: {response['route']} · target: {response['target'] or 'none'} · confidence {confidence} · "
                    f"retrieval: {response['retrieval_mode'] or 'n/a'} · source: {response['source']} · "

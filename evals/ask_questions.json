@@ -103,7 +103,10 @@
   },
   {
    "question": "total cash collected so far",
-   "expect": "net_collected_cash",
+   "expect": [
+    "net_collected_cash",
+    "kpi_totals"
+   ],
    "split": "dev"
   },
   {
@@ -148,7 +151,10 @@
   },
   {
    "question": "how many leads did we get yesterday",
-   "expect": "daily_update",
+   "expect": [
+    "daily_update",
+    "kpi_totals"
+   ],
    "split": "dev"
   },
   {
@@ -424,6 +430,294 @@
    "question": "select * from payments",
    "expect": "refuse",
    "split": "holdout"
+  },
+  {
+   "question": "how many leads came in last week",
+   "expect": "kpi_totals",
+   "split": "dev",
+   "expect_slots": {
+    "measure": "leads",
+    "window": "days"
+   }
+  },
+  {
+   "question": "ad spend in August",
+   "expect": "kpi_totals",
+   "split": "dev",
+   "expect_slots": {
+    "measure": "spend",
+    "window": "month"
+   }
+  },
+  {
+   "question": "what did we spend on ads this month",
+   "expect": "kpi_totals",
+   "split": "dev",
+   "expect_slots": {
+    "measure": "spend",
+    "window": "month_to_date"
+   }
+  },
+  {
+   "question": "how many MQLs this quarter",
+   "expect": "kpi_totals",
+   "split": "dev",
+   "expect_slots": {
+    "measure": "mqls",
+    "window": "quarter_to_date"
+   }
+  },
+  {
+   "question": "net cash year to date",
+   "expect": [
+    "kpi_totals",
+    "net_collected_cash"
+   ],
+   "split": "dev",
+   "expect_slots": {
+    "measure": "net_cash",
+    "window": "year_to_date"
+   }
+  },
+  {
+   "question": "how much was refunded last month",
+   "expect": [
+    "kpi_totals",
+    "net_collected_cash"
+   ],
+   "split": "dev",
+   "expect_slots": {
+    "measure": "refunds",
+    "window": "previous_month"
+   }
+  },
+  {
+   "question": "how many deals did we close in July",
+   "expect": "kpi_totals",
+   "split": "dev",
+   "expect_slots": {
+    "measure": "deals_won",
+    "window": "month"
+   }
+  },
+  {
+   "question": "what is the MQL rate over the last 14 days",
+   "expect": "kpi_totals",
+   "split": "dev",
+   "expect_slots": {
+    "measure": "mql_rate",
+    "window": "days"
+   }
+  },
+  {
+   "question": "what does a lead cost on LinkedIn",
+   "expect": "paid_efficiency",
+   "split": "dev",
+   "expect_slots": {
+    "platform": "linkedin",
+    "measure": "cpl"
+   }
+  },
+  {
+   "question": "Meta CPM last month",
+   "expect": "paid_efficiency",
+   "split": "dev",
+   "expect_slots": {
+    "platform": "meta",
+    "measure": "cpm",
+    "window": "previous_month"
+   }
+  },
+  {
+   "question": "cost per booked call for google brand search",
+   "expect": "paid_efficiency",
+   "split": "dev",
+   "expect_slots": {
+    "campaign": "google_brand_search",
+    "measure": "cost_per_booked_call"
+   }
+  },
+  {
+   "question": "how is meta_broad_v17 doing on cost per MQL",
+   "expect": "paid_efficiency",
+   "split": "dev",
+   "expect_slots": {
+    "campaign": "meta_broad_v17",
+    "measure": "cost_per_mql"
+   }
+  },
+  {
+   "question": "CTR on Google this quarter",
+   "expect": "paid_efficiency",
+   "split": "dev",
+   "expect_slots": {
+    "platform": "google",
+    "measure": "ctr",
+    "window": "quarter_to_date"
+   }
+  },
+  {
+   "question": "tiktok cost per lead",
+   "expect": "refuse",
+   "split": "dev"
+  },
+  {
+   "question": "pinterest ad spend last month",
+   "expect": "refuse",
+   "split": "dev"
+  },
+  {
+   "question": "email performance in August",
+   "expect": "email_performance",
+   "split": "dev",
+   "expect_slots": {
+    "window": "month"
+   }
+  },
+  {
+   "question": "newsletter open rate last month",
+   "expect": "email_performance",
+   "split": "dev",
+   "expect_slots": {
+    "window": "previous_month"
+   }
+  },
+  {
+   "question": "leads over the past 30 days",
+   "expect": "kpi_totals",
+   "split": "holdout",
+   "expect_slots": {
+    "measure": "leads",
+    "window": "days"
+   }
+  },
+  {
+   "question": "how much cash did we bring in last month",
+   "expect": [
+    "kpi_totals",
+    "net_collected_cash"
+   ],
+   "split": "holdout",
+   "expect_slots": {
+    "measure": "net_cash",
+    "window": "previous_month"
+   }
+  },
+  {
+   "question": "total ad spend year to date",
+   "expect": "kpi_totals",
+   "split": "holdout",
+   "expect_slots": {
+    "measure": "spend",
+    "window": "year_to_date"
+   }
+  },
+  {
+   "question": "number of booked calls this week",
+   "expect": "kpi_totals",
+   "split": "holdout",
+   "expect_slots": {
+    "measure": "calls_booked",
+    "window": "week_to_date"
+   }
+  },
+  {
+   "question": "CPL on Meta over the last 14 days",
+   "expect": "paid_efficiency",
+   "split": "holdout",
+   "expect_slots": {
+    "platform": "meta",
+    "measure": "cpl",
+    "window": "days"
+   }
+  },
+  {
+   "question": "LinkedIn cost per MQL",
+   "expect": "paid_efficiency",
+   "split": "holdout",
+   "expect_slots": {
+    "platform": "linkedin",
+    "measure": "cost_per_mql"
+   }
+  },
+  {
+   "question": "what's the click through rate on Google ads",
+   "expect": "paid_efficiency",
+   "split": "holdout",
+   "expect_slots": {
+    "platform": "google",
+    "measure": "ctr"
+   }
+  },
+  {
+   "question": "cost per call for linkedin ceo abm",
+   "expect": "paid_efficiency",
+   "split": "holdout",
+   "expect_slots": {
+    "campaign": "linkedin_ceo_abm",
+    "measure": "cost_per_booked_call"
+   }
+  },
+  {
+   "question": "snapchat CPL",
+   "expect": "refuse",
+   "split": "holdout"
+  },
+  {
+   "question": "how many MQLs did we get in September",
+   "expect": "kpi_totals",
+   "split": "holdout",
+   "expect_slots": {
+    "measure": "mqls",
+    "window": "month"
+   }
+  },
+  {
+   "question": "deals won last quarter",
+   "expect": "kpi_totals",
+   "split": "holdout",
+   "expect_slots": {
+    "measure": "deals_won",
+    "window": "previous_quarter"
+   }
+  },
+  {
+   "question": "refunds this year",
+   "expect": [
+    "kpi_totals",
+    "net_collected_cash"
+   ],
+   "split": "holdout",
+   "expect_slots": {
+    "measure": "refunds",
+    "window": "year_to_date"
+   }
+  },
+  {
+   "question": "what did a lead cost last month",
+   "expect": "paid_efficiency",
+   "split": "holdout",
+   "expect_slots": {
+    "measure": "cpl",
+    "window": "previous_month"
+   }
+  },
+  {
+   "question": "reddit ads performance",
+   "expect": "refuse",
+   "split": "holdout"
+  },
+  {
+   "question": "spend on google in august",
+   "expect": [
+    "paid_efficiency",
+    "kpi_totals"
+   ],
+   "split": "holdout",
+   "expect_slots": {
+    "platform": "google",
+    "window": "month"
+   }
   }
  ],
  "first_holdout_scoring": {
@@ -442,6 +736,32 @@
    "Three questions have two valid answers and now accept either.",
    "Definitions get a bonus when the metric's full name is in the question (warehouse vs platform ROAS).",
    "The paid-efficiency answer now includes 30-day ROAS by platform."
+  ]
+ },
+ "revisions": [
+  {
+   "date": "2026-09-27",
+   "change": "Added kpi_totals (windowed totals). Two existing questions now reach it and get the same correct figure, so they accept either answer: 'how many leads did we get yesterday' (that day's leads, exactly) and 'total cash collected so far' (all-time totals led by net cash). No other expectation was changed."
+  }
+ ],
+ "second_holdout_scoring": {
+  "date": "2026-09-27",
+  "note": "The 15 holdout questions for windows, platforms, campaigns and measures, written before tuning and recorded here on first scoring, before any fix.",
+  "hybrid": {
+   "right": 13,
+   "wrong": 1,
+   "refused": 1
+  },
+  "keyword": {
+   "right": 13,
+   "wrong": 1,
+   "refused": 1
+  },
+  "wrong": [
+   "'how much cash did we bring in last month': right answer, but 'bring in' was not read as net cash"
+  ],
+  "refused": [
+   "'spend on google in august': spend for a named platform was not routed"
   ]
  }
 }

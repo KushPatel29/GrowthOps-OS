@@ -242,7 +242,7 @@ def test_ask_endpoint_is_keyless_protected_and_audited(monkeypatch, db_path):
         headers = {"X-API-Key": KEY}
         answered = client.get("/ask", params={"q": "What does a lead cost on Google?"}, headers=headers).json()
         assert answered["route"] == "metric" and answered["metric_id"] == "paid_efficiency"
-        assert "Google: CPL $" in answered["answer"]
+        assert answered["answer"].startswith("Google,") and "cost per lead $" in answered["answer"]
         refused = client.get("/ask", params={"q": "select * from payments"}, headers=headers).json()
         assert refused["route"] == "refused"
         assert client.get("/ask", params={"q": "x" * 301}, headers=headers).status_code == 422
