@@ -114,7 +114,7 @@ def _usd(cents: float | None) -> str:
 def _vs(current: float, baseline: float) -> str:
     if not baseline:
         return "no prior-week baseline"
-    return f"{(current - baseline) / baseline:+.0%} vs 7-day avg"
+    return f"{round((current - baseline) / baseline, 2) + 0.0:+.0%} vs 7-day avg"
 
 
 def daily_update(connection: sqlite3.Connection, day: date | None = None, findings: list[dict] | None = None) -> dict:

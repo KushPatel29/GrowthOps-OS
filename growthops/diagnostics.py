@@ -147,6 +147,20 @@ def _series(cube: Cube, spec: MetricSpec, end: date) -> list[dict]:
     return points
 
 
+def share_phrase(share: float | None, detail: str = "", of: str = "") -> str:
+    """How much of a change one driver explains, worded so a share over 100% is not read as a typo.
+
+    Shift-share contributions sum to the change, so one segment can explain more than all of it when
+    the others moved the other way.
+    """
+    if share is None:
+        return "an undetermined share" + (f" of {of}" if of else "")
+    if round(share, 2) > 1:
+        extra = f", {detail}" if detail else ""
+        return f"all of {of or 'it'} ({share:.0%}{extra}; the rest moved the other way)"
+    return f"{share:.0%}" + (f" of {of}" if of else "") + (f" ({detail})" if detail else "")
+
+
 def decompose(cube: Cube, spec: MetricSpec, baseline: tuple[date, date], current: tuple[date, date]) -> dict:
     """Exact shift-share split of the change between two windows across segments."""
     before = _window(cube, *baseline)

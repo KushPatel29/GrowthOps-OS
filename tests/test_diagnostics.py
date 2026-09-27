@@ -42,3 +42,12 @@ def test_quiet_period_produces_no_quality_alarm(connection):
     early = detect(connection, as_of=date(2026, 4, 30), lookback_days=30)
     assert not [e for e in early if e["metric_id"] == "mql_rate"]
     assert date(2026, 4, 30) - timedelta(days=30) < date(2026, 8, 10)
+
+
+def test_a_share_over_100_percent_is_said_in_words():
+    from growthops.diagnostics import share_phrase
+
+    assert share_phrase(0.92, of="the drop") == "92% of the drop"
+    assert share_phrase(0.92, "-8.6 pp") == "92% (-8.6 pp)"
+    assert share_phrase(1.01, "-7.6 pp") == "all of it (101%, -7.6 pp; the rest moved the other way)"
+    assert share_phrase(1.004) == "100%"

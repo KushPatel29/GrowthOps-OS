@@ -8,6 +8,15 @@ import sqlite3
 from statistics import NormalDist
 
 
+def format_p(p: float | None) -> str:
+    """A p-value for a reader: "p < 0.001" rather than a rounded "p = 0.0"."""
+    if p is None:
+        return "p n/a"
+    if p < 0.001:
+        return "p < 0.001"
+    return f"p = {p:.3f}" if p < 0.01 else f"p = {p:.2f}"
+
+
 def _bootstrap_mean_difference(a: list[int], b: list[int], draws: int, seed: int = 29) -> list[float]:
     """Exact multinomial bootstrap of mean(b) - mean(a), fast for zero-inflated cash.
 

@@ -35,6 +35,26 @@ PLATFORMS = {
     "google": r"\b(google|adwords|search ads|paid search)\b",
     "linkedin": r"\blinked ?in\b",
 }
+_MONTH_RE = "|".join(sorted(MONTHS, key=len, reverse=True))
+_ORD = r"(?:st|nd|rd|th)?"
+# One point in time: an ISO date, "3 September [2026]", "September 3[rd] [2026]", "August [2025]" or a year.
+POINT = re.compile(
+    r"\b(?:(?P<iso_y>20\d\d)-(?P<iso_m>\d{1,2})-(?P<iso_d>\d{1,2})"
+    rf"|(?P<dm_d>\d{{1,2}}){_ORD}\s+(?:of\s+)?(?P<dm_m>{_MONTH_RE})\.?(?:,?\s+(?P<dm_y>20\d\d))?"
+    rf"|(?P<md_m>{_MONTH_RE})\.?\s+(?P<md_d>\d{{1,2}}){_ORD}(?:,?\s+(?P<md_y>20\d\d))?"
+    rf"|(?P<m_m>{_MONTH_RE})\.?(?:\s+(?P<m_y>20\d\d))?"
+    r"|(?P<y>20\d\d))\b")
+_ORDINALS = {"first": 1, "1st": 1, "second": 2, "2nd": 2, "third": 3, "3rd": 3, "fourth": 4, "4th": 4}
+QUARTER = re.compile(r"\b(?:(?P<pre>20\d\d)\s+)?(?:q(?P<q>[1-4])|(?P<qw>first|second|third|fourth|1st|2nd|3rd|4th)"
+                     r"\s+quarter)\b(?:\s+(?:of\s+)?(?P<year>20\d\d))?")
+HALF = re.compile(r"\b(?:(?P<pre>20\d\d)\s+)?(?:h(?P<h>[12])|(?P<hw>first|second|1st|2nd)\s+half)\b"
+                  r"(?:\s+(?:of\s+)?(?P<year>20\d\d))?")
+# "the start of June" is June's first day and "the end of July" its last, which is how a range reads them anyway.
+_EDGE_START = r"(\s+the\s+(start|beginning)\s+of)?"
+_EDGE_END = r"(\s+the\s+(end|close)\s+of)?"
+MONTH_NAMES = ("January", "February", "March", "April", "May", "June", "July", "August", "September", "October",
+               "November", "December")
+
 UNTRACKED_PLATFORMS = r"\b(tik ?tok|pinterest|snap(chat)?|reddit|twitter|x ads|bing|microsoft ads|amazon ads|quora)\b"
 
 # (measure id, pattern). Checked in order: "cost per mql" before "mql", "net cash" before "cash".
@@ -50,9 +70,11 @@ MEASURES: tuple[tuple[str, str], ...] = (
     ("mql_rate", r"mql rate|lead[- ]to[- ]mql|qualif(y|ication) rate|share of leads (that )?qualif"),
     ("mqls", r"\bmqls?\b|marketing[- ]qualified"),
     ("leads", r"\bleads?\b|sign[- ]?ups?\b|new contacts"),
-    ("calls_booked", r"(booked|discovery) calls?|calls? booked|bookings"),
+    ("calls_booked", r"(booked|discovery) calls?|calls? (were |got |have been )?booked|bookings"),
     ("deals_won", (r"deals? (won|closed)|deals? .{0,15}\b(win|won|close|closed)\b|\b(win|won|close|closed) .{0,12}"
                    r"deals?|closed[- ]won|wins\b|new customers|how many customers")),
+    ("refund_rate", (r"refund (rate|ratio)|(share|percent(age)?|%) of (cash|revenue|sales|payments|gross)[a-z ]{0,12}"
+                     r"refunded|refunds? as a (share|percent(age)?)")),
     ("refunds", r"\brefunds?\b|refunded"),
     ("gross_collected", r"gross (cash|collected|revenue|payments)"),
     ("crm_booked", r"\bbooked (revenue|value)|bookings value|\bcrm\b"),
@@ -65,7 +87,7 @@ MEASURES: tuple[tuple[str, str], ...] = (
 MEASURE_LABELS = {
     "cost_per_booked_call": "cost per booked call", "cost_per_mql": "cost per MQL", "cpl": "cost per lead",
     "cpm": "CPM", "cpc": "CPC", "ctr": "CTR", "roas": "ROAS", "mql_rate": "MQL rate", "mqls": "MQLs",
-    "leads": "leads", "calls_booked": "booked calls", "deals_won": "deals won", "refunds": "refunds",
+    "leads": "leads", "calls_booked": "booked calls", "deals_won": "deals won", "refunds": "refunds", "refund_rate": "refund rate",
     "gross_collected": "gross cash", "crm_booked": "CRM bookings", "net_cash": "net cash", "spend": "ad spend",
 }
 
@@ -88,6 +110,7 @@ CAMPAIGN_PATTERNS = {campaign_id: re.compile(_campaign_pattern(campaign_id), re.
 class Slots:
     window: dict | None = None            # symbolic: resolved against the data's as-of date by resolve_window
     platform: str | None = None
+    platforms: tuple[str, ...] = ()       # two or more named together: a comparison between them
     untracked_platform: str | None = None
     campaign: str | None = None
     measure: str | None = None
@@ -97,8 +120,10 @@ class Slots:
         parts = []
         if self.window:
             parts.append(self.window["phrase"])
-        if self.platform:
-            parts.append(self.platform.title() if self.platform != "linkedin" else "LinkedIn")
+        names = [name.title() if name != "linkedin" else "LinkedIn"
+                 for name in self.platforms or ((self.platform,) if self.platform else ())]
+        if names:
+            parts.append(" vs ".join(names))
         if self.campaign:
             parts.append(self.campaign)
         if self.measure:
@@ -113,7 +138,9 @@ def _count(word: str) -> int | None:
 def parse_window(text: str) -> dict | None:
     """The period a question names, as a spec. None when it names none."""
     t = text.lower()
-    if re.search(r"\b(all[- ]time|ever|since (the )?(start|launch|beginning)|to date overall|in total|overall)\b", t):
+    # "since the start" is all time, but "since the start of August" is a date and is read below.
+    if re.search(r"\b(all[- ]time|ever|since (the )?(start|launch|beginning)(?!\s+of\b)|to date overall|in total|overall)\b",
+                 t):
         return {"kind": "all", "phrase": "all time"}
     # The data's as-of date is the last complete day, which is what the daily update calls "yesterday";
     # "today" is not in yet, so it means the same latest complete day and says so.
@@ -121,6 +148,10 @@ def parse_window(text: str) -> dict | None:
         return {"kind": "days", "n": 1, "offset": 0, "phrase": "yesterday (the latest complete day)"}
     if re.search(r"\btoday\b", t):
         return {"kind": "days", "n": 1, "offset": 0, "phrase": "the latest complete day (today is not in yet)"}
+    if re.search(r"\b(the )?week before last\b", t):
+        return {"kind": "days", "n": 7, "offset": 7, "phrase": "the week before last"}
+    if re.search(r"\b(last|past|previous|this past)\s+fortnight\b", t):
+        return {"kind": "days", "n": 14, "offset": 0, "phrase": "the last 14 days"}
     m = re.search(r"\b(last|past|previous|trailing|over the last|in the last)\s+(\d+|[a-z]+)\s+(day|week|month)s?\b", t)
     if m and _count(m.group(2)):
         n, unit = _count(m.group(2)), m.group(3)
@@ -144,20 +175,82 @@ def parse_window(text: str) -> dict | None:
         return {"kind": "year_to_date", "phrase": "this year to date"}
     if re.search(r"\b(last|previous) year\b", t):
         return {"kind": "previous_year", "phrase": "last year"}
-    month = re.search(r"\b(in|during|for|of|over)?\s*(" + "|".join(sorted(MONTHS, key=len, reverse=True))
-                      + r")\.?\s*(20\d\d)?\b", t)
+    return _explicit(t)
+
+
+def _point(m: re.Match) -> dict | None:
+    """A matched point in time as a spec; an impossible date such as 31 February is kind "invalid"."""
+    g = m.groupdict()
+    if g["y"]:
+        return {"kind": "year", "year": int(g["y"]), "phrase": g["y"]}
+    if g["m_m"]:
+        year = int(g["m_y"]) if g["m_y"] else None
+        return {"kind": "month", "month": MONTHS[g["m_m"]], "year": year,
+                "phrase": g["m_m"].title() + (f" {year}" if year else "")}
+    if g["iso_y"]:
+        month, day, year = int(g["iso_m"]), int(g["iso_d"]), int(g["iso_y"])
+    else:
+        name = g["dm_m"] or g["md_m"]
+        month, day = MONTHS[name], int(g["dm_d"] or g["md_d"])
+        year = int(g["dm_y"] or g["md_y"]) if (g["dm_y"] or g["md_y"]) else None
+    try:
+        date(year or 2024, month, day)  # 2024 is a leap year, so 29 February is allowed without a year
+    except ValueError:
+        # Kept, not dropped: a question about "31 February" is answered with a refusal, never with all time.
+        named = f"{day} {MONTH_NAMES[month - 1]}" + (f" {year}" if year else "") if 1 <= month <= 12 else m.group(0)
+        return {"kind": "invalid", "phrase": named}
+    return {"kind": "date", "month": month, "day": day, "year": year,
+            "phrase": f"{day} {MONTH_NAMES[month - 1][:3]}" + (f" {year}" if year else "")}
+
+
+def _standalone_month(t: str, m: re.Match) -> bool:
     # A full month name stands on its own ("August net cash"). "May" and abbreviations ("mar", "dec") are
     # ordinary words too, so they need "in"/"during" or a year before they are read as a month.
-    full_name = month and len(month.group(2)) > 3 and month.group(2) != "may"
-    if month and (month.group(1) or month.group(3) or full_name):
-        number = MONTHS[month.group(2)]
-        year = int(month.group(3)) if month.group(3) else None
-        label = month.group(2).title() + (f" {year}" if year else "")
-        return {"kind": "month", "month": number, "year": year, "phrase": label}
-    year = re.search(r"\b(in|during|for)\s+(20\d\d)\b", t)
-    if year:
-        return {"kind": "year", "year": int(year.group(2)), "phrase": year.group(2)}
-    return None
+    name = m.group("m_m")
+    return bool(m.group("m_y") or (len(name) > 3 and name != "may")
+                or re.search(r"\b(in|during|for|of|over|on|since|from|between|to|until|till|through|thru|and|starting)"
+                             r"\s*$", t[:m.start()]))
+
+
+def _year(t: str, m: re.Match) -> bool:
+    # "in 2019" is a year even outside the data, so it can be refused; a bare number is one only if it is
+    # plausibly this business's year, so "spend over 2000" is not read as the year 2000.
+    return bool(re.search(r"\b(in|during|for|of|since|from|between|to|and|through|until)\s*$", t[:m.start()])
+                or 2020 <= int(m.group("y")) <= 2039)
+
+
+def _explicit(t: str) -> dict | None:
+    """Named periods: a quarter or half, a range, "since" a point, one day, one month or one year."""
+    for pattern, kind, words in ((QUARTER, "quarter", "q"), (HALF, "half", "h")):
+        m = pattern.search(t)
+        if m:
+            number = int(m.group(words)) if m.group(words) else _ORDINALS[m.group(words + "w")]
+            raw = m.group("year") or m.group("pre")
+            year = int(raw) if raw else None
+            label = f"{'Q' if kind == 'quarter' else 'H'}{number}" + (f" {year}" if year else "")
+            return {"kind": kind, "n": number, "year": year, "phrase": label}
+    matches = [m for m in POINT.finditer(t)
+               if (not m.group("m_m") or _standalone_month(t, m)) and (not m.group("y") or _year(t, m))]
+    points = [(m, spec) for m in matches if (spec := _point(m))]
+    invalid = next((spec for _m, spec in points if spec["kind"] == "invalid"), None)
+    if invalid:
+        return invalid
+    if len(points) >= 2:
+        (m0, first), (m1, second) = points[0], points[1]
+        joined = t[m0.end():m1.start()]
+        # "between July and August", "July to August", "from the start of June to the end of July".
+        if (re.search(rf"\b(between|from){_EDGE_START}\s*$", t[:m0.start()])
+                and re.search(rf"^\s*(and|to|until|till|through|thru|-|–){_EDGE_END}\s*$", joined)) \
+                or re.search(rf"^\s*(to|until|till|through|thru|-|–){_EDGE_END}\s*$", joined):
+            return {"kind": "span", "from": first, "to": second, "phrase": f"{first['phrase']} to {second['phrase']}"}
+    if not points:
+        return None
+    m0, first = points[0]
+    # "since August" and "August onwards"; a bare "from August" is read as August itself.
+    if re.search(rf"\b(since|starting( from)?){_EDGE_START}\s*$", t[:m0.start()]) \
+            or re.search(r"^\s*(onwards?|and after|or later)\b", t[m0.end():]):
+        return {"kind": "since", "from": first, "phrase": f"since {first['phrase']}"}
+    return first
 
 
 def day_label(day: date) -> str:
@@ -174,12 +267,60 @@ def _add_months(day: date, months: int) -> date:
     return date(year, month, min(day.day, days_in))
 
 
+def _latest(candidate, as_of: date) -> tuple[date, date]:
+    # A period named without a year is the most recent one that has started by the as-of date.
+    start, end = candidate(as_of.year)
+    return (start, end) if start <= as_of else candidate(as_of.year - 1)
+
+
+def _bounds(spec: dict, as_of: date, first: date) -> tuple[date, date]:
+    """The unclipped (start, end) a spec names."""
+    kind = spec["kind"]
+    if kind in ("date", "month", "quarter", "half", "year"):
+        def candidate(year: int) -> tuple[date, date]:
+            if kind == "date":
+                day = date(year, spec["month"], min(spec["day"], 28 if spec["month"] == 2 and year % 4 else 31))
+                return day, day
+            if kind == "month":
+                start = date(year, spec["month"], 1)
+                return start, _add_months(start, 1) - timedelta(days=1)
+            if kind == "year":
+                return date(year, 1, 1), date(year, 12, 31)
+            months = 3 if kind == "quarter" else 6
+            start = date(year, months * (spec["n"] - 1) + 1, 1)
+            return start, _add_months(start, months) - timedelta(days=1)
+        year = spec.get("year")
+        return candidate(year) if year else _latest(candidate, as_of)
+    if kind == "since":
+        return _bounds(spec["from"], as_of, first)[0], as_of
+    if kind == "span":
+        start_spec, end_spec = spec["from"], spec["to"]
+        start, _ = _bounds(start_spec, as_of, first)
+        _, end = _bounds(end_spec, as_of, first)
+        # "from 1 Aug 2025 to 15 Aug" and "between November and February": carry the named year across,
+        # and move an unnamed year back so the range runs forwards.
+        if end_spec.get("year") is None and start_spec.get("year") is not None:
+            _, end = _bounds({**end_spec, "year": start.year}, as_of, first)
+            if end < start:
+                _, end = _bounds({**end_spec, "year": start.year + 1}, as_of, first)
+        elif start > end and start_spec.get("year") is None:
+            start, _ = _bounds({**start_spec, "year": end.year - (1 if start.year >= end.year else 0)}, as_of, first)
+        return start, end
+    raise ValueError(kind)  # pragma: no cover - every kind is produced by parse_window
+
+
 def resolve_window(spec: dict | None, as_of: date, first: date) -> dict | None:
     """(start, end, label, clipped) for a spec against the data's own range; None if it covers no data."""
     if spec is None:
         return None
     kind = spec["kind"]
-    if kind == "all":
+    if kind == "invalid":
+        return None
+    if kind in ("date", "month", "quarter", "half", "year", "since", "span"):
+        start, end = _bounds(spec, as_of, first)
+        if start > end:
+            return None
+    elif kind == "all":
         start, end = first, as_of
     elif kind == "days":
         end = as_of - timedelta(days=spec.get("offset", 0))
@@ -203,12 +344,6 @@ def resolve_window(spec: dict | None, as_of: date, first: date) -> dict | None:
         end, start = as_of, date(as_of.year, 1, 1)
     elif kind == "previous_year":
         start, end = date(as_of.year - 1, 1, 1), date(as_of.year - 1, 12, 31)
-    elif kind == "month":
-        year = spec["year"] or (as_of.year if spec["month"] <= as_of.month else as_of.year - 1)
-        start = date(year, spec["month"], 1)
-        end = _add_months(start, 1) - timedelta(days=1)
-    elif kind == "year":
-        start, end = date(spec["year"], 1, 1), date(spec["year"], 12, 31)
     else:  # pragma: no cover - every kind above is produced by parse_window
         raise ValueError(kind)
     if end < first or start > as_of:
@@ -222,10 +357,11 @@ def resolve_window(spec: dict | None, as_of: date, first: date) -> dict | None:
 
 def parse(text: str) -> Slots:
     t = " ".join(text.lower().split())
-    platform = next((name for name, pattern in PLATFORMS.items() if re.search(pattern, t)), None)
+    named = [name for name, pattern in PLATFORMS.items() if re.search(pattern, t)]
+    platform = named[0] if len(named) == 1 else None
     untracked = re.search(UNTRACKED_PLATFORMS, t)
     campaign = next((campaign_id for campaign_id, pattern in CAMPAIGN_PATTERNS.items() if pattern.search(t)), None)
     measure = next((name for name, pattern in MEASURES if re.search(pattern, t)), None)
-    return Slots(window=parse_window(t), platform=platform,
-                 untracked_platform=untracked.group(0) if untracked and not platform else None,
+    return Slots(window=parse_window(t), platform=platform, platforms=tuple(named) if len(named) > 1 else (),
+                 untracked_platform=untracked.group(0) if untracked and not named else None,
                  campaign=campaign, measure=measure)

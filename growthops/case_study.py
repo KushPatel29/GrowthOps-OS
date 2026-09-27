@@ -13,9 +13,10 @@ from pathlib import Path
 
 from growthops.brief import findings
 from growthops.campaign_links import audit_short_links
-from growthops.diagnostics import detect, incident_recall
+from growthops.diagnostics import detect, incident_recall, share_phrase
 from growthops.email_analytics import deliverability, email_performance
 from growthops.experiments import analyze as experiment_analysis
+from growthops.experiments import format_p
 from growthops.hubspot import audit as hubspot_audit
 from growthops.migration import audit as migration_audit
 from growthops.performance import paid_efficiency
@@ -144,11 +145,11 @@ detector can be scored against ground truth:
 
 - **Lead quality.** {quality_episode['label']} fell from {quality_episode['baseline_text']} to
   {quality_episode['current_text']}. `{quality_episode['top_drivers'][0]['segment']}`, a broad-audience Meta
-  campaign launched in August, explains {quality_episode['top_drivers'][0]['share_of_change']:.0%} of the drop.
+  campaign launched in August, explains {share_phrase(quality_episode['top_drivers'][0]['share_of_change'], of='the drop')}.
   The same campaign added lead volume and spend, so the brief reports one story rather than three alerts:
   judge it on cost per MQL, not on leads.
 - **Tracking.** UTM completeness fell from {utm_episode['baseline_text']} to {utm_episode['current_text']};
-  `{utm_episode['top_drivers'][0]['segment']}` explains {utm_episode['top_drivers'][0]['share_of_change']:.0%}.
+  `{utm_episode['top_drivers'][0]['segment']}` explains {share_phrase(utm_episode['top_drivers'][0]['share_of_change'], of='the fall')}.
   A landing-page release stopped passing UTM parameters, leaving {_usd(quality['unassigned_net_cash_cents'])}
   of net cash that cannot be credited to any campaign.
 
@@ -170,14 +171,14 @@ Replaying a dead-lettered event is a role-gated API action; the lookup endpoint 
 ## 4. Experiment: more leads is not more money
 
 A "Get my growth plan" CTA was tested against "Book a strategy call", randomized by visitor (sample-ratio
-check p = {comparison['sample_ratio_p_value']}).
+check {format_p(comparison['sample_ratio_p_value'])}).
 
 | Variant | Visitors | Lead rate | MQL per lead | Buyers | Net cash per visitor |
 |---|---:|---:|---:|---:|---:|
 | {a['label']} | {a['visitors']:,} | {a['lead_rate']:.2%} | {a['mql_per_lead']:.1%} | {a['customers']} | ${a['net_cash_per_visitor_cents'] / 100:.2f} |
 | {b['label']} | {b['visitors']:,} | {b['lead_rate']:.2%} | {b['mql_per_lead']:.1%} | {b['customers']} | ${b['net_cash_per_visitor_cents'] / 100:.2f} |
 
-The lead-rate lift is large and significant (p = {comparison['lead_rate_p_value']}); the cash-per-visitor
+The lead-rate lift is large and significant ({format_p(comparison['lead_rate_p_value'])}); the cash-per-visitor
 difference has a bootstrap 95% interval of ${comparison['cash_per_visitor_bootstrap_95_ci_cents'][0] / 100:.2f}
 to ${comparison['cash_per_visitor_bootstrap_95_ci_cents'][1] / 100:.2f}. **{comparison['decision']}**
 

@@ -75,7 +75,7 @@ detector can be scored against ground truth:
   The same campaign added lead volume and spend, so the brief reports one story rather than three alerts:
   judge it on cost per MQL, not on leads.
 - **Tracking.** UTM completeness fell from 97.6% to 90.2%;
-  `/webinar` explains 101%.
+  `/webinar` explains all of the fall (101%; the rest moved the other way).
   A landing-page release stopped passing UTM parameters, leaving $42,300
   of net cash that cannot be credited to any campaign.
 
@@ -97,14 +97,14 @@ Replaying a dead-lettered event is a role-gated API action; the lookup endpoint 
 ## 4. Experiment: more leads is not more money
 
 A "Get my growth plan" CTA was tested against "Book a strategy call", randomized by visitor (sample-ratio
-check p = 0.9305).
+check p = 0.93).
 
 | Variant | Visitors | Lead rate | MQL per lead | Buyers | Net cash per visitor |
 |---|---:|---:|---:|---:|---:|
 | Control: Book a strategy call | 7,951 | 6.59% | 22.9% | 6 | $6.45 |
 | Variant: Get my growth plan | 7,940 | 9.91% | 19.7% | 9 | $5.59 |
 
-The lead-rate lift is large and significant (p = 0.0); the cash-per-visitor
+The lead-rate lift is large and significant (p < 0.001); the cash-per-visitor
 difference has a bootstrap 95% interval of $-8.37
 to $5.67. **Do not ship on lead rate alone: B lifts leads 50%, but cash per visitor rests on 15 buyers and its interval spans zero. Keep A and extend the test until the cash interval is decisive.**
 

@@ -33,3 +33,12 @@ def test_fast_bootstrap_matches_a_naive_bootstrap():
                    for _ in range(4000))
     for q in (0.025, 0.5, 0.975):
         assert abs(fast[int(q * 4000)] - naive[int(q * 4000)]) < 1.5
+
+
+def test_p_values_read_as_a_reader_expects():
+    from growthops.experiments import format_p
+
+    assert format_p(0.0) == "p < 0.001"
+    assert format_p(0.0042) == "p = 0.004"
+    assert format_p(0.9305) == "p = 0.93"
+    assert format_p(None) == "p n/a"

@@ -31,6 +31,7 @@ from growthops.email_analytics import (
 )
 from growthops.embeddings import model_ready, runtime_available
 from growthops.experiments import analyze as experiment_analysis
+from growthops.experiments import format_p
 from growthops.funnel import funnel, funnel_by_campaign
 from growthops.hubspot import audit as hubspot_audit
 from growthops.migration import audit as migration_audit
@@ -474,8 +475,8 @@ with tabs[6]:
     experiment = case["experiment"]
     comparison = experiment["comparison"]
     st.subheader("CTA test: more leads, but more money?")
-    st.caption(f"{experiment['hypothesis']} Randomized by visitor; sample-ratio check p = "
-               f"{comparison['sample_ratio_p_value']}.")
+    st.caption(f"{experiment['hypothesis']} Randomized by visitor; sample-ratio check "
+               f"{format_p(comparison['sample_ratio_p_value'])}.")
     variants = pd.DataFrame(experiment["variants"])
     variants["cash_per_visitor"] = variants["net_cash_per_visitor_cents"] / 100
     st.dataframe(variants[["label", "visitors", "leads", "lead_rate", "mqls", "mql_per_lead", "customers",

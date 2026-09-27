@@ -11,7 +11,7 @@ from __future__ import annotations
 import sqlite3
 from datetime import date, timedelta
 
-from growthops.diagnostics import BASELINE, detect
+from growthops.diagnostics import BASELINE, detect, share_phrase
 from growthops.email_analytics import deliverability_finding
 from growthops.renewals import monitor as renewal_monitor
 from growthops.report import campaign_performance, executive_brief
@@ -51,7 +51,7 @@ def _driver_sentence(episode: dict) -> str:
     for driver in episode["top_drivers"][:2]:
         segment = SEGMENT_LABELS.get(driver["segment"], driver["segment"])
         new = " (new in this period)" if driver["new_segment"] else ""
-        parts.append(f"{segment}{new} explains {driver['share_of_change']:.0%} ({driver['contribution_text']})")
+        parts.append(f"{segment}{new} explains {share_phrase(driver['share_of_change'], driver['contribution_text'])}")
     return "; ".join(parts)
 
 

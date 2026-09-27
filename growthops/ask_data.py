@@ -99,11 +99,12 @@ def _pct(value: float | None, digits: int = 1) -> str:
 def _change(now: float | None, before: float | None, rate: bool = False) -> str:
     if now is None or before is None:
         return ""
+    # Round before signing, so a tiny fall reads "+0%" rather than "-0%".
     if rate:
-        return f" ({(now - before) * 100:+.1f} pts on the period before)"
+        return f" ({round((now - before) * 100, 1) + 0.0:+.1f} pts on the period before)"
     if not before:
         return ""
-    return f" ({(now - before) / abs(before):+.0%} on the period before)"
+    return f" ({round((now - before) / abs(before), 2) + 0.0:+.0%} on the period before)"
 
 
 # --- governed answers ------------------------------------------------------
@@ -198,7 +199,10 @@ KPI_COLUMNS = {  # measure -> (label, mart column or None for a ratio, money?)
     "net_cash": ("net cash collected", "net_cash_cents", True),
     "crm_booked": ("CRM bookings (closed-won value)", "booked_cents", True),
     "mql_rate": ("MQL rate (MQLs per lead)", None, False),
+    "refund_rate": ("refund rate (refunds as a share of gross cash)", None, False),
 }
+# Ratio measures: summed over the period first, then divided, so a period is never an average of daily rates.
+RATIOS = {"mql_rate": ("mqls", "leads"), "refund_rate": ("refunds_cents", "gross_collected_cents")}
 KPI_MEASURES = frozenset(KPI_COLUMNS)
 
 
@@ -210,18 +214,19 @@ def _period_totals(connection, start: date, end: date) -> dict:
                   SUM(net_cash_cents) net_cash_cents, SUM(booked_cents) booked_cents
            FROM mart_growth_daily WHERE day BETWEEN ? AND ?""", (start.isoformat(), end.isoformat())).fetchone()
     totals = {key: value or 0 for key, value in dict(row).items()}
-    totals["mql_rate"] = totals["mqls"] / totals["leads"] if totals["leads"] else None
+    for ratio, (num, den) in RATIOS.items():
+        totals[ratio] = totals[num] / totals[den] if totals[den] else None
     return totals
 
 
 def _kpi_value(totals: dict, measure: str) -> float | None:
     column = KPI_COLUMNS[measure][1]
-    return totals["mql_rate"] if column is None else totals[column]
+    return totals[measure] if column is None else totals[column]
 
 
 def _kpi_text(measure: str, value: float | None, before: float | None) -> str:
     label, _column, money = KPI_COLUMNS[measure]
-    if measure == "mql_rate":
+    if measure in RATIOS:
         return f"{label} {_pct(value)}{_change(value, before, rate=True)}"
     shown = _usd(value) if money else f"{value:,}"
     return f"{label} {shown}{_change(value, before)}"
@@ -248,7 +253,7 @@ def _kpi_totals(connection, ctx=None):
     first_line = _kpi_text(order[0], _kpi_value(now, order[0]), before and _kpi_value(before, order[0]))
     rest = "; ".join(_kpi_text(m, _kpi_value(now, m), before and _kpi_value(before, m)) for m in order[1:4])
     note = "" if before else " There is no earlier period of the same length in the data to compare with."
-    clipped = " The data starts on 1 Jul 2025, so the period is cut to what exists." if (
+    clipped = f" The data starts on {day_label(ctx.first)}, so the period is cut to what exists." if (
         ctx.window and ctx.window.get("clipped")) else ""
     basis = (" Cash is dated by payment and refund, leads and MQLs by the day they happened, so the MQL rate is "
              "an event-basis read of lead quality.") if measure in (None, "mql_rate", "mqls", "leads") else ""
@@ -305,7 +310,8 @@ def _paid_efficiency(connection, ctx=None):
         return ((f"{name}, {label}: {describe(focus, measure)}. All paid media for comparison: "
                  f"{describe(total, measure)}.{lag}"),
                 "ad_spend_daily, lifecycle events (activity basis)")
-    parts = [f"{PLATFORM_LABELS.get(row['segment'], row['segment'])}: {describe(row, measure)}" for row in rows[:-1]]
+    compared = [row for row in rows[:-1] if not ctx.slots.platforms or row["segment"] in ctx.slots.platforms]
+    parts = [f"{PLATFORM_LABELS.get(row['segment'], row['segment'])}: {describe(row, measure)}" for row in compared]
     return (f"{label[0].upper() + label[1:]}: " + "; ".join(parts) + f". All paid: {describe(total, measure)}.{lag}",
             "ad_spend_daily, lifecycle events (activity basis)")
 
@@ -320,13 +326,20 @@ def _tracking(connection, ctx=None):
             "of net cash that cannot be credited to a campaign."), "measurement health")
 
 
+CASH_MEASURES = frozenset({"net_cash", "gross_collected", "refunds", "refund_rate", "crm_booked"})
+
+
 def _cash(connection, ctx=None):
     from growthops.report import metrics
 
     if ctx and ctx.window:
-        return _kpi_totals(connection, Context(Slots(measure="net_cash"), ctx.window, ctx.as_of, ctx.first))
+        # Keep the cash measure the question named ("refunds last month"); anything else leads with net cash.
+        measure = ctx.slots.measure if ctx.slots.measure in CASH_MEASURES else "net_cash"
+        return _kpi_totals(connection, Context(Slots(measure=measure), ctx.window, ctx.as_of, ctx.first))
     values = metrics(connection)
-    return ((f"Gross collected was {_usd(values['gross_collected_cents'])}; refunds were {_usd(values['refunds_cents'])}; "
+    rate = values["refunds_cents"] / values["gross_collected_cents"] if values["gross_collected_cents"] else None
+    return ((f"Gross collected was {_usd(values['gross_collected_cents'])}; refunds were {_usd(values['refunds_cents'])} "
+             f"({_pct(rate)} of gross); "
             f"net collected cash was {_usd(values['net_collected_cents'])}. Closed-won deal value is a separate "
             f"{_usd(values['booked_revenue_cents'])} booking measure."), "payments, refunds, closed-won deals")
 
@@ -485,7 +498,7 @@ INTENTS = (
             "cash with no campaign attached"), _tracking),
     Intent("net_collected_cash", "Cash and refunds", "Money actually collected: gross cash, refunds given to customers, net collected cash after refunds, versus "
            "CRM bookings.",
-           ("What is net cash after refunds?", "how much money did we collect", "total refunds",
+           ("What is net cash after refunds?", "how much money did we collect", "total refunds", "what is our refund rate",
             "booked revenue versus collected cash across systems"), _cash),
     Intent("email_performance", "Email performance",
            "Email campaign engagement: newsletter, webinar invite, promo and nurture open rate on human opens, email "
@@ -565,8 +578,8 @@ FOLLOW_UPS: dict[str, tuple[str, ...]] = {
 # answer with numbers in it, in both retrieval modes, so a suggestion can never lead to a refusal.
 SUGGESTIONS: dict[str, tuple[str, ...]] = {
     "Revenue truth": ("Which revenue number is right?", "What is net cash after refunds?",
-                      "Net cash in August", "Compare attribution models"),
-    "Paid media": ("What does a lead cost on Google?", "What does a booked call cost on Meta?",
+                      "Refund rate since the start of June", "Compare attribution models"),
+    "Paid media": ("What does a lead cost on Google?", "Meta vs Google cost per lead last month",
                    "How much did we spend on ads this month?", "Which paid campaigns are best?"),
     "Funnel and leads": ("How many leads did we get last week?", "What was the MQL rate last month?",
                          "Where does the funnel drop off?", "How did the CTA test do?"),
@@ -646,6 +659,8 @@ PLATFORM_NAMES = {"tiktok": "TikTok", "tik tok": "TikTok", "snapchat": "Snapchat
 
 # Answers that read the question's details (window, platform, campaign, measure); the rest are fixed views.
 SLOT_AWARE = frozenset({"kpi_totals", "paid_efficiency", "email_performance", "net_collected_cash"})
+# Answers that are about the latest days already, so "this week" or "yesterday" asks for exactly what they give.
+RECENT_BY_DESIGN = frozenset({"anomaly_episodes", "daily_update"})
 EFFICIENCY_MEASURES = frozenset({"cpl", "cost_per_mql", "cost_per_booked_call", "cpm", "cpc", "ctr"})
 PAID_VOLUMES = frozenset({"spend", "leads", "mqls", "calls_booked"})  # counts a paid platform or campaign also has
 # "Why did leads drop last week" is a diagnosis, and "which campaign had the most leads" a ranking: neither is a total.
@@ -664,11 +679,20 @@ def _slot_route(text: str, slots: Slots) -> str | None:
     totals. An efficiency figure for a named platform or campaign ("CPL on Google", "cost per MQL for
     meta_broad_v17") is paid efficiency. Anything else is left to retrieval, which knows the other answers.
     """
-    if slots.window and slots.measure in KPI_MEASURES and not (slots.platform or slots.campaign) \
+    named = slots.platform or slots.campaign or slots.platforms
+    if slots.window and slots.measure in KPI_MEASURES and not named \
             and not (RECONCILE.search(text) or DIAGNOSTIC.search(text) or BREAKDOWN.search(text)):
         return "kpi_totals"
-    if (slots.platform or slots.campaign) and slots.measure in EFFICIENCY_MEASURES | PAID_VOLUMES \
-            and not RECONCILE.search(text):
+    # "Meta vs Google CPL" compares platforms; "vs" only means reconciliation alongside a word like "claim".
+    if slots.platforms and slots.measure in EFFICIENCY_MEASURES | PAID_VOLUMES | {"roas", None} \
+            and not RECONCILE.search(re.sub(r"\b(vs|versus)\b", " ", text, flags=re.IGNORECASE)):
+        return "paid_efficiency"
+    if RECONCILE.search(text):
+        return None
+    if (slots.platform or slots.campaign) and slots.measure in EFFICIENCY_MEASURES | PAID_VOLUMES:
+        return "paid_efficiency"
+    # A paid-only measure over a named period with no platform ("ROAS last month") compares every platform.
+    if slots.window and slots.measure in EFFICIENCY_MEASURES | {"roas"}:
         return "paid_efficiency"
     return None
 
@@ -688,6 +712,8 @@ def route(question: str, mode: str | None = None) -> dict:
     if slots.untracked_platform:
         return {**_refuse(f"{PLATFORM_NAMES.get(slots.untracked_platform, slots.untracked_platform.title())} ads are not bought or tracked here; paid media is "
                           "Meta, Google and LinkedIn. Try “What does a lead cost on Google?”"), "slots": slots}
+    if slots.window and slots.window["kind"] == "invalid":
+        return {**_refuse(f"{slots.window['phrase']} is not a date on the calendar."), "slots": slots}
     certified = CERTIFIED.get(text.lower().rstrip("?").strip())
     if certified:
         return {"route": "certified", "target": certified, "score": 1.0, "hits": [], "mode": "certified",
@@ -742,6 +768,10 @@ def answer(connection: sqlite3.Connection, question: str, mode: str | None = Non
         intent = INTENT_BY_ID[decision["target"]]
         first, as_of = data_range(connection)
         text, source = intent.run(connection, Context(slots, window, as_of, first))
+        if window and intent.id not in SLOT_AWARE | RECENT_BY_DESIGN:
+            # Never let a named period pass silently: this answer is not cut by period, so say what it covers.
+            text = (f"This answer is not cut by period, so it covers the data as of {day_label(as_of)} rather than "
+                    f"{slots.window['phrase']}. {text}")
         result = {"answer": text, "source": source, "metric_id": intent.id, "citations": []}
         follow_ups = [q for q in FOLLOW_UPS.get(intent.id, ()) if q.lower().rstrip("?") != question.lower().rstrip("?")]
     elif decision["route"] == "definition":
@@ -783,8 +813,8 @@ def run_eval(mode: str | None = None, path: Path = EVAL_PATH) -> dict:
         verdict = "right" if got in accepted else "refused" if got == "refuse" else "wrong"
         # The right answer read for the wrong platform, measure or period is a wrong answer.
         slots = decision.get("slots") or Slots()
-        read = {"platform": slots.platform, "campaign": slots.campaign, "measure": slots.measure,
-                "window": slots.window["kind"] if slots.window else None}
+        read = {"platform": slots.platform, "platforms": sorted(slots.platforms) or None, "campaign": slots.campaign,
+                "measure": slots.measure, "window": slots.window["kind"] if slots.window else None}
         mismatched = {key: read[key] for key, value in case.get("expect_slots", {}).items() if read[key] != value}
         if verdict == "right" and mismatched:
             verdict = "wrong"

@@ -718,6 +718,268 @@
     "platform": "google",
     "window": "month"
    }
+  },
+  {
+   "question": "what was the refund rate last month",
+   "expect": "kpi_totals",
+   "split": "dev",
+   "expect_slots": {
+    "measure": "refund_rate",
+    "window": "previous_month"
+   }
+  },
+  {
+   "question": "what share of cash was refunded in the last 90 days",
+   "expect": "kpi_totals",
+   "split": "dev",
+   "expect_slots": {
+    "measure": "refund_rate",
+    "window": "days"
+   }
+  },
+  {
+   "question": "what is our refund rate",
+   "expect": "net_collected_cash",
+   "split": "dev",
+   "expect_slots": {
+    "measure": "refund_rate"
+   }
+  },
+  {
+   "question": "how much revenue since August",
+   "expect": "kpi_totals",
+   "split": "dev",
+   "expect_slots": {
+    "measure": "net_cash",
+    "window": "since"
+   }
+  },
+  {
+   "question": "revenue between July and August",
+   "expect": "kpi_totals",
+   "split": "dev",
+   "expect_slots": {
+    "measure": "net_cash",
+    "window": "span"
+   }
+  },
+  {
+   "question": "what was net cash on 3 September",
+   "expect": "kpi_totals",
+   "split": "dev",
+   "expect_slots": {
+    "measure": "net_cash",
+    "window": "date"
+   }
+  },
+  {
+   "question": "how many leads the week before last",
+   "expect": "kpi_totals",
+   "split": "dev",
+   "expect_slots": {
+    "measure": "leads",
+    "window": "days"
+   }
+  },
+  {
+   "question": "ad spend in Q2",
+   "expect": "kpi_totals",
+   "split": "dev",
+   "expect_slots": {
+    "measure": "spend",
+    "window": "quarter"
+   }
+  },
+  {
+   "question": "revenue in the first half of 2026",
+   "expect": "kpi_totals",
+   "split": "dev",
+   "expect_slots": {
+    "measure": "net_cash",
+    "window": "half"
+   }
+  },
+  {
+   "question": "revenue 2025",
+   "expect": "kpi_totals",
+   "split": "dev",
+   "expect_slots": {
+    "measure": "net_cash",
+    "window": "year"
+   }
+  },
+  {
+   "question": "leads from 2025-12-01 to 2026-01-15",
+   "expect": "kpi_totals",
+   "split": "dev",
+   "expect_slots": {
+    "measure": "leads",
+    "window": "span"
+   }
+  },
+  {
+   "question": "how many calls were booked in the last fortnight",
+   "expect": "kpi_totals",
+   "split": "dev",
+   "expect_slots": {
+    "measure": "calls_booked",
+    "window": "days"
+   }
+  },
+  {
+   "question": "what was ROAS last month",
+   "expect": "paid_efficiency",
+   "split": "dev",
+   "expect_slots": {
+    "measure": "roas",
+    "window": "previous_month"
+   }
+  },
+  {
+   "question": "meta cpl vs google cpl",
+   "expect": "paid_efficiency",
+   "split": "dev",
+   "expect_slots": {
+    "measure": "cpl",
+    "platforms": [
+     "google",
+     "meta"
+    ]
+   }
+  },
+  {
+   "question": "net cash from the start of June to the end of July",
+   "expect": "kpi_totals",
+   "split": "holdout",
+   "expect_slots": {
+    "measure": "net_cash",
+    "window": "span"
+   }
+  },
+  {
+   "question": "how many leads did we get in the 2nd quarter",
+   "expect": "kpi_totals",
+   "split": "holdout",
+   "expect_slots": {
+    "measure": "leads",
+    "window": "quarter"
+   }
+  },
+  {
+   "question": "spend since 1 September",
+   "expect": "kpi_totals",
+   "split": "holdout",
+   "expect_slots": {
+    "measure": "spend",
+    "window": "since"
+   }
+  },
+  {
+   "question": "google cost per lead between August and September",
+   "expect": "paid_efficiency",
+   "split": "holdout",
+   "expect_slots": {
+    "platform": "google",
+    "measure": "cpl",
+    "window": "span"
+   }
+  },
+  {
+   "question": "linkedin vs meta cost per MQL",
+   "expect": "paid_efficiency",
+   "split": "holdout",
+   "expect_slots": {
+    "platforms": [
+     "linkedin",
+     "meta"
+    ],
+    "measure": "cost_per_mql"
+   }
+  },
+  {
+   "question": "what was the refund rate in 2026",
+   "expect": "kpi_totals",
+   "split": "holdout",
+   "expect_slots": {
+    "measure": "refund_rate",
+    "window": "year"
+   }
+  },
+  {
+   "question": "MQLs on 14 August",
+   "expect": "kpi_totals",
+   "split": "holdout",
+   "expect_slots": {
+    "measure": "mqls",
+    "window": "date"
+   }
+  },
+  {
+   "question": "revenue for H1",
+   "expect": "kpi_totals",
+   "split": "holdout",
+   "expect_slots": {
+    "measure": "net_cash",
+    "window": "half"
+   }
+  },
+  {
+   "question": "how much did we spend from March through May",
+   "expect": "kpi_totals",
+   "split": "holdout",
+   "expect_slots": {
+    "measure": "spend",
+    "window": "span"
+   }
+  },
+  {
+   "question": "ctr on facebook in the fourth quarter of 2025",
+   "expect": "paid_efficiency",
+   "split": "holdout",
+   "expect_slots": {
+    "platform": "meta",
+    "measure": "ctr",
+    "window": "quarter"
+   }
+  },
+  {
+   "question": "deals won since January",
+   "expect": "kpi_totals",
+   "split": "holdout",
+   "expect_slots": {
+    "measure": "deals_won",
+    "window": "since"
+   }
+  },
+  {
+   "question": "leads on 30 February",
+   "expect": "refuse",
+   "split": "holdout"
+  },
+  {
+   "question": "what's the cost per booked call for the past fortnight",
+   "expect": "paid_efficiency",
+   "split": "holdout",
+   "expect_slots": {
+    "measure": "cost_per_booked_call",
+    "window": "days"
+   }
+  },
+  {
+   "question": "which revenue figure is right for Q1",
+   "expect": "revenue_truth",
+   "split": "holdout",
+   "expect_slots": {
+    "window": "quarter"
+   }
+  },
+  {
+   "question": "email open rate in august",
+   "expect": "email_performance",
+   "split": "holdout",
+   "expect_slots": {
+    "window": "month"
+   }
   }
  ],
  "first_holdout_scoring": {
@@ -742,6 +1004,14 @@
   {
    "date": "2026-09-27",
    "change": "Added kpi_totals (windowed totals). Two existing questions now reach it and get the same correct figure, so they accept either answer: 'how many leads did we get yesterday' (that day's leads, exactly) and 'total cash collected so far' (all-time totals led by net cash). No other expectation was changed."
+  },
+  {
+   "date": "2026-09-27",
+   "change": "Added refund rate (refunds as a share of gross cash) as a measure, after 'refund rate yesterday' was answered with a refund amount. Three dev questions added for it; no existing expectation was changed."
+  },
+  {
+   "date": "2026-09-27",
+   "change": "Periods the parser used to drop or misread (a question about 'since August' got August alone, 'between July and August' got July, '3 September' got the whole month, and 'Q2', '2025', 'the first half of 2026' and 'the week before last' got all-time figures) are now read: explicit dates, ranges, 'since', quarters, halves, years and fortnights. 'ROAS last month' and 'Meta vs Google CPL' now reach paid efficiency. Eleven dev questions added for these; no existing expectation was changed. An impossible date is refused, and an answer that cannot be cut by period now says so rather than passing a period silently."
   }
  ],
  "second_holdout_scoring": {
@@ -762,6 +1032,30 @@
   ],
   "refused": [
    "'spend on google in august': spend for a named platform was not routed"
+  ]
+ },
+ "third_holdout_scoring": {
+  "date": "2026-09-27",
+  "note": "15 holdout questions for dates, ranges, 'since', quarters, halves, years, fortnights, refund rate and platform comparisons, written after that work and before it was scored, recorded here on first scoring before any fix.",
+  "hybrid": {
+   "right": 13,
+   "wrong": 2,
+   "refused": 0
+  },
+  "keyword": {
+   "right": 13,
+   "wrong": 2,
+   "refused": 0
+  },
+  "wrong_before_fix": [
+   {
+    "question": "net cash from the start of June to the end of July",
+    "cause": "'the start of' and 'the end of' around the months hid the range, so June alone was read."
+   },
+   {
+    "question": "leads on 30 February",
+    "cause": "an impossible date was refused when answering but not when routing, which is what the contract scores; it is now refused at routing."
+   }
   ]
  }
 }

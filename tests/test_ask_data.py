@@ -120,6 +120,10 @@ def test_windowed_totals_equal_the_mart(connection):
     expected = _mart(connection, "mqls", *span) / _mart(connection, "leads", *span)
     assert f"MQL rate (MQLs per lead) {expected:.1%}" in rate["answer"]
     assert rate["understood"].startswith("last month · MQL rate")
+    refunds = answer(connection, "What was the refund rate last month?")
+    expected = _mart(connection, "refunds_cents", *span) / _mart(connection, "gross_collected_cents", *span)
+    assert f"refund rate (refunds as a share of gross cash) {expected:.1%}" in refunds["answer"]
+    assert refunds["understood"].startswith("last month · refund rate")
 
 
 def test_platform_answers_equal_paid_efficiency(connection):
@@ -147,3 +151,13 @@ def test_untracked_platforms_and_uncovered_periods_are_refused(connection):
 def test_understood_is_only_shown_where_it_shaped_the_answer(connection):
     assert answer(connection, "Which revenue number is right?")["understood"] == ""
     assert "Google" in answer(connection, "What does a lead cost on Google?")["understood"]
+
+
+def test_a_tiny_fall_never_reads_as_minus_zero():
+    from growthops.ask_data import _change
+    from growthops.performance import _vs
+
+    assert _change(1434, 1435) == " (+0% on the period before)"
+    assert _change(0.2, 0.20004, rate=True) == " (+0.0 pts on the period before)"
+    assert _change(90, 100) == " (-10% on the period before)"
+    assert _vs(1434, 1435) == "+0% vs 7-day avg"
