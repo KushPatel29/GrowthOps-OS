@@ -1,7 +1,8 @@
 """Build the formula-driven Excel dashboard from the verified Power BI CSV marts.
 
-Every KPI cell is an Excel formula over the raw mart sheets (no pasted values),
-the period sheet recomputes from editable dates, and the Audit sheet holds
+Every KPI cell is an Excel formula over the raw mart sheets (no pasted values).
+Four yellow inputs on Period analysis (dates, paid platform, email type) drive
+the period, marketing and weekly-trend sheets, and the Audit sheet holds
 reconciliation checks that must all equal zero. Regenerate after
 ``python -m growthops.export_bi --refresh-pbip``.
 """
@@ -17,7 +18,7 @@ from pathlib import Path
 
 from openpyxl import Workbook
 from openpyxl.chart import BarChart, LineChart, Reference
-from openpyxl.formatting.rule import CellIsRule
+from openpyxl.formatting.rule import CellIsRule, ColorScaleRule, DataBarRule, FormulaRule
 from openpyxl.styles import Alignment, Font, PatternFill, Protection
 from openpyxl.utils import get_column_letter
 from openpyxl.workbook.defined_name import DefinedName
@@ -29,6 +30,8 @@ INK, MUTED, BLUE, RED = "0B0B0B", "52514E", "2A78D6", "E34948"
 HEADER = PatternFill("solid", fgColor="EAF2FC")
 INPUT = PatternFill("solid", fgColor="FFF7D6")
 MONEY = '"$"#,##0'
+MONEY2 = '"$"#,##0.00'
+WEEKS = 26
 DATA_SHEETS = (
     ("Daily", "mart_growth_daily"), ("Campaigns", "mart_campaign_performance"), ("Funnel", "mart_funnel"),
     ("Revenue", "mart_revenue"), ("Bridge", "mart_revenue_bridge"), ("Platforms", "mart_platform_comparison"),
@@ -94,8 +97,10 @@ def build(output: Path = OUTPUT) -> Path:
     workbook = Workbook()
     dashboard = workbook.active
     dashboard.title = "Dashboard"
+    start = workbook.create_sheet("Start here", 0)
     analysis = workbook.create_sheet("Period analysis")
     marketing = workbook.create_sheet("Marketing KPIs")
+    weekly = workbook.create_sheet("Weekly trends")
     layout = {title: _data_sheet(workbook, title, mart) for title, mart in DATA_SHEETS}
     audit = workbook.create_sheet("Audit")
     definitions = workbook.create_sheet("Definitions")
@@ -135,6 +140,10 @@ def build(output: Path = OUTPUT) -> Path:
     dashboard["A14"], dashboard["B14"] = "Platform claims ÷ net collected cash", "=IF(B4=0,\"n.a.\",B13/B4)"
     dashboard["B14"].number_format = '0.00"×"'
     dashboard["A14"].font = dashboard["B14"].font = Font(bold=True, color=RED)
+    renewals_h, renewals_n = layout["Renewals"]
+    risk = rng("Renewals", renewals_h, "risk_level", renewals_n)
+    dashboard["A15"], dashboard["B15"] = "Renewals at high risk (failed card)", f'=COUNTIF({risk},"high")'
+    dashboard["A16"], dashboard["B16"] = "Renewals at medium risk (due soon)", f'=COUNTIF({risk},"medium")'
     dashboard.column_dimensions["A"].width = 38
     dashboard.column_dimensions["B"].width = 18
 
@@ -147,6 +156,21 @@ def build(output: Path = OUTPUT) -> Path:
         dashboard.cell(index + 2, 5, f"=Bridge!D{index}/100").number_format = MONEY
     dashboard.column_dimensions["D"].width = 32
     dashboard.column_dimensions["E"].width = 16
+
+    funnel_h, funnel_n = layout["Funnel"]
+    top = 5 + len(bridge_rows)
+    for column, title in zip("DEF", ("Funnel stage (people)", "People", "From previous")):
+        dashboard[f"{column}{top}"] = title
+        dashboard[f"{column}{top}"].font, dashboard[f"{column}{top}"].fill = Font(bold=True), HEADER
+    for row in range(2, funnel_n + 1):
+        dashboard.cell(top + row - 1, 4, f"=Funnel!{_col(funnel_h, 'stage')}{row}")
+        dashboard.cell(top + row - 1, 5, f"=Funnel!{_col(funnel_h, 'people')}{row}").number_format = "#,##0"
+        rate = f"Funnel!{_col(funnel_h, 'from_previous_rate')}{row}"
+        dashboard.cell(top + row - 1, 6, f'=IF({rate}="","",{rate})').number_format = "0.0%"
+    people = f"E{top + 1}:E{top + funnel_n - 1}"
+    dashboard.conditional_formatting.add(people, DataBarRule(start_type="num", start_value=0, end_type="max",
+                                                             color=BLUE, showValue=True))
+    dashboard.column_dimensions["F"].width = 14
 
     platforms_h, platforms_n = layout["Platforms"]
     dashboard["G3"], dashboard["H3"], dashboard["I3"] = "Platform", "Self-reported ROAS", "Warehouse ROAS"
@@ -170,14 +194,16 @@ def build(output: Path = OUTPUT) -> Path:
 
     net_col = _col(daily_h, "net_cash_cents")
     spend_col = _col(daily_h, "spend_cents")
-    cash_chart = LineChart()
-    cash_chart.title, cash_chart.y_axis.title = "Daily net cash (cents, event date)", "cents"
-    cash_chart.add_data(Reference(workbook["Daily"], min_col=daily_h.index("net_cash_cents") + 1, min_row=1,
-                                  max_row=daily_n), titles_from_data=True)
-    cash_chart.set_categories(Reference(workbook["Daily"], min_col=1, min_row=2, max_row=daily_n))
-    cash_chart.series[0].graphicalProperties.line.solidFill = BLUE
+    cash_chart = BarChart()
+    cash_chart.title = f"Weekly net cash (USD), {WEEKS} weeks to the selected end date"
+    cash_chart.y_axis.title, cash_chart.y_axis.number_format = "USD", MONEY
+    cash_chart.add_data(Reference(weekly, min_col=9, min_row=5, max_row=5 + WEEKS), titles_from_data=True)
+    cash_chart.set_categories(Reference(weekly, min_col=1, min_row=6, max_row=5 + WEEKS))
+    cash_chart.series[0].graphicalProperties.solidFill = BLUE
+    cash_chart.x_axis.number_format = "d mmm"
+    cash_chart.legend = None
     cash_chart.height, cash_chart.width = 7.5, 24
-    dashboard.add_chart(cash_chart, "A17")
+    dashboard.add_chart(cash_chart, f"A{top + funnel_n + 2}")
 
     analysis["A1"] = "Period analysis"
     analysis["A1"].font = Font(size=16, bold=True)
@@ -188,6 +214,16 @@ def build(output: Path = OUTPUT) -> Path:
     analysis["A6"], analysis["B6"] = "Days in window", "=B5-B4+1"
     for cell in (analysis["B4"], analysis["B5"]):
         cell.fill, cell.number_format = INPUT, "yyyy-mm-dd"
+    analysis["F4"], analysis["G4"], analysis["H4"] = "Paid platform", "All", '=IF(G4="All","*",G4)'
+    analysis["F5"], analysis["G5"], analysis["H5"] = "Email type", "All", '=IF(G5="All","*",G5)'
+    for cell in (analysis["G4"], analysis["G5"]):
+        cell.fill = INPUT
+    for cell in (analysis["H4"], analysis["H5"]):
+        cell.font = Font(color="A0A09C", italic=True)
+    analysis["F6"] = "Filters apply to Marketing KPIs and Weekly trends; the table below covers all channels."
+    analysis["F6"].font = Font(italic=True, color=MUTED)
+    analysis.column_dimensions["F"].width = 16
+    analysis.column_dimensions["G"].width = 16
     analysis["A8"], analysis["B8"], analysis["C8"], analysis["D8"] = "Metric", "Selected window", "Prior window", "Change"
     for cell in analysis[8]:
         cell.font, cell.fill = Font(bold=True), HEADER
@@ -240,17 +276,42 @@ def build(output: Path = OUTPUT) -> Path:
          f"=SUM('Paid daily'!{_col(paid_h, 'leads')}2:{_col(paid_h, 'leads')}{paid_n})-("
          + paid.replace("{}", rng("Campaigns", camp_h, "leads", camp_n)) + ")"),
     ]
+    mix = _marketing_sheet(marketing, paid_h, paid_n, email_h, email_n, links_h, links_n)
+    _weekly_sheet(weekly, paid_h, paid_n, email_h, email_n, daily_h, daily_n)
+    window = lambda sheet, header, column, dates, last: (  # noqa: E731
+        f"SUMIFS({rng(sheet, header, column, last)},{rng(sheet, header, dates, last)},\">=\"&StartDate,"
+        f"{rng(sheet, header, dates, last)},\"<=\"&EndDate)")
+    first_week, last_week = "'Weekly trends'!$A$6", f"('Weekly trends'!$A${5 + WEEKS}+6)"
+    extra += [
+        ("Channel mix total spend − window paid spend",
+         f"=ROUND('Marketing KPIs'!B{mix['paid_total']}*100-"
+         + window("'Paid daily'", paid_h, "spend_cents", "day", paid_n) + ",0)"),
+        ("Email-by-type delivered − window delivered",
+         f"='Marketing KPIs'!B{mix['email_total']}-" + window("Email", email_h, "delivered", "sent_date", email_n)),
+        (f"Weekly net cash ({WEEKS} weeks) − daily net cash, same dates",
+         f"=ROUND(SUM('Weekly trends'!I6:I{5 + WEEKS})*100-SUMIFS(Daily!${net_col}$2:${net_col}${daily_n},"
+         f"Daily!$A$2:$A${daily_n},\">=\"&{first_week},Daily!$A$2:$A${daily_n},\"<=\"&{last_week}),0)"),
+    ]
     first_extra = len(checks) + 3
     for offset, (label, formula) in enumerate(extra, start=first_extra):
         audit.cell(offset, 1, label)
         audit.cell(offset, 2, formula)
         audit.cell(offset, 3, f'=IF(B{offset}=0,"✓ Reconciled","✗ Investigate")')
-    audit.cell(first_extra + len(extra) + 1, 1, "All checks reconciled").font = Font(bold=True)
-    audit.cell(first_extra + len(extra) + 1, 2, f"=SUMPRODUCT(ABS(B3:B{first_extra + len(extra) - 1}))=0")
+    total_row = first_extra + len(extra) + 1
+    audit.cell(total_row, 1, "All checks reconciled").font = Font(bold=True)
+    audit.cell(total_row, 2, f"=SUMPRODUCT(ABS(B3:B{total_row - 2}))=0")
+    note = audit.cell(total_row - 4, 4, "← These three follow the Period analysis inputs: the filtered sheets "
+                                         "must add up for whatever window is selected.")
+    note.font = Font(italic=True, color=MUTED)
+    status = f'=IF(Audit!B{total_row},"✓ All {len(checks) + len(extra)} checks pass","✗ See Audit")'
+    dashboard["A17"], dashboard["B17"] = "Reconciliation checks", status
+    dashboard["A17"].font = Font(bold=True)
 
-    _marketing_sheet(marketing, paid_h, paid_n, email_h, email_n, links_h, links_n)
+    _start_sheet(start, status, [sheet.title for sheet in workbook.worksheets])
     _definitions_sheet(definitions)
-    _protect(workbook, analysis, daily_n)
+    _protect(workbook, analysis, daily_n, paid_h, paid_n, email_h, email_n)
+    _presentation(workbook)
+    workbook.active = 0
     audit.column_dimensions["A"].width = 44
     audit.column_dimensions["B"].width = 20
     audit.column_dimensions["C"].width = 16
@@ -266,13 +327,17 @@ def build(output: Path = OUTPUT) -> Path:
     return output
 
 
-def _marketing_sheet(sheet, paid_h, paid_n, email_h, email_n, links_h, links_n) -> None:
-    """Paid, email and link KPIs for the window chosen on the Period analysis sheet, and the window before it."""
+def _marketing_sheet(sheet, paid_h, paid_n, email_h, email_n, links_h, links_n) -> dict[str, int]:
+    """Paid, email and link KPIs for the window chosen on the Period analysis sheet, and the window before it,
+    then the paid channel mix and email results by type for the selected window. Returns the total rows."""
     sheet["A1"] = "Marketing KPIs for the selected window"
     sheet["A1"].font = Font(size=16, bold=True)
     sheet["A2"] = ("Window dates come from the yellow cells on Period analysis. Activity basis: events are dated "
                    "when they happened and credited to the campaign that created the lead.")
     sheet["A2"].font = Font(italic=True, color=MUTED)
+    sheet["A3"] = ('="Window "&TEXT(StartDate,"yyyy-mm-dd")&" to "&TEXT(EndDate,"yyyy-mm-dd")'
+                   '&" · paid platform: "&PaidPlatform&" · email type: "&EmailType')
+    sheet["A3"].font = Font(bold=True, color=BLUE)
     for column, title in zip("ABCD", ("Metric", "Selected window", "Prior window", "Change")):
         sheet[f"{column}4"] = title
         sheet[f"{column}4"].font, sheet[f"{column}4"].fill = Font(bold=True), HEADER
@@ -283,13 +348,15 @@ def _marketing_sheet(sheet, paid_h, paid_n, email_h, email_n, links_h, links_n) 
         values = f"'Paid daily'!${_col(paid_h, column)}$2:${_col(paid_h, column)}${paid_n}"
         dates = f"'Paid daily'!$A$2:$A${paid_n}"
         lo, hi = windows[col]
-        return f'SUMIFS({values},{dates},">="&{lo},{dates},"<="&{hi})'
+        platforms = f"'Paid daily'!${_col(paid_h, 'platform')}$2:${_col(paid_h, 'platform')}${paid_n}"
+        return f'SUMIFS({values},{dates},">="&{lo},{dates},"<="&{hi},{platforms},PlatformCriteria)'
 
     def email_sum(column: str, col: str) -> str:
         values = f"Email!${_col(email_h, column)}$2:${_col(email_h, column)}${email_n}"
         dates = f"Email!${_col(email_h, 'sent_date')}$2:${_col(email_h, 'sent_date')}${email_n}"
         lo, hi = windows[col]
-        return f'SUMIFS({values},{dates},">="&{lo},{dates},"<="&{hi})'
+        types = f"Email!${_col(email_h, 'email_type')}$2:${_col(email_h, 'email_type')}${email_n}"
+        return f'SUMIFS({values},{dates},">="&{lo},{dates},"<="&{hi},{types},EmailTypeCriteria)'
 
     rows = [
         ("Paid spend (USD)", lambda c: f"={paid_sum('spend_cents', c)}/100", MONEY),
@@ -332,6 +399,238 @@ def _marketing_sheet(sheet, paid_h, paid_n, email_h, email_n, links_h, links_n) 
     sheet.column_dimensions["A"].width = 44
     for column in "BCD":
         sheet.column_dimensions[column].width = 17
+    totals = _channel_mix(sheet, paid_h, paid_n)
+    totals |= _email_by_type(sheet, email_h, email_n, totals["paid_total"] + 3)
+    return totals
+
+
+def _window_sumifs(sheet: str, header: list[str], last: int, column: str, dates: str, key: str, value: str) -> str:
+    """SUMIFS over the selected window for rows whose ``key`` column equals ``value``."""
+    def span(name: str) -> str:
+        return f"{sheet}!${_col(header, name)}$2:${_col(header, name)}${last}"
+    return (f'SUMIFS({span(column)},{span(dates)},">="&StartDate,{span(dates)},"<="&EndDate,'
+            f'{span(key)},{value})')
+
+
+def _table_header(sheet, row: int, titles: tuple[str, ...]) -> None:
+    for index, title in enumerate(titles, 1):
+        cell = sheet.cell(row, index, title)
+        cell.font, cell.fill = Font(bold=True), HEADER
+        cell.alignment = Alignment(wrap_text=True, vertical="center")
+
+
+def _channel_mix(sheet, paid_h: list[str], paid_n: int) -> dict[str, int]:
+    """One row per ad platform for the selected window (ignores the platform filter, by design)."""
+    _, rows = _load("mart_paid_efficiency_daily")
+    platforms = sorted({row[paid_h.index("platform")] for row in rows})
+    top = 28
+    sheet[f"A{top}"] = "Paid channel mix, selected window (every platform, whatever the filter)"
+    sheet[f"A{top}"].font = Font(size=13, bold=True)
+    _table_header(sheet, top + 1, ("Platform", "Spend (USD)", "Share of spend", "Leads", "CPL (USD)", "MQLs",
+                                   "Cost per MQL (USD)", "Calls booked", "Cost per booked call (USD)", "CTR"))
+    first, total = top + 2, top + 2 + len(platforms)
+
+    def paid(column: str, row: int) -> str:
+        return _window_sumifs("'Paid daily'", paid_h, paid_n, column, "day", "platform", f"$A{row}")
+    for row, platform in enumerate(platforms, start=first):
+        sheet.cell(row, 1, platform)
+        sheet.cell(row, 2, f"={paid('spend_cents', row)}/100")
+        sheet.cell(row, 4, f"={paid('leads', row)}")
+        sheet.cell(row, 6, f"={paid('mqls', row)}")
+        sheet.cell(row, 8, f"={paid('calls_booked', row)}")
+        sheet.cell(row, 10, f"=IFERROR({paid('clicks', row)}/{paid('impressions', row)},\"n.a.\")")
+    sheet.cell(total, 1, "Total").font = Font(bold=True)
+    for column in "BDFH":
+        sheet[f"{column}{total}"] = f"=SUM({column}{first}:{column}{total - 1})"
+        sheet[f"{column}{total}"].font = Font(bold=True)
+    clicks = _window_sumifs("'Paid daily'", paid_h, paid_n, "clicks", "day", "platform", '"*"')
+    impressions = _window_sumifs("'Paid daily'", paid_h, paid_n, "impressions", "day", "platform", '"*"')
+    sheet[f"J{total}"] = f'=IFERROR({clicks}/{impressions},"n.a.")'
+    for row in range(first, total + 1):
+        sheet[f"C{row}"] = f'=IFERROR(B{row}/B${total},"n.a.")'
+        sheet[f"E{row}"] = f'=IFERROR(B{row}/D{row},"n.a.")'
+        sheet[f"G{row}"] = f'=IFERROR(B{row}/F{row},"n.a.")'
+        sheet[f"I{row}"] = f'=IFERROR(B{row}/H{row},"n.a.")'
+        for column, fmt in zip("BCDEFGHIJ", (MONEY, "0%", "#,##0", MONEY2, "#,##0", MONEY2, "#,##0", MONEY2, "0.00%")):
+            sheet[f"{column}{row}"].number_format = fmt
+    sheet.conditional_formatting.add(f"B{first}:B{total - 1}", DataBarRule(
+        start_type="num", start_value=0, end_type="max", color=BLUE, showValue=True))
+    for column in "EGI":  # cheaper is better: light green for the lowest cost, light red for the highest
+        sheet.conditional_formatting.add(f"{column}{first}:{column}{total - 1}", ColorScaleRule(
+            start_type="min", start_color="DDF0E2", end_type="max", end_color="F9DADA"))
+    chart = BarChart()
+    chart.type, chart.title = "bar", "Cost per booked call by platform (USD)"
+    chart.add_data(Reference(sheet, min_col=9, min_row=first, max_row=total - 1))
+    chart.set_categories(Reference(sheet, min_col=1, min_row=first, max_row=total - 1))
+    chart.series[0].graphicalProperties.solidFill = BLUE
+    chart.x_axis.number_format = MONEY
+    chart.legend, chart.height, chart.width = None, 7, 13
+    sheet.add_chart(chart, "F4")
+    for column in "EFGHIJ":
+        sheet.column_dimensions[column].width = 14
+    sheet.row_dimensions[top + 1].height = 30
+    return {"paid_total": total}
+
+
+def _email_by_type(sheet, email_h: list[str], email_n: int, top: int) -> dict[str, int]:
+    """Email results by type for the selected window (ignores the email-type filter, by design)."""
+    _, rows = _load("mart_email_performance")
+    kinds = sorted({row[email_h.index("email_type")] for row in rows})
+    sheet[f"A{top}"] = "Email by type, selected window (every type, whatever the filter)"
+    sheet[f"A{top}"].font = Font(size=13, bold=True)
+    _table_header(sheet, top + 1, ("Email type", "Delivered", "Human open rate", "Click rate", "Click-to-open rate",
+                                   "Bounce rate", "Complaint rate", "Unsubscribes"))
+    first, total = top + 2, top + 2 + len(kinds)
+
+    def email(column: str, row: int) -> str:
+        value = '"*"' if row == total else f"$A{row}"
+        return _window_sumifs("Email", email_h, email_n, column, "sent_date", "email_type", value)
+    for row in range(first, total + 1):
+        sheet.cell(row, 1, "Total" if row == total else kinds[row - first])
+        sheet[f"B{row}"] = f"={email('delivered', row)}"
+        sheet[f"C{row}"] = f'=IFERROR({email("human_opens", row)}/B{row},"n.a.")'
+        sheet[f"D{row}"] = f'=IFERROR({email("clicks", row)}/B{row},"n.a.")'
+        sheet[f"E{row}"] = f'=IFERROR({email("clicks", row)}/{email("human_opens", row)},"n.a.")'
+        sheet[f"F{row}"] = f'=IFERROR({email("bounces", row)}/{email("sends", row)},"n.a.")'
+        sheet[f"G{row}"] = f'=IFERROR({email("spam_complaints", row)}/B{row},"n.a.")'
+        sheet[f"H{row}"] = f"={email('unsubscribes', row)}"
+        for column, fmt in zip("BCDEFGH", ("#,##0", "0.0%", "0.00%", "0.0%", "0.00%", "0.000%", "#,##0")):
+            sheet[f"{column}{row}"].number_format = fmt
+    sheet.cell(total, 1).font = Font(bold=True)
+    sheet.conditional_formatting.add(f"F{first}:F{total}", CellIsRule(operator="greaterThan", formula=["0.02"],
+                                                                      font=Font(color=RED)))
+    sheet.conditional_formatting.add(f"G{first}:G{total}", CellIsRule(operator="greaterThan", formula=["0.001"],
+                                                                      font=Font(color=RED)))
+    sheet.row_dimensions[top + 1].height = 30
+    return {"email_total": total}
+
+
+def _weekly_sheet(sheet, paid_h, paid_n, email_h, email_n, daily_h, daily_n) -> None:
+    """Twenty-six Monday weeks ending with the week of EndDate, with an 8-week CPL baseline flag."""
+    sheet["A1"] = f"Weekly trends: {WEEKS} weeks to the selected end date"
+    sheet["A1"].font = Font(size=16, bold=True)
+    sheet["A2"] = ("Weeks start Monday. Paid columns follow the platform filter, email columns the email-type "
+                   "filter; net cash is every channel, on event date. Red: CPL 25%+ above its prior 8-week average.")
+    sheet["A2"].font = Font(italic=True, color=MUTED)
+    sheet["A3"] = '="Paid platform: "&PaidPlatform&" · email type: "&EmailType'
+    sheet["A3"].font = Font(bold=True, color=BLUE)
+    _table_header(sheet, 5, ("Week start", "Spend (USD)", "Leads", "CPL (USD)", "Calls booked",
+                             "Cost per booked call (USD)", "Emails delivered", "Human open rate", "Net cash (USD)",
+                             "CPL vs prior 8 weeks"))
+
+    def span(sheet_name: str, header: list[str], last: int, column: str) -> str:
+        return f"{sheet_name}!${_col(header, column)}$2:${_col(header, column)}${last}"
+
+    def week(sheet_name: str, header: list[str], last: int, column: str, dates: str, row: int, extra: str = "") -> str:
+        days = span(sheet_name, header, last, dates)
+        return f'SUMIFS({span(sheet_name, header, last, column)},{days},">="&$A{row},{days},"<="&($A{row}+6){extra}'
+    paid = f",{span(chr(39) + 'Paid daily' + chr(39), paid_h, paid_n, 'platform')},PlatformCriteria)"
+    email = f",{span('Email', email_h, email_n, 'email_type')},EmailTypeCriteria)"
+    first, last = 6, 5 + WEEKS
+    for row in range(first, last + 1):
+        sheet[f"A{row}"] = f"=EndDate-WEEKDAY(EndDate,3)-7*{last - row}"
+        sheet[f"B{row}"] = "=" + week("'Paid daily'", paid_h, paid_n, "spend_cents", "day", row, paid) + "/100"
+        sheet[f"C{row}"] = "=" + week("'Paid daily'", paid_h, paid_n, "leads", "day", row, paid)
+        sheet[f"D{row}"] = f'=IFERROR(B{row}/C{row},"n.a.")'
+        sheet[f"E{row}"] = "=" + week("'Paid daily'", paid_h, paid_n, "calls_booked", "day", row, paid)
+        sheet[f"F{row}"] = f'=IFERROR(B{row}/E{row},"n.a.")'
+        sheet[f"G{row}"] = "=" + week("Email", email_h, email_n, "delivered", "sent_date", row, email)
+        opens = week("Email", email_h, email_n, "human_opens", "sent_date", row, email)
+        sheet[f"H{row}"] = f'=IFERROR({opens}/G{row},"n.a.")'
+        sheet[f"I{row}"] = "=" + week("Daily", daily_h, daily_n, "net_cash_cents", "day", row, ")") + "/100"
+        sheet[f"J{row}"] = (f'=IFERROR(D{row}/AVERAGE(D{row - 8}:D{row - 1})-1,"n.a.")' if row >= first + 8
+                            else "=\"baseline\"")
+        for column, fmt in zip("ABCDEFGHIJ", ("yyyy-mm-dd", MONEY, "#,##0", MONEY2, "#,##0", MONEY2, "#,##0",
+                                               "0.0%", MONEY, "+0%;-0%;0%")):
+            sheet[f"{column}{row}"].number_format = fmt
+    sheet.conditional_formatting.add(f"A{first + 8}:J{last}", FormulaRule(
+        formula=[f'AND(ISNUMBER($J{first + 8}),$J{first + 8}>=0.25)'], fill=PatternFill("solid", fgColor="FBE3E3"),
+        font=Font(color=RED)))
+    for index, (column, title, fmt, anchor) in enumerate((
+            (4, "Weekly CPL (USD)", MONEY2, "L5"), (8, "Weekly human open rate", "0%", "L21"),
+            (9, "Weekly net cash (USD)", MONEY, "L37"))):
+        chart = LineChart() if index < 2 else BarChart()
+        chart.title = title
+        chart.add_data(Reference(sheet, min_col=column, min_row=first, max_row=last))
+        chart.set_categories(Reference(sheet, min_col=1, min_row=first, max_row=last))
+        chart.y_axis.number_format, chart.x_axis.number_format = fmt, "d mmm"
+        if index < 2:
+            chart.series[0].graphicalProperties.line.solidFill = BLUE
+            chart.series[0].graphicalProperties.line.width = 22000
+        else:
+            chart.series[0].graphicalProperties.solidFill = BLUE
+        chart.legend, chart.height, chart.width = None, 7.5, 16
+        sheet.add_chart(chart, anchor)
+    sheet.freeze_panes = "B6"
+    sheet.row_dimensions[5].height = 30
+    for column, width in zip("ABCDEFGHIJ", (12, 13, 9, 11, 10, 14, 12, 12, 14, 13)):
+        sheet.column_dimensions[column].width = width
+
+
+def _start_sheet(sheet, status: str, titles: list[str]) -> None:
+    """Cover sheet: what the workbook is, how to use it, where each number comes from, how to refresh it."""
+    sheet["A1"] = "GrowthOps OS: Excel dashboard"
+    sheet["A1"].font = Font(size=20, bold=True, color=INK)
+    sheet["A2"] = ("Synthetic portfolio case (ScaleLab, a coaching business). Every number is a formula over the "
+                   "verified dbt marts on the grey data sheets; nothing is typed in.")
+    sheet["A2"].font = Font(italic=True, color=MUTED)
+    facts = (("Data through", "=Dashboard!H1", "yyyy-mm-dd"), ("Reconciliation", status, "General"),
+             ("Selected window", '=TEXT(StartDate,"yyyy-mm-dd")&" to "&TEXT(EndDate,"yyyy-mm-dd")', "General"),
+             ("Filters", '="Paid platform: "&PaidPlatform&" · email type: "&EmailType', "General"))
+    for row, (label, formula, fmt) in enumerate(facts, start=4):
+        sheet.cell(row, 1, label).font = Font(bold=True)
+        sheet.cell(row, 2, formula).number_format = fmt
+    sheet["A9"] = "How to use it"
+    sheet["A9"].font = Font(size=13, bold=True)
+    steps = ("1. On Period analysis, change the yellow cells: start and end date, paid platform, email type.",
+             "2. Marketing KPIs and Weekly trends recalculate; the Dashboard shows all-time totals and the bridge.",
+             "3. Check Audit: every difference must be zero (it is also shown above).",
+             "4. Definitions has the governed metric catalog. Sheets are locked (no password) so formulas stay intact;"
+             " filters and sorting still work on the data sheets.")
+    for row, text in enumerate(steps, start=10):
+        sheet.cell(row, 1, text)
+    sheet["A15"] = "Sheets"
+    sheet["A15"].font = Font(size=13, bold=True)
+    purposes = {
+        "Dashboard": "All-time KPIs, CRM-to-cash bridge, funnel, platform ROAS, weekly net cash",
+        "Period analysis": "The inputs, plus the selected window against the one before it",
+        "Marketing KPIs": "CPL, cost per MQL and booked call, CTR, email rates; channel mix; email by type",
+        "Weekly trends": f"{WEEKS} weeks of paid, email and cash, with a CPL anomaly flag",
+        "Audit": "Reconciliation checks that must all equal zero",
+        "Definitions": "Metric catalog copied from docs/metric-catalog.md",
+    }
+    row = 16
+    for title in titles:
+        if title == sheet.title:
+            continue
+        link = sheet.cell(row, 1, title)
+        link.hyperlink, link.font = f"#'{title}'!A1", Font(color=BLUE, underline="single")
+        sheet.cell(row, 2, purposes.get(title, "Data: one dbt mart, as exported")).font = Font(color=MUTED)
+        row += 1
+    sheet.cell(row + 1, 1, "Refresh").font = Font(size=13, bold=True)
+    sheet.cell(row + 2, 1, "python -m growthops.export_bi --refresh-pbip && python -m growthops.export_excel")
+    sheet.cell(row + 2, 1).font = Font(name="Consolas", color=INK)
+    sheet.cell(row + 3, 1, "CI rebuilds the workbook and fails if the committed file differs.").font = \
+        Font(italic=True, color=MUTED)
+    sheet.column_dimensions["A"].width = 26
+    sheet.column_dimensions["B"].width = 90
+
+
+def _presentation(workbook: Workbook) -> None:
+    """Tab colours, print layout, visible chart axes and document properties."""
+    reports = {"Start here", "Dashboard", "Period analysis", "Marketing KPIs", "Weekly trends", "Audit", "Definitions"}
+    for sheet in workbook.worksheets:
+        sheet.sheet_properties.tabColor = BLUE if sheet.title in reports else "A0A09C"
+        sheet.page_setup.orientation = "landscape"
+        sheet.page_setup.fitToWidth, sheet.page_setup.fitToHeight = 1, 0
+        sheet.sheet_properties.pageSetUpPr.fitToPage = True
+        sheet.oddFooter.left.text = "GrowthOps OS · synthetic data"
+        sheet.oddFooter.right.text = "&A · page &P of &N"
+        for chart in sheet._charts:
+            chart.x_axis.delete = chart.y_axis.delete = False  # openpyxl 3.1 hides axes unless told not to
+    workbook.properties.title = "GrowthOps OS Excel dashboard"
+    workbook.properties.subject = "Marketing performance, revenue reconciliation and data quality (synthetic)"
+    workbook.properties.keywords = "marketing analytics, CPL, ROAS, email, reconciliation"
 
 
 def _definitions_sheet(sheet) -> None:
@@ -353,7 +652,7 @@ def _definitions_sheet(sheet) -> None:
             cell.alignment = Alignment(wrap_text=True, vertical="top")
 
 
-def _protect(workbook: Workbook, analysis, daily_n: int) -> None:
+def _protect(workbook: Workbook, analysis, daily_n: int, paid_h, paid_n, email_h, email_n) -> None:
     """Named, validated date inputs; every other cell locked against accidental edits (no password)."""
     workbook.defined_names["StartDate"] = DefinedName("StartDate", attr_text="'Period analysis'!$B$4")
     workbook.defined_names["EndDate"] = DefinedName("EndDate", attr_text="'Period analysis'!$B$5")
@@ -363,7 +662,18 @@ def _protect(workbook: Workbook, analysis, daily_n: int) -> None:
                                 error="Pick a date inside the data range shown on the Daily sheet.")
     analysis.add_data_validation(validation)
     validation.add("B4:B5")
-    for cell in (analysis["B4"], analysis["B5"]):
+    names = {"PaidPlatform": "$G$4", "EmailType": "$G$5", "PlatformCriteria": "$H$4", "EmailTypeCriteria": "$H$5"}
+    for name, cell in names.items():
+        workbook.defined_names[name] = DefinedName(name, attr_text=f"'Period analysis'!{cell}")
+    for cell, mart, column in (("G4", "mart_paid_efficiency_daily", "platform"),
+                               ("G5", "mart_email_performance", "email_type")):
+        header, rows = _load(mart)
+        options = ",".join(["All"] + sorted({row[header.index(column)] for row in rows}))
+        choice = DataValidation(type="list", formula1=f'"{options}"', showErrorMessage=True,
+                                errorTitle="Not an option", error=f"Pick one of: {options}")
+        analysis.add_data_validation(choice)
+        choice.add(cell)
+    for cell in (analysis["B4"], analysis["B5"], analysis["G4"], analysis["G5"]):
         cell.protection = Protection(locked=False)
     for sheet in workbook.worksheets:
         sheet.protection.sheet = True

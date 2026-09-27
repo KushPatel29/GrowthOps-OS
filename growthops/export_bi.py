@@ -43,21 +43,21 @@ PAID, EMAIL, LINKS = "'mart_paid_efficiency_daily'", "'mart_email_performance'",
 # table -> (name, DAX, format string, display folder, description). Added when missing; never overwritten.
 MEASURES = {
     "mart_paid_efficiency_daily": (
-        ("Paid spend USD", f"DIVIDE(SUM({PAID}[spend_cents]), 100)", '"$"#,0', "Paid efficiency",
+        ("Daily paid spend USD", f"DIVIDE(SUM({PAID}[spend_cents]), 100)", '"$"#,0', "Paid efficiency",
          "Paid media spend in the filter context, in dollars."),
-        ("Paid leads", f"SUM({PAID}[leads])", "#,0", "Paid efficiency",
+        ("Daily paid leads", f"SUM({PAID}[leads])", "#,0", "Paid efficiency",
          "Leads created by paid campaigns (activity basis)."),
-        ("CPL USD", "DIVIDE([Paid spend USD], [Paid leads])", '"$"#,0.00', "Paid efficiency",
+        ("CPL USD", "DIVIDE([Daily paid spend USD], [Daily paid leads])", '"$"#,0.00', "Paid efficiency",
          "Cost per lead: paid spend / paid leads in the same window."),
-        ("Cost per MQL USD", f"DIVIDE([Paid spend USD], SUM({PAID}[mqls]))", '"$"#,0.00', "Paid efficiency",
+        ("Cost per MQL USD", f"DIVIDE([Daily paid spend USD], SUM({PAID}[mqls]))", '"$"#,0.00', "Paid efficiency",
          "Paid spend / MQLs reached in the window by paid-created leads."),
-        ("Cost per booked call USD", f"DIVIDE([Paid spend USD], SUM({PAID}[calls_booked]))", '"$"#,0.00',
+        ("Cost per booked call USD", f"DIVIDE([Daily paid spend USD], SUM({PAID}[calls_booked]))", '"$"#,0.00',
          "Paid efficiency", "Paid spend / discovery calls booked in the window by paid-created leads (CPDM)."),
-        ("CPM USD", f"DIVIDE([Paid spend USD] * 1000, SUM({PAID}[impressions]))", '"$"#,0.00', "Paid efficiency",
+        ("CPM USD", f"DIVIDE([Daily paid spend USD] * 1000, SUM({PAID}[impressions]))", '"$"#,0.00', "Paid efficiency",
          "Cost per thousand impressions."),
         ("CTR", f"DIVIDE(SUM({PAID}[clicks]), SUM({PAID}[impressions]))", "0.00%", "Paid efficiency",
          "Ad clicks / impressions."),
-        ("CPC USD", f"DIVIDE([Paid spend USD], SUM({PAID}[clicks]))", '"$"#,0.00', "Paid efficiency",
+        ("CPC USD", f"DIVIDE([Daily paid spend USD], SUM({PAID}[clicks]))", '"$"#,0.00', "Paid efficiency",
          "Paid spend / ad clicks."),
     ),
     "mart_email_performance": (
@@ -163,6 +163,15 @@ def _partition(table: str, columns: list[str], rows: list[list[str]], types: dic
 def _measure_block(table: str, name: str, expression: str, fmt: str, folder: str, description: str) -> str:
     return (f"\t/// {description}\n\tmeasure '{name}' = {expression}\n\t\tformatString: {fmt}\n"
             f"\t\tdisplayFolder: {folder}\n\t\tlineageTag: {_lineage(table, 'measure', name)}\n\n")
+
+
+def _drop_generated_measures(table: str, text: str) -> str:
+    """Remove measures this module wrote (their lineage tag is derived from the name), so renamed
+    or retired ones do not linger; measures written by hand in Desktop keep random tags and stay."""
+    def keep(match: re.Match) -> str:
+        return "" if match["tag"] == _lineage(table, "measure", match["name"]) else match[0]
+    pattern = r"(?:\t/// [^\n]*\n)?\tmeasure '(?P<name>[^']+)' = (?:(?!\n\tmeasure ).)*?\n\t\tlineageTag: (?P<tag>[0-9a-f-]+)\n\n"
+    return re.sub(pattern, keep, text, flags=re.DOTALL)
 
 
 def _date_table(first: str, last: str) -> str:
@@ -273,8 +282,10 @@ def refresh_pbip(csv_dir: str = "dashboards/powerbi-data", project: Path = PROJE
             blocks = "".join(_column_block(mart, column, types[column]) for column in missing)
             anchor = text.find("\n\tmeasure ")
             text = text + blocks if anchor == -1 else text[:anchor + 1] + blocks + text[anchor + 1:]
-        present = set(re.findall(r"\n\tmeasure '([^']+)'", text))
-        additions = "".join(_measure_block(mart, *spec) for spec in MEASURES.get(mart, ()) if spec[0] not in present)
+        text = _drop_generated_measures(mart, text)
+        present = {name.lower() for name in re.findall(r"\n\tmeasure '([^']+)'", text)}
+        additions = "".join(_measure_block(mart, *spec) for spec in MEASURES.get(mart, ())
+                            if spec[0].lower() not in present)
         text = text.rstrip("\n") + "\n\n" + additions + _partition(mart, columns, rows, types)
         path.write_text(text, encoding="utf-8")
         refreshed[mart] = len(rows)

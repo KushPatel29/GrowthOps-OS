@@ -62,37 +62,37 @@ table mart_paid_efficiency_daily
 		sourceColumn: closed_won_deals
 
 	/// Paid media spend in the filter context, in dollars.
-	measure 'Paid spend USD' = DIVIDE(SUM('mart_paid_efficiency_daily'[spend_cents]), 100)
+	measure 'Daily paid spend USD' = DIVIDE(SUM('mart_paid_efficiency_daily'[spend_cents]), 100)
 		formatString: "$"#,0
 		displayFolder: Paid efficiency
-		lineageTag: 8da92ad0-ad98-5d73-86b6-3dec14da4c96
+		lineageTag: 5678076f-0496-57f6-b292-019c8cd3d4a1
 
 	/// Leads created by paid campaigns (activity basis).
-	measure 'Paid leads' = SUM('mart_paid_efficiency_daily'[leads])
+	measure 'Daily paid leads' = SUM('mart_paid_efficiency_daily'[leads])
 		formatString: #,0
 		displayFolder: Paid efficiency
-		lineageTag: 4f6d87e2-3084-52a0-8267-60814fcfd584
+		lineageTag: c43d770e-383e-5cde-9871-7b6d00fde054
 
 	/// Cost per lead: paid spend / paid leads in the same window.
-	measure 'CPL USD' = DIVIDE([Paid spend USD], [Paid leads])
+	measure 'CPL USD' = DIVIDE([Daily paid spend USD], [Daily paid leads])
 		formatString: "$"#,0.00
 		displayFolder: Paid efficiency
 		lineageTag: f5db4883-5c4d-502c-8c82-dc22b2ccbb56
 
 	/// Paid spend / MQLs reached in the window by paid-created leads.
-	measure 'Cost per MQL USD' = DIVIDE([Paid spend USD], SUM('mart_paid_efficiency_daily'[mqls]))
+	measure 'Cost per MQL USD' = DIVIDE([Daily paid spend USD], SUM('mart_paid_efficiency_daily'[mqls]))
 		formatString: "$"#,0.00
 		displayFolder: Paid efficiency
 		lineageTag: 73e805dc-87a4-57b6-a666-82cf2d0c9912
 
 	/// Paid spend / discovery calls booked in the window by paid-created leads (CPDM).
-	measure 'Cost per booked call USD' = DIVIDE([Paid spend USD], SUM('mart_paid_efficiency_daily'[calls_booked]))
+	measure 'Cost per booked call USD' = DIVIDE([Daily paid spend USD], SUM('mart_paid_efficiency_daily'[calls_booked]))
 		formatString: "$"#,0.00
 		displayFolder: Paid efficiency
 		lineageTag: 2208a2d1-9a93-537e-8f8e-8190d56a9ac7
 
 	/// Cost per thousand impressions.
-	measure 'CPM USD' = DIVIDE([Paid spend USD] * 1000, SUM('mart_paid_efficiency_daily'[impressions]))
+	measure 'CPM USD' = DIVIDE([Daily paid spend USD] * 1000, SUM('mart_paid_efficiency_daily'[impressions]))
 		formatString: "$"#,0.00
 		displayFolder: Paid efficiency
 		lineageTag: 887ca634-6de9-542a-aec2-611adc49fa14
@@ -104,7 +104,7 @@ table mart_paid_efficiency_daily
 		lineageTag: f1e62e33-8c2a-5f79-94d5-a91dcda98554
 
 	/// Paid spend / ad clicks.
-	measure 'CPC USD' = DIVIDE([Paid spend USD], SUM('mart_paid_efficiency_daily'[clicks]))
+	measure 'CPC USD' = DIVIDE([Daily paid spend USD], SUM('mart_paid_efficiency_daily'[clicks]))
 		formatString: "$"#,0.00
 		displayFolder: Paid efficiency
 		lineageTag: 4ad2cad5-b708-5ef6-994e-16c458881ffb

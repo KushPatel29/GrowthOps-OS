@@ -6,6 +6,7 @@ import zlib
 from pathlib import Path
 
 import openpyxl
+import pytest
 
 from growthops.export_bi import MARTS, PROJECT
 from growthops.export_excel import build
@@ -61,6 +62,29 @@ def test_power_bi_model_has_date_dimension_relationships_and_documented_measures
             assert f"formatString: {fmt}" in block[1][:400] and f"displayFolder: {folder}" in block[1][:400]
 
 
+def test_power_bi_model_names_load_in_desktop():
+    """Desktop refuses the whole model if two measures share a name, ignoring case, anywhere in it,
+    if a measure shares a name with a column of its table, or if DAX references a missing measure."""
+    from growthops.export_bi import _drop_generated_measures, _lineage, _measure_block
+
+    tables = {path.stem: path.read_text(encoding="utf-8") for path in (ROOT / PROJECT / "tables").glob("*.tmdl")}
+    measures = {table: re.findall(r"\n\tmeasure '([^']+)' = ", text) for table, text in tables.items()}
+    seen = {}
+    for table, names in measures.items():
+        columns = {name.strip("'").lower() for name in re.findall(r"\n\tcolumn ('[^']+'|\w+)", tables[table])}
+        for name in names:
+            assert name.lower() not in seen, f"measure {name!r} in {table} and {seen[name.lower()]}"
+            assert name.lower() not in columns, f"measure {name!r} clashes with a column of {table}"
+            seen[name.lower()] = table
+    for table, text in tables.items():
+        for name in re.findall(r"(?<![\w')])\[([^\]]+)\]", "".join(re.findall(r"\n\tmeasure '[^']+' = ([^\n]+)", text))):
+            assert name.lower() in seen, f"{table}: DAX references unknown measure [{name}]"
+
+    stale = _measure_block("t", "Old name", "1", "0", "F", "retired")
+    manual = f"\tmeasure 'Hand made' = 2\n\t\tlineageTag: {_lineage('manual')}\n\n"
+    assert _drop_generated_measures("t", "table t\n\n" + stale + manual) == "table t\n\n" + manual
+
+
 def test_excel_workbook_has_controls_and_marketing_kpis(tmp_path):
     workbook = openpyxl.load_workbook(build(tmp_path / "dashboard.xlsx"))
     assert {"Marketing KPIs", "Paid daily", "Email", "Links", "Definitions"} <= set(workbook.sheetnames)
@@ -74,6 +98,51 @@ def test_excel_workbook_has_controls_and_marketing_kpis(tmp_path):
     assert workbook["Dashboard"]["H1"].value.startswith("=MAX(Daily!")
     definitions = [row[0] for row in workbook["Definitions"].iter_rows(min_row=4, values_only=True)]
     assert "Human open rate" in definitions and "Cost per booked call (CPDM)" in definitions
+
+
+def test_excel_filters_trends_and_start_sheet(tmp_path):
+    workbook = openpyxl.load_workbook(build(tmp_path / "dashboard.xlsx"))
+    assert workbook.sheetnames[0] == "Start here" and workbook.active.title == "Start here"
+    assert set(workbook.defined_names) >= {"PaidPlatform", "EmailType", "PlatformCriteria", "EmailTypeCriteria"}
+    analysis = workbook["Period analysis"]
+    lists = {str(item.sqref): item.formula1 for item in analysis.data_validations.dataValidation if item.type == "list"}
+    assert lists == {"G4": '"All,google,linkedin,meta"', "G5": '"All,newsletter,nurture,promo,webinar_invite"'}
+    assert not analysis["G4"].protection.locked and not analysis["G5"].protection.locked
+    kpis = workbook["Marketing KPIs"]
+    assert "PlatformCriteria" in kpis["B5"].value and "EmailTypeCriteria" in kpis["B17"].value
+    assert [kpis.cell(row, 1).value for row in range(30, 34)] == ["google", "linkedin", "meta", "Total"]
+    weekly = workbook["Weekly trends"]
+    assert weekly["A31"].value == "=EndDate-WEEKDAY(EndDate,3)-7*0" and weekly["A6"].value.endswith("-7*25")
+    assert len(weekly._charts) == 3 and weekly.conditional_formatting
+    for sheet in workbook.worksheets:
+        assert sheet.page_setup.orientation == "landscape"
+        assert all(chart.x_axis.delete is False and chart.y_axis.delete is False for chart in sheet._charts)
+    links = [cell.hyperlink.location for cell in workbook["Start here"]["A"] if cell.hyperlink]
+    assert len(links) == len(workbook.sheetnames) - 1
+
+
+def test_excel_formulas_evaluate_without_errors_and_every_audit_is_zero(tmp_path):
+    formulas = pytest.importorskip("formulas")
+    path = build(tmp_path / "dashboard.xlsx")
+    solution = formulas.ExcelModel().loads(str(path)).finish().calculate()
+    values = {}
+    for key, value in solution.items():
+        if "!" in key and ":" not in key.split("!")[1]:
+            sheet, cell = key.split("]")[1].split("!")
+            values[(sheet.strip("'").upper(), cell)] = value.value[0][0] if hasattr(value, "value") else value
+    workbook = openpyxl.load_workbook(path)
+    for sheet in workbook.worksheets:
+        for row in sheet.iter_rows():
+            for cell in row:
+                if isinstance(cell.value, str) and cell.value.startswith("="):
+                    value = values.get((sheet.title.upper(), cell.coordinate))
+                    assert value is not None and "Error" not in type(value).__name__, f"{sheet.title}!{cell.coordinate}"
+    audit = workbook["Audit"]
+    checks = [row for row in range(3, audit.max_row + 1) if str(audit.cell(row, 3).value or "").startswith("=IF(B")]
+    assert len(checks) == 13 and all(values[("AUDIT", f"B{row}")] == 0 for row in checks)
+    assert values[("START HERE", "B5")] == "✓ All 13 checks pass"
+    kpis = {row: values[("MARKETING KPIS", f"B{row}")] for row in (5, 6, 7)}
+    assert round(kpis[5] / kpis[6], 6) == round(kpis[7], 6)
 
 
 def _shape(node):
