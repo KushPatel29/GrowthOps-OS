@@ -22,7 +22,7 @@ Live synthetic dashboard: https://growthops-os.streamlit.app/ · GitHub: https:/
 - **Keyless ask-your-data** (`ask_data.py`, `retrieval.py`, `embeddings.py`): the Ask Your Data design, with
   no language model or API key. Guard, then certified phrases, then hybrid BM25 + local MiniLM retrieval over
   19 governed answers and the metric catalog, then a governed answer, a cited definition or a refusal. On the
-  83-question contract, hybrid scores 80 right, 0 wrong, 3 refused and keyword-only 74 right, 0 wrong, 9 refused.
+  83-question contract, hybrid and keyword-only both score 83 right, 0 wrong, 0 refused.
   The first scoring of the 30 holdout questions is kept in the file. Every question is audited in `ask_log`.
 - **Production runtime**: fail-fast settings (`config.py`); API keys; replay-safe signed webhooks; request IDs,
   JSON logs and security headers; `/ready` and Prometheus `/metrics`; versioned migrations; verified backups and
