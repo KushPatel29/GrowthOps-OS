@@ -1,89 +1,94 @@
 table mart_experiment_variants
-	lineageTag: e515b0fc-0bcd-41c4-9413-cec429e7611d
+	lineageTag: 7eb4dfb9-7dd4-574a-9bb6-d527472c7261
 
 	column experiment_id
 		dataType: string
-		lineageTag: 61ded60e-5bcc-4f53-93f3-4bbb18cf06b9
+		lineageTag: ebc5e558-074e-5d2d-bb07-8c21597fb03e
 		summarizeBy: none
 		sourceColumn: experiment_id
 
 	column variant_id
 		dataType: string
-		lineageTag: cb378796-4f8f-4b29-9784-d629a05883a6
+		lineageTag: 91e5579f-16d7-5d34-bd69-ea4b86d7ab2b
 		summarizeBy: none
 		sourceColumn: variant_id
 
 	column label
 		dataType: string
-		lineageTag: cc9409a2-7613-421c-9292-2074491e16ac
+		lineageTag: 06479227-62cb-527b-9062-e40a59bf1823
 		summarizeBy: none
 		sourceColumn: label
 
 	column cta_text
 		dataType: string
-		lineageTag: e3a9d6b7-fc80-4ff9-a91b-537d88dc764f
+		lineageTag: b5f8fb34-9147-5e09-bbb2-00eebe8900fe
 		summarizeBy: none
 		sourceColumn: cta_text
 
 	column visitors
 		dataType: int64
-		lineageTag: c3109310-a062-4f57-b1f4-97d4c57eabb8
-		summarizeBy: none
+		formatString: #,0
+		lineageTag: 249c45c8-f834-558f-b646-c353608d8628
+		summarizeBy: sum
 		sourceColumn: visitors
 
 	column leads
 		dataType: int64
-		lineageTag: ec1b39d1-4654-49eb-85d2-1b8f8a981247
-		summarizeBy: none
+		formatString: #,0
+		lineageTag: 4debae55-e457-506b-a97e-74593eef68ce
+		summarizeBy: sum
 		sourceColumn: leads
 
 	column mqls
 		dataType: int64
-		lineageTag: 3cdcf1c4-3710-4fe6-ac1b-4e8b8e04c94e
-		summarizeBy: none
+		formatString: #,0
+		lineageTag: bcaff9ee-7077-5dd3-b18b-c80e783ac8f9
+		summarizeBy: sum
 		sourceColumn: mqls
 
 	column customers
 		dataType: int64
-		lineageTag: a1d8ca65-297a-4c55-aae4-06ac23859b6f
-		summarizeBy: none
+		formatString: #,0
+		lineageTag: 79ef3874-4a61-5e22-8580-9219898dd212
+		summarizeBy: sum
 		sourceColumn: customers
 
 	column net_cash_cents
 		dataType: int64
-		lineageTag: d644eef6-0b68-43d6-a6f9-748c71c3df88
-		summarizeBy: none
+		formatString: #,0
+		lineageTag: 59075a7e-f59f-5bd2-aeef-c09faa0e79a8
+		summarizeBy: sum
 		sourceColumn: net_cash_cents
 
 	column lead_rate
 		dataType: double
-		lineageTag: 342af15b-145c-424f-abd0-ba70b42cbc2d
+		formatString: 0.0%
+		lineageTag: 9374997c-7e65-5129-a6fe-b5a37c3f70ed
 		summarizeBy: none
 		sourceColumn: lead_rate
 
 	column mql_per_lead
 		dataType: double
-		lineageTag: 54d7e2aa-98a1-4d80-974a-4489c0178704
+		formatString: 0.0%
+		lineageTag: de1fe533-3860-55e4-a8bd-6383b743acfb
 		summarizeBy: none
 		sourceColumn: mql_per_lead
 
 	column net_cash_per_visitor_cents
 		dataType: double
-		lineageTag: 55def697-3bbf-400a-9558-373821478ba1
+		formatString: 0.0%
+		lineageTag: 44207507-b41b-55e9-a5de-34cbe42e20cd
 		summarizeBy: none
 		sourceColumn: net_cash_per_visitor_cents
-
-	/// Net collected cash attributed to each experiment variant, in dollars.
-	measure 'Experiment Net Cash USD' = DIVIDE(SUM('mart_experiment_variants'[net_cash_cents]), 100)
-		formatString: "$"#,0
-		displayFolder: Experiments
-		lineageTag: 6e560a4f-c325-5310-a5c4-80ce1bb3154b
 
 	partition mart_experiment_variants = m
 		mode: import
 		source =
 				let
-				  Source = Table.FromRows(Json.Document(Binary.Decompress(Binary.FromText("i45WSi5JjE8vyi8vyYgvyEnMU9IBiyQCaaf8/GyFRIXikqLEktT0SoXkxJwc3MKmBgZA0hBMmoMIIzDfyMzAACxmoGcEJs1BUqZGBnoGSrE6uKxPAtLuqSUKuZUKEEkFqCRWQajVJiDSGOIKIGFmjLDZAkIZmhhD3QSyPRYA", BinaryEncoding.Base64), Compression.Deflate)), let _t = ((type nullable text) meta [Serialized.Text = true]) in type table [experiment_id = nullable text, variant_id = nullable text, label = nullable text, cta_text = nullable text, visitors = nullable text, leads = nullable text, mqls = nullable text, customers = nullable text, net_cash_cents = nullable text, lead_rate = nullable text, mql_per_lead = nullable text, net_cash_per_visitor_cents = nullable text]),
-				  #"Changed column type" = Table.TransformColumnTypes(Source, {{"experiment_id", type text}, {"variant_id", type text}, {"label", type text}, {"cta_text", type text}, {"visitors", Int64.Type}, {"leads", Int64.Type}, {"mqls", Int64.Type}, {"customers", Int64.Type}, {"net_cash_cents", Int64.Type}, {"lead_rate", type number}, {"mql_per_lead", type number}, {"net_cash_per_visitor_cents", type number}})
+				    Source = #table(type table [#"experiment_id" = nullable text, #"variant_id" = nullable text, #"label" = nullable text, #"cta_text" = nullable text, #"visitors" = nullable text, #"leads" = nullable text, #"mqls" = nullable text, #"customers" = nullable text, #"net_cash_cents" = nullable text, #"lead_rate" = nullable text, #"mql_per_lead" = nullable text, #"net_cash_per_visitor_cents" = nullable text], {
+				        {"cta_growth_plan", "cta_a", "Control: Book a strategy call", "Book a strategy call", "7951", "524", "120", "6", "5130000", "0.0659", "0.229", "645.2"},
+				        {"cta_growth_plan", "cta_b", "Variant: Get my growth plan", "Get my growth plan", "7940", "787", "155", "9", "4440000", "0.0991", "0.197", "559.19"}
+				    }),
+				    Typed = Table.TransformColumnTypes(Source, {{"experiment_id", type text}, {"variant_id", type text}, {"label", type text}, {"cta_text", type text}, {"visitors", Int64.Type}, {"leads", Int64.Type}, {"mqls", Int64.Type}, {"customers", Int64.Type}, {"net_cash_cents", Int64.Type}, {"lead_rate", type number}, {"mql_per_lead", type number}, {"net_cash_per_visitor_cents", type number}})
 				in
-				  #"Changed column type"
+				    Typed

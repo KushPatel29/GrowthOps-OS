@@ -1,12 +1,27 @@
-relationship 2c69b932-b226-5d62-8eb4-30f00982ae0c
+relationship a6e12476-df74-50dc-8e85-93efa33d362a
 	fromColumn: mart_growth_daily.day
-	toColumn: dim_date.Date
+	toColumn: dim_date.date
 
-relationship b18e55bb-712a-5acf-ba80-99c1047f46e5
+relationship dc7ea4b4-2bee-5799-a9db-5177d0f38851
 	fromColumn: mart_paid_efficiency_daily.day
-	toColumn: dim_date.Date
+	toColumn: dim_date.date
 
-relationship e5ae4d7f-4c46-52be-9681-80cf671dc9a5
+relationship 35ba6553-ca22-5525-a0ff-15fbb3f0e872
+	fromColumn: mart_paid_efficiency_daily.campaign_id
+	toColumn: dim_campaign.campaign_id
+
+relationship ecd80f80-6f1c-5ecb-978e-a97238dffcba
+	fromColumn: fact_cash_attribution.paid_date
+	toColumn: dim_date.date
+
+relationship 6c29fcd8-b1cb-5f4a-b268-04a9b958c4f3
+	fromColumn: fact_cash_attribution.campaign_id
+	toColumn: dim_campaign.campaign_id
+
+relationship 066e4d9f-c469-5a8d-ac6c-a1ca03881d36
 	fromColumn: mart_email_performance.sent_date
-	toColumn: dim_date.Date
+	toColumn: dim_date.date
 
+relationship 89b0a49f-fb8a-5a47-b9f4-3f56884ff290
+	fromColumn: mart_campaign_performance.campaign_id
+	toColumn: dim_campaign.campaign_id

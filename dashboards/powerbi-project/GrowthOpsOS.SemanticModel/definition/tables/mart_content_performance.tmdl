@@ -1,76 +1,115 @@
 table mart_content_performance
-	lineageTag: c3e7179c-9de0-463a-9b5d-19a8ddfe3d52
-
-	measure 'Influenced Cash USD' = DIVIDE(SUM('mart_content_performance'[influenced_net_cash_cents]), 100)
-		formatString: "$"#,0
-		displayFolder: Content
-		lineageTag: 1aea32f6-56ab-42b7-b594-be1d413e58b4
+	lineageTag: b1b6d0ef-d8d0-5537-8d06-2d402b46ffb5
 
 	column content_id
 		dataType: string
-		lineageTag: 63d9e34a-27eb-44a8-8128-3afcd2b21aef
+		lineageTag: 63bc5351-e5b6-5256-b8f6-18529afbc70b
 		summarizeBy: none
 		sourceColumn: content_id
 
 	column title
 		dataType: string
-		lineageTag: fb280f29-57dc-4516-824f-e578f891ff44
+		lineageTag: bb0675a6-f26b-5848-9776-835d7efd72bc
 		summarizeBy: none
 		sourceColumn: title
 
 	column platform
 		dataType: string
-		lineageTag: 8a229ba3-140f-4083-8124-db1ddd39e74b
+		lineageTag: 5b3ec8d3-063a-5de5-a538-150cb6adbb82
 		summarizeBy: none
 		sourceColumn: platform
 
+	column topic
+		dataType: string
+		lineageTag: 5093ef5b-733d-50d1-a6aa-5b18e32f6074
+		summarizeBy: none
+		sourceColumn: topic
+
 	column views
 		dataType: int64
-		lineageTag: 7611c07d-ec8e-43b5-8249-4a9777334fd8
-		summarizeBy: none
+		formatString: #,0
+		lineageTag: 8a2ff1f0-3b85-56c9-bb6d-21b264a10785
+		summarizeBy: sum
 		sourceColumn: views
 
 	column clicks
 		dataType: int64
-		lineageTag: b32f8b2a-11e2-4407-a82d-6afa05f845eb
-		summarizeBy: none
+		formatString: #,0
+		lineageTag: 2c778bae-7529-5146-af60-11b44fd4b5e8
+		summarizeBy: sum
 		sourceColumn: clicks
 
 	column engaged_leads
 		dataType: int64
-		lineageTag: 9fe52412-4ce3-4c72-a86b-0f67312ceaf8
-		summarizeBy: none
+		formatString: #,0
+		lineageTag: 9cdcdda5-da74-50ba-bd9c-ab7a89783e2f
+		summarizeBy: sum
 		sourceColumn: engaged_leads
 
 	column mqls
 		dataType: int64
-		lineageTag: b0f21c5d-0684-4d67-b0c0-571d42e22dad
-		summarizeBy: none
+		formatString: #,0
+		lineageTag: a9df7d04-fdc5-5746-adc5-97be6df28ab5
+		summarizeBy: sum
 		sourceColumn: mqls
 
 	column calls_booked
 		dataType: int64
-		lineageTag: 364f5c8d-7f5f-4224-8cc5-823a80f41353
-		summarizeBy: none
+		formatString: #,0
+		lineageTag: 7550ccae-0869-5806-a043-197da7b96d92
+		summarizeBy: sum
 		sourceColumn: calls_booked
 
 	column customers
 		dataType: int64
-		lineageTag: 06be1784-382a-45fc-9e64-56b490b3c90a
-		summarizeBy: none
+		formatString: #,0
+		lineageTag: ffafd436-48e0-5cda-a270-54da44070270
+		summarizeBy: sum
 		sourceColumn: customers
 
 	column influenced_net_cash_cents
 		dataType: int64
-		lineageTag: c7022cb2-2f37-46bf-8857-7c1258202d74
-		summarizeBy: none
+		formatString: #,0
+		lineageTag: 8a372033-25f0-5498-8fc1-1143d5f41a45
+		summarizeBy: sum
 		sourceColumn: influenced_net_cash_cents
 
 	partition mart_content_performance = m
 		mode: import
 		source =
 				let
-				  Source = Table.FromRows(Json.Document(Binary.Decompress(Binary.FromText("hdBLCsMgEAbgqwTXLeg8orlALxGyKXFRaCPUpJDbN2oo1UYq/DKgfMxM34vXbbTuLKU4iYtbptE+G7/62T58c7feu6lR29Pqlnm52q0CGf924TJFWIYjhtOHhTqLGUscWaXpwKWudNu6qzO3Sy5S6EQXIebCpbrLmavTGoDNkUulq+ouZC4Cxz0g7LPjHhnzRWKdpIxkHUlQ7T+S62SbkSZ1iXEHYWLY80PqOmkyUsnUJho6Noc3", BinaryEncoding.Base64), Compression.Deflate)), let _t = ((type nullable text) meta [Serialized.Text = true]) in type table [content_id = nullable text, title = nullable text, platform = nullable text, views = nullable text, clicks = nullable text, engaged_leads = nullable text, mqls = nullable text, calls_booked = nullable text, customers = nullable text, influenced_net_cash_cents = nullable text]),
-				  #"Changed column type" = Table.TransformColumnTypes(Source, {{"content_id", type text}, {"title", type text}, {"platform", type text}, {"views", Int64.Type}, {"clicks", Int64.Type}, {"engaged_leads", Int64.Type}, {"mqls", Int64.Type}, {"calls_booked", Int64.Type}, {"customers", Int64.Type}, {"influenced_net_cash_cents", Int64.Type}})
+				    Source = #table(type table [#"content_id" = nullable text, #"title" = nullable text, #"platform" = nullable text, #"topic" = nullable text, #"views" = nullable text, #"clicks" = nullable text, #"engaged_leads" = nullable text, #"mqls" = nullable text, #"calls_booked" = nullable text, #"customers" = nullable text, #"influenced_net_cash_cents" = nullable text], {
+				        {"video-01", "Why founders burn out (ep. 1)", "youtube", "mindset", "44650", "556", "1122", "232", "104", "16", "13500000"},
+				        {"video-07", "The discovery call script (ep. 7)", "youtube", "sales", "11740", "324", "246", "82", "40", "15", "12070000"},
+				        {"video-05", "Morning routine of a CEO (ep. 5)", "youtube", "mindset", "24910", "252", "604", "130", "50", "15", "10460000"},
+				        {"video-03", "Delegating the inbox (ep. 3)", "youtube", "systems", "11177", "297", "270", "88", "37", "8", "5790000"},
+				        {"video-13", "Founder operating system (ep. 13)", "youtube", "systems", "12532", "249", "166", "42", "23", "7", "5260000"},
+				        {"video-06", "Value-based pricing teardown (ep. 6)", "youtube", "pricing", "5936", "256", "165", "71", "37", "7", "4890000"},
+				        {"video-02", "Handling the budget objection (ep. 2)", "youtube", "sales", "8300", "324", "221", "73", "36", "8", "4830000"},
+				        {"video-15", "Value-based pricing teardown (ep. 15)", "youtube", "pricing", "7182", "160", "73", "27", "18", "6", "4380000"},
+				        {"video-08", "Handling the budget objection (ep. 8)", "youtube", "sales", "5805", "195", "112", "41", "18", "5", "4200000"},
+				        {"video-12", "Closing without pressure (ep. 12)", "youtube", "sales", "7187", "227", "114", "34", "14", "2", "3150000"},
+				        {"video-04", "Your first operations hire (ep. 4)", "youtube", "hiring", "17570", "440", "455", "137", "60", "7", "3120000"},
+				        {"video-16", "Raise prices without losing clients (ep. 16)", "youtube", "pricing", "9707", "360", "118", "44", "16", "4", "3120000"},
+				        {"video-18", "Delegating the inbox (ep. 18)", "youtube", "systems", "5354", "161", "55", "20", "6", "2", "3000000"},
+				        {"video-19", "Your first operations hire (ep. 19)", "youtube", "hiring", "8009", "231", "69", "19", "10", "4", "2820000"},
+				        {"video-23", "Weekly metrics that matter (ep. 23)", "youtube", "systems", "30204", "835", "182", "41", "19", "4", "2800000"},
+				        {"video-10", "Why founders burn out (ep. 10)", "youtube", "mindset", "18652", "176", "366", "90", "42", "4", "2670000"},
+				        {"video-25", "Why founders burn out (ep. 25)", "youtube", "mindset", "45088", "448", "223", "39", "18", "3", "2500000"},
+				        {"video-09", "Scorecards for new hires (ep. 9)", "youtube", "hiring", "8342", "146", "165", "50", "26", "4", "1920000"},
+				        {"video-21", "Value-based pricing teardown (ep. 21)", "youtube", "pricing", "14524", "470", "123", "47", "22", "4", "1510000"},
+				        {"video-11", "Pricing a high-ticket offer (ep. 11)", "youtube", "pricing", "8531", "200", "117", "39", "16", "1", "1500000"},
+				        {"video-17", "Handling the budget objection (ep. 17)", "youtube", "sales", "11006", "268", "114", "43", "21", "3", "1470000"},
+				        {"video-14", "Hiring an integrator (ep. 14)", "youtube", "hiring", "4007", "94", "51", "16", "10", "2", "1110000"},
+				        {"video-26", "Pricing a high-ticket offer (ep. 26)", "youtube", "pricing", "11615", "423", "60", "19", "10", "2", "650000"},
+				        {"video-28", "Founder operating system (ep. 28)", "youtube", "systems", "13319", "321", "57", "7", "5", "1", "630000"},
+				        {"video-27", "Closing without pressure (ep. 27)", "youtube", "sales", "12822", "402", "56", "17", "7", "1", "480000"},
+				        {"video-20", "Morning routine of a CEO (ep. 20)", "youtube", "mindset", "11724", "186", "120", "17", "11", "2", "410000"},
+				        {"video-22", "The discovery call script (ep. 22)", "youtube", "sales", "7034", "211", "42", "12", "6", "0", "0"},
+				        {"video-24", "Scorecards for new hires (ep. 24)", "youtube", "hiring", "9286", "222", "46", "10", "3", "0", "0"},
+				        {"video-29", "Handling the budget objection (ep. 29)", "youtube", "sales", "7179", "270", "21", "3", "1", "0", "0"},
+				        {"video-30", "Thinking in decades (ep. 30)", "youtube", "mindset", "27937", "350", "59", "10", "4", "0", "0"}
+				    }),
+				    Typed = Table.TransformColumnTypes(Source, {{"content_id", type text}, {"title", type text}, {"platform", type text}, {"topic", type text}, {"views", Int64.Type}, {"clicks", Int64.Type}, {"engaged_leads", Int64.Type}, {"mqls", Int64.Type}, {"calls_booked", Int64.Type}, {"customers", Int64.Type}, {"influenced_net_cash_cents", Int64.Type}})
 				in
-				  #"Changed column type"
+				    Typed

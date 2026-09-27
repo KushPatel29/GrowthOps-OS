@@ -1,0 +1,2134 @@
+table _Measures
+	lineageTag: 4df5ce8c-4aa6-5e59-ad08-eb1d6165148c
+
+	/// The last complete day of data. Every 'last 28 days' figure ends here.
+	measure 'As-of date' = CALCULATE(MAX(dim_date[date]), REMOVEFILTERS(dim_date))
+		formatString: d mmm yyyy
+		lineageTag: 69236b32-c527-5425-8bd2-991338300e7e
+		displayFolder: 00 Calendar
+
+	/// Days in the current date filter.
+	measure 'Days in view' = COUNTROWS(dim_date)
+		formatString: #,0
+		lineageTag: 86622a62-2a30-5ef0-99c9-d661b39c002e
+		displayFolder: 00 Calendar
+
+	/// Payments received minus refunds, on the day each happened (event date).
+	measure 'Net cash' = DIVIDE(SUM(mart_growth_daily[net_cash_cents]), 100)
+		formatString: \$#,0
+		lineageTag: 2791ae87-ecee-5edd-bd5b-e8ff9784ed83
+		displayFolder: 01 Cash
+
+	/// Payments received, on the payment date.
+	measure 'Gross collected' = DIVIDE(SUM(mart_growth_daily[gross_collected_cents]), 100)
+		formatString: \$#,0
+		lineageTag: 7c865eb5-5ca3-5eda-91dd-56e4af0d15fd
+		displayFolder: 01 Cash
+
+	/// Money returned, on the refund date.
+	measure 'Refunds' = DIVIDE(SUM(mart_growth_daily[refunds_cents]), 100)
+		formatString: \$#,0
+		lineageTag: a8dc5850-8489-51f2-86c6-21a18c316825
+		displayFolder: 01 Cash
+
+	/// Closed-won deal value on the close date, as the CRM records it.
+	measure 'CRM booked' = DIVIDE(SUM(mart_growth_daily[booked_cents]), 100)
+		formatString: \$#,0
+		lineageTag: ebf70195-35c1-5ef8-bf61-bb373f5fd030
+		displayFolder: 01 Cash
+
+	/// Paid media spend on Meta, Google and LinkedIn, on the spend date.
+	measure 'Ad spend' = DIVIDE(SUM(mart_growth_daily[spend_cents]), 100)
+		formatString: \$#,0
+		lineageTag: f7d5e650-0c6d-5fcc-9301-a93bd5474d8d
+		displayFolder: 01 Cash
+
+	/// Contacts created, every channel.
+	measure 'Leads' = SUM(mart_growth_daily[leads])
+		formatString: #,0
+		lineageTag: 05d1f5d7-7072-5d50-8cca-7da4cce81982
+		displayFolder: 01 Cash
+
+	/// Contacts reaching marketing-qualified, on the day they qualified.
+	measure 'MQLs' = SUM(mart_growth_daily[mqls])
+		formatString: #,0
+		lineageTag: 1b4a959d-3e42-5574-88af-45acd949d612
+		displayFolder: 01 Cash
+
+	/// Discovery calls booked, on the booking day.
+	measure 'Calls booked' = SUM(mart_growth_daily[calls_booked])
+		formatString: #,0
+		lineageTag: 89af7259-48e2-560b-af10-6158b00b1a08
+		displayFolder: 01 Cash
+
+	/// Deals closed-won, on the close day.
+	measure 'Deals won' = SUM(mart_growth_daily[closed_won_deals])
+		formatString: #,0
+		lineageTag: 7129475e-e841-533f-a331-15de02ccdef7
+		displayFolder: 01 Cash
+
+	/// MQLs / leads in the same window (event basis): a lagging read of lead quality.
+	measure 'MQL rate' = DIVIDE([MQLs], [Leads])
+		formatString: 0.0%
+		lineageTag: b25c67fb-9445-53cc-a245-00d9154bfb21
+		displayFolder: 01 Cash
+
+	/// Ad spend / deals won in the same window. Blended: organic deals are in the denominator.
+	measure 'Spend per deal won' = DIVIDE([Ad spend], [Deals won])
+		formatString: \$#,0
+		lineageTag: 57c3ff33-22e8-55e9-a683-8777fde8a3e9
+		displayFolder: 01 Cash
+
+	/// Spend by paid campaign and day.
+	measure 'Paid spend' = DIVIDE(SUM(mart_paid_efficiency_daily[spend_cents]), 100)
+		formatString: \$#,0
+		lineageTag: 9926bf59-1b1e-5192-beb4-c0c22b5aea79
+		displayFolder: 02 Paid media
+
+	/// Ad impressions.
+	measure 'Impressions' = SUM(mart_paid_efficiency_daily[impressions])
+		formatString: #,0
+		lineageTag: 8fc061a0-123f-5358-81f4-4a54083770af
+		displayFolder: 02 Paid media
+
+	/// Ad clicks.
+	measure 'Ad clicks' = SUM(mart_paid_efficiency_daily[clicks])
+		formatString: #,0
+		lineageTag: bfacb84e-a138-506e-96a9-b324589554ee
+		displayFolder: 02 Paid media
+
+	/// Leads whose creating touch was a paid campaign, on the creation day.
+	measure 'Paid leads' = SUM(mart_paid_efficiency_daily[leads])
+		formatString: #,0
+		lineageTag: 34289031-031c-53b2-998b-f5d0f936c0dc
+		displayFolder: 02 Paid media
+
+	/// MQLs reached in the window by leads a paid campaign created.
+	measure 'Paid MQLs' = SUM(mart_paid_efficiency_daily[mqls])
+		formatString: #,0
+		lineageTag: 75072e50-f8b5-5aa1-ae0b-8e9c6e6570e4
+		displayFolder: 02 Paid media
+
+	/// Discovery calls booked in the window by paid-created leads.
+	measure 'Paid calls booked' = SUM(mart_paid_efficiency_daily[calls_booked])
+		formatString: #,0
+		lineageTag: 850fd5f9-d1c5-5216-b530-cf70899398a2
+		displayFolder: 02 Paid media
+
+	/// Deals won in the window by paid-created leads.
+	measure 'Paid deals won' = SUM(mart_paid_efficiency_daily[closed_won_deals])
+		formatString: #,0
+		lineageTag: 83326712-4d52-55e2-849b-8ee92c78ab0a
+		displayFolder: 02 Paid media
+
+	/// Cost per thousand impressions.
+	measure 'CPM' = DIVIDE([Paid spend] * 1000, [Impressions])
+		formatString: \$#,0.00
+		lineageTag: 31756522-180c-59ca-b169-15e0f6db6960
+		displayFolder: 02 Paid media
+
+	/// Ad clicks / impressions.
+	measure 'CTR' = DIVIDE([Ad clicks], [Impressions])
+		formatString: 0.00%
+		lineageTag: 9695652d-8512-56e3-99b4-7fe500c7244f
+		displayFolder: 02 Paid media
+
+	/// Paid spend / ad clicks.
+	measure 'CPC' = DIVIDE([Paid spend], [Ad clicks])
+		formatString: \$#,0.00
+		lineageTag: 61f76487-1ba7-512b-9c5d-d5ac17ad8dae
+		displayFolder: 02 Paid media
+
+	/// Paid spend / paid leads in the same window (CPL).
+	measure 'Cost per lead' = DIVIDE([Paid spend], [Paid leads])
+		formatString: \$#,0.00
+		lineageTag: 99fc70c4-2e81-52eb-b145-88700234d561
+		displayFolder: 02 Paid media
+
+	/// Paid spend / MQLs from paid-created leads in the same window.
+	measure 'Cost per MQL' = DIVIDE([Paid spend], [Paid MQLs])
+		formatString: \$#,0.00
+		lineageTag: 25c4716c-4ac1-55d7-bb0f-2e724c5a65a7
+		displayFolder: 02 Paid media
+
+	/// Paid spend / discovery calls booked by paid-created leads (CPDM).
+	measure 'Cost per booked call' = DIVIDE([Paid spend], [Paid calls booked])
+		formatString: \$#,0.00
+		lineageTag: 3a76bba9-33d2-5506-85d7-7f5fe1499a74
+		displayFolder: 02 Paid media
+
+	/// Paid MQLs / paid leads in the same window: lead quality by campaign.
+	measure 'Paid MQL rate' = DIVIDE([Paid MQLs], [Paid leads])
+		formatString: 0.0%
+		lineageTag: 9d3baaff-694d-5a4d-9b6d-b3770f53c35a
+		displayFolder: 02 Paid media
+
+	/// Paid spend / deals won by paid-created leads.
+	measure 'Cost per deal won' = DIVIDE([Paid spend], [Paid deals won])
+		formatString: \$#,0
+		lineageTag: 52815581-6fdc-5154-b368-f6b45120ae01
+		displayFolder: 02 Paid media
+
+	/// Net cash credited to the campaign whose touch created the lead, on the payment date. Sums to net cash.
+	measure 'Attributed net cash' = DIVIDE(SUM(fact_cash_attribution[net_cash_cents]), 100)
+		formatString: \$#,0
+		lineageTag: 89e1a6e1-485d-5930-bab5-83e8947d70b3
+		displayFolder: 03 Attribution
+
+	/// Payments credited.
+	measure 'Attributed payments' = COUNTROWS(fact_cash_attribution)
+		formatString: #,0
+		lineageTag: 50d8f865-9659-5dea-a649-43cbcb6e8003
+		displayFolder: 03 Attribution
+
+	/// Net cash credited to paid campaigns.
+	measure 'Paid attributed net cash' = CALCULATE([Attributed net cash], dim_campaign[is_paid] = TRUE())
+		formatString: \$#,0
+		lineageTag: 8b6bc94e-b21a-5182-a9e0-dcad476b6893
+		displayFolder: 03 Attribution
+
+	/// Net cash credited to paid campaigns / paid spend. Descriptive, not incremental: it credits the creating touch.
+	measure 'Cash ROAS' = DIVIDE([Paid attributed net cash], [Paid spend])
+		formatString: 0.00"x"
+		lineageTag: 6d62e23f-0bbb-5304-9b37-f8c7f2c46f31
+		displayFolder: 03 Attribution
+
+	/// Net cash from buyers with no lead-creation touch before paying.
+	measure 'Unattributed net cash' = CALCULATE([Attributed net cash], dim_campaign[campaign_id] = "(unattributed)")
+		formatString: \$#,0
+		lineageTag: 6e5a9edd-2d36-576c-a137-c3446dfbb574
+		displayFolder: 03 Attribution
+
+	/// Share of net cash no campaign can claim.
+	measure 'Unattributed share' = DIVIDE([Unattributed net cash], [Attributed net cash])
+		formatString: 0.0%
+		lineageTag: ffb54eb0-db6f-573a-b23a-565bed046fb5
+		displayFolder: 03 Attribution
+
+	/// All closed-won deal value in the CRM.
+	measure 'Booked (CRM, all time)' = DIVIDE(SUM(mart_revenue[booked_cents]), 100)
+		formatString: \$#,0
+		lineageTag: 92b11bf7-8a07-5bcf-a7c9-8e0b15c7bc4b
+		displayFolder: 04 Revenue truth
+
+	/// All payments received.
+	measure 'Gross collected (all time)' = DIVIDE(SUM(mart_revenue[gross_collected_cents]), 100)
+		formatString: \$#,0
+		lineageTag: 71d425e9-8ba7-53e5-95a5-861313fd5bc7
+		displayFolder: 04 Revenue truth
+
+	/// All refunds.
+	measure 'Refunds (all time)' = DIVIDE(SUM(mart_revenue[refunds_cents]), 100)
+		formatString: \$#,0
+		lineageTag: 4d08fc9c-cf12-5133-87e5-c02bb9b661b5
+		displayFolder: 04 Revenue truth
+
+	/// All payments minus all refunds: the number the bank agrees with.
+	measure 'Net collected (all time)' = DIVIDE(SUM(mart_revenue[net_collected_cents]), 100)
+		formatString: \$#,0
+		lineageTag: c4bca579-2521-5ed7-b103-8346d5136dde
+		displayFolder: 04 Revenue truth
+
+	/// Refunds / gross collected.
+	measure 'Refund rate' = DIVIDE([Refunds (all time)], [Gross collected (all time)])
+		formatString: 0.0%
+		lineageTag: ee34e605-a5a5-5e6c-a647-a40dc3d52744
+		displayFolder: 04 Revenue truth
+
+	/// How far CRM bookings run ahead of the cash that arrived.
+	measure 'CRM overstatement' = [Booked (CRM, all time)] - [Net collected (all time)]
+		formatString: \$#,0
+		lineageTag: 5c24f1e4-3d71-5992-bcaa-184e7c8e4ac5
+		displayFolder: 04 Revenue truth
+
+	/// Each step between CRM bookings and net cash. The chart adds them, so its total is the gap between the two.
+	measure 'Bridge movement' = SUMX(FILTER(mart_revenue_bridge, mart_revenue_bridge[kind] = "delta"), mart_revenue_bridge[cents]) / 100
+		formatString: \$#,0
+		lineageTag: 7b9407c6-f07c-5b89-a60f-db26435e6df2
+		displayFolder: 04 Revenue truth
+
+	/// The bridge value at each step, totals included.
+	measure 'Bridge amount' = DIVIDE(SUM(mart_revenue_bridge[cents]), 100)
+		formatString: \$#,0
+		lineageTag: 7f83454f-4e1b-52ce-815a-a0eabf9c66a9
+		displayFolder: 04 Revenue truth
+
+	/// Conversion value the ad platforms claim for themselves.
+	measure 'Platform-reported value' = DIVIDE(SUM(mart_platform_comparison[reported_value_cents]), 100)
+		formatString: \$#,0
+		lineageTag: 28f9dc0a-d6f7-5976-9eca-71c99f0c341a
+		displayFolder: 04 Revenue truth
+
+	/// Net cash the warehouse credits to each platform's campaigns.
+	measure 'Warehouse cash (paid platforms)' = DIVIDE(SUM(mart_platform_comparison[warehouse_net_cash_cents]), 100)
+		formatString: \$#,0
+		lineageTag: b65e766c-0d16-5386-830c-80e471777bac
+		displayFolder: 04 Revenue truth
+
+	/// Spend on each platform, all time.
+	measure 'Platform spend' = DIVIDE(SUM(mart_platform_comparison[spend_cents]), 100)
+		formatString: \$#,0
+		lineageTag: 9a6a6b4f-cb56-5cb0-8acd-2f6995f80d6e
+		displayFolder: 04 Revenue truth
+
+	/// Claimed value the warehouse cannot find in cash.
+	measure 'Platform overstatement' = [Platform-reported value] - [Warehouse cash (paid platforms)]
+		formatString: \$#,0
+		lineageTag: 487b469f-4997-5301-8ccc-99c86e2e1eda
+		displayFolder: 04 Revenue truth
+
+	/// What each platform says its spend returned.
+	measure 'Reported ROAS' = DIVIDE([Platform-reported value], [Platform spend])
+		formatString: 0.00"x"
+		lineageTag: ae126f09-4d75-5929-abb0-cca2d8b1d66a
+		displayFolder: 04 Revenue truth
+
+	/// What the spend returned in collected, net cash.
+	measure 'Warehouse ROAS' = DIVIDE([Warehouse cash (paid platforms)], [Platform spend])
+		formatString: 0.00"x"
+		lineageTag: 56c314d4-63e1-53d6-8b1d-38768a7e8940
+		displayFolder: 04 Revenue truth
+
+	/// Platform claims / warehouse cash: 1.00x would mean the platforms are right.
+	measure 'Claim multiple' = DIVIDE([Platform-reported value], [Warehouse cash (paid platforms)])
+		formatString: 0.00"x"
+		lineageTag: 72daefab-bf2c-57e5-bc8e-ee525b041441
+		displayFolder: 04 Revenue truth
+
+	/// People who reached the stage, all time.
+	measure 'Funnel people' = SUM(mart_funnel[people])
+		formatString: #,0
+		lineageTag: a9de6df6-cccf-5274-9aff-d5879033dc31
+		displayFolder: 05 Funnel
+
+	/// Paying customers / leads, all time.
+	measure 'Lead to paid' =
+			DIVIDE(CALCULATE([Funnel people], mart_funnel[stage] = "paid"),
+			    CALCULATE([Funnel people], mart_funnel[stage] = "lead"))
+		formatString: 0.00%
+		lineageTag: 904d8d77-3a12-58b0-a6a9-cba988e6b870
+		displayFolder: 05 Funnel
+
+	/// People at this stage / people at the stage before.
+	measure 'Stage conversion' =
+			VAR vStage = SELECTEDVALUE(mart_funnel[ordinal])
+			VAR vHere = [Funnel people]
+			VAR vBefore = CALCULATE([Funnel people], REMOVEFILTERS(mart_funnel), mart_funnel[ordinal] = vStage - 1)
+			RETURN IF(NOT ISBLANK(vStage) && vStage > 1, DIVIDE(vHere, vBefore))
+		formatString: 0.0%
+		lineageTag: 17db8721-671c-579d-90cc-359ec78ce8c1
+		displayFolder: 05 Funnel
+
+	/// Visitors randomized into the CTA test.
+	measure 'Test visitors' = SUM(mart_experiment_variants[visitors])
+		formatString: #,0
+		lineageTag: 66113b23-6a01-512d-8dc4-64025e9d74c4
+		displayFolder: 05 Funnel
+
+	/// Leads / visitors in the CTA test.
+	measure 'Test lead rate' = DIVIDE(SUM(mart_experiment_variants[leads]), [Test visitors])
+		formatString: 0.00%
+		lineageTag: 2b15f12a-8643-5b13-b223-ec481ebef34c
+		displayFolder: 05 Funnel
+
+	/// MQLs / leads in the CTA test.
+	measure 'Test MQLs per lead' = DIVIDE(SUM(mart_experiment_variants[mqls]), SUM(mart_experiment_variants[leads]))
+		formatString: 0.0%
+		lineageTag: a0999e98-b5ca-5326-9a8b-5fce2ec1648e
+		displayFolder: 05 Funnel
+
+	/// Buyers in the CTA test. Fifteen buyers cannot carry a cash decision.
+	measure 'Test customers' = SUM(mart_experiment_variants[customers])
+		formatString: #,0
+		lineageTag: 50979b28-ede9-515e-88b4-47405245ba20
+		displayFolder: 05 Funnel
+
+	/// Net cash / visitors: the metric the test should be decided on.
+	measure 'Test cash per visitor' = DIVIDE(SUM(mart_experiment_variants[net_cash_cents]), [Test visitors]) / 100
+		formatString: \$#,0.00
+		lineageTag: b94e8b8b-ba45-5b92-98b5-29ad7e67b62e
+		displayFolder: 05 Funnel
+
+	/// Variant lead rate against control.
+	measure 'Variant lead-rate lift' =
+			VAR vControl = CALCULATE([Test lead rate], mart_experiment_variants[variant_id] = "cta_a")
+			VAR vVariant = CALCULATE([Test lead rate], mart_experiment_variants[variant_id] = "cta_b")
+			RETURN DIVIDE(vVariant, vControl) - 1
+		formatString: +0.0%;-0.0%;0.0%
+		lineageTag: abfa353d-c70f-5797-b674-10d3c94c7eb2
+		displayFolder: 05 Funnel
+
+	/// Variant cash per visitor against control.
+	measure 'Variant cash-per-visitor lift' =
+			VAR vControl = CALCULATE([Test cash per visitor], mart_experiment_variants[variant_id] = "cta_a")
+			VAR vVariant = CALCULATE([Test cash per visitor], mart_experiment_variants[variant_id] = "cta_b")
+			RETURN DIVIDE(vVariant, vControl) - 1
+		formatString: +0.0%;-0.0%;0.0%
+		lineageTag: 45ccd052-b6c6-50fb-b774-5740bc5eaa76
+		displayFolder: 05 Funnel
+
+	/// Views, all time.
+	measure 'Content views' = SUM(mart_content_performance[views])
+		formatString: #,0
+		lineageTag: 015556c3-8292-5704-96a4-76a1b5f286aa
+		displayFolder: 06 Content
+
+	/// Leads whose first identified engagement was the item.
+	measure 'Content engaged leads' = SUM(mart_content_performance[engaged_leads])
+		formatString: #,0
+		lineageTag: 76bb9d96-f4cd-535b-968b-73c679c2775b
+		displayFolder: 06 Content
+
+	/// Buyers whose first identified engagement was the item.
+	measure 'Content customers' = SUM(mart_content_performance[customers])
+		formatString: #,0
+		lineageTag: 23f97cd6-9ea2-51f7-813a-76502b7d7566
+		displayFolder: 06 Content
+
+	/// Net cash from buyers whose first identified engagement was the item.
+	measure 'Content-influenced cash' = DIVIDE(SUM(mart_content_performance[influenced_net_cash_cents]), 100)
+		formatString: \$#,0
+		lineageTag: cc4b7c4d-dd6f-5e94-8c99-6204c9936b76
+		displayFolder: 06 Content
+
+	/// Influenced cash per thousand views: views are not buyers.
+	measure 'Cash per 1K views' = DIVIDE([Content-influenced cash] * 1000, [Content views])
+		formatString: \$#,0.00
+		lineageTag: cc052a8e-0c97-5562-991a-403bb766be8e
+		displayFolder: 06 Content
+
+	/// Messages sent.
+	measure 'Emails sent' = SUM(mart_email_performance[sends])
+		formatString: #,0
+		lineageTag: 22c7ce84-c674-5d2c-bd2b-52df5dc5347c
+		displayFolder: 07 Email
+
+	/// Delivered sends.
+	measure 'Emails delivered' = SUM(mart_email_performance[delivered])
+		formatString: #,0
+		lineageTag: 7f3e1ea8-0e6c-57d5-b866-945d4fa8c8ec
+		displayFolder: 07 Email
+
+	/// Opens excluding privacy-proxy machine opens / delivered.
+	measure 'Human open rate' = DIVIDE(SUM(mart_email_performance[human_opens]), [Emails delivered])
+		formatString: 0.0%
+		lineageTag: 14212e10-1937-52d2-9156-9bdd0b81b724
+		displayFolder: 07 Email
+
+	/// All opens / delivered, inflated by machine opens; shown only for comparison.
+	measure 'Reported open rate' = DIVIDE(SUM(mart_email_performance[opens]), [Emails delivered])
+		formatString: 0.0%
+		lineageTag: 90a2d976-cdef-586c-93cc-d04f839816fa
+		displayFolder: 07 Email
+
+	/// Share of reported opens made by privacy proxies, not people.
+	measure 'Machine open share' = DIVIDE(SUM(mart_email_performance[machine_opens]), SUM(mart_email_performance[opens]))
+		formatString: 0.0%
+		lineageTag: 477a196f-366c-5f48-8efd-3bb39977298d
+		displayFolder: 07 Email
+
+	/// Clicks / delivered.
+	measure 'Email click rate' = DIVIDE(SUM(mart_email_performance[clicks]), [Emails delivered])
+		formatString: 0.00%
+		lineageTag: 4e1784a2-9a53-5b54-a19b-a466f3b6d580
+		displayFolder: 07 Email
+
+	/// Clicks / human opens.
+	measure 'Click-to-open rate' = DIVIDE(SUM(mart_email_performance[clicks]), SUM(mart_email_performance[human_opens]))
+		formatString: 0.0%
+		lineageTag: 711034eb-7f0c-5c09-aa95-fe42aeea7a79
+		displayFolder: 07 Email
+
+	/// Bounces / sends. Above 2% the sending domain is at risk.
+	measure 'Bounce rate' = DIVIDE(SUM(mart_email_performance[bounces]), [Emails sent])
+		formatString: 0.00%
+		lineageTag: f6b3098f-3f6a-57a7-b47e-3aabd3bcf2d7
+		displayFolder: 07 Email
+
+	/// Spam complaints / delivered. The mailbox providers' limit is 0.1%.
+	measure 'Complaint rate' = DIVIDE(SUM(mart_email_performance[spam_complaints]), [Emails delivered])
+		formatString: 0.000%
+		lineageTag: bd366f3a-336d-5783-a244-345821609b1a
+		displayFolder: 07 Email
+
+	/// Unsubscribes / delivered.
+	measure 'Unsubscribe rate' = DIVIDE(SUM(mart_email_performance[unsubscribes]), [Emails delivered])
+		formatString: 0.00%
+		lineageTag: b1959da5-96be-56c7-8d20-3a2b0331137a
+		displayFolder: 07 Email
+
+	/// The 2% bounce threshold, as a reference line.
+	measure 'Bounce limit' = 0.02
+		formatString: 0.0%
+		lineageTag: 1f07e161-a6c9-5f73-a529-9deb703be9d8
+		displayFolder: 07 Email
+
+	/// Eligible touches that arrived with UTM parameters.
+	measure 'UTM completeness' = DIVIDE(SUM(mart_measurement_health[touches_with_utm]), SUM(mart_measurement_health[eligible_touches]))
+		formatString: 0.0%
+		lineageTag: 3717e505-8f3a-55dc-8f42-c0444b0940d3
+		displayFolder: 08 Data quality
+
+	/// Eligible touches whose campaign is in the registry.
+	measure 'Registry coverage' = DIVIDE(SUM(mart_measurement_health[registered_touches]), SUM(mart_measurement_health[eligible_touches]))
+		formatString: 0.0%
+		lineageTag: 9bb4e911-859c-5448-9b97-3926815419fd
+		displayFolder: 08 Data quality
+
+	/// CRM contacts with an owner assigned.
+	measure 'Contacts with an owner' = DIVIDE(SUM(mart_measurement_health[owned_contacts]), SUM(mart_measurement_health[contacts]))
+		formatString: 0.0%
+		lineageTag: 595e709e-ae52-5cf9-b9fd-bb704e46d8c2
+		displayFolder: 08 Data quality
+
+	/// Paying contacts whose journey has a lead-creation touch before payment.
+	measure 'Valid paid journeys' = DIVIDE(SUM(mart_measurement_health[valid_paid_journeys]), SUM(mart_measurement_health[paid_contact_count]))
+		formatString: 0.0%
+		lineageTag: b45f80ae-2efa-5f06-b5f5-d1a9fc887d5e
+		displayFolder: 08 Data quality
+
+	/// Payments the CRM cannot tie to a contact.
+	measure 'Unmatched payments' = SUM(mart_measurement_health[unmatched_payments])
+		formatString: #,0
+		lineageTag: 0da0c255-8ed4-5850-adfa-c927a4359039
+		displayFolder: 08 Data quality
+
+	/// Contact rows sharing an email address.
+	measure 'Duplicate contact rows' = SUM(mart_measurement_health[duplicate_contact_rows])
+		formatString: #,0
+		lineageTag: 1b64daae-9fca-50a4-9b98-3a4ba12a72d6
+		displayFolder: 08 Data quality
+
+	/// Short links in use.
+	measure 'Short links' = COUNTROWS(mart_link_hygiene)
+		formatString: #,0
+		lineageTag: 705131e0-6d4a-534c-adf7-efed14d0330f
+		displayFolder: 08 Data quality
+
+	/// Short links with missing, unregistered or off-taxonomy UTMs.
+	measure 'Links with defects' = COUNTROWS(FILTER(mart_link_hygiene, mart_link_hygiene[missing_utm] || mart_link_hygiene[unregistered_campaign] || mart_link_hygiene[off_taxonomy]))
+		formatString: #,0
+		lineageTag: 8c32488b-40a3-53cf-a539-88d4dd2abe62
+		displayFolder: 08 Data quality
+
+	/// Share of the last 30 days' short-link clicks that land without a valid campaign.
+	measure 'Defective link click share' =
+			DIVIDE(
+			    CALCULATE(SUM(mart_link_hygiene[recent_clicks]),
+			        FILTER(mart_link_hygiene, mart_link_hygiene[missing_utm] || mart_link_hygiene[unregistered_campaign] || mart_link_hygiene[off_taxonomy])),
+			    SUM(mart_link_hygiene[recent_clicks]))
+		formatString: 0.0%
+		lineageTag: 3484a348-f803-5dee-9ab1-3f9e7d2f938c
+		displayFolder: 08 Data quality
+
+	/// Short-link clicks in the last 30 days.
+	measure 'Link recent clicks' = SUM(mart_link_hygiene[recent_clicks])
+		formatString: #,0
+		lineageTag: b2231197-8b2c-5f05-9b3b-60a7e656f3a6
+		displayFolder: 08 Data quality
+
+	/// Contacts in the legacy CRM snapshot.
+	measure 'Legacy contacts' = SUM(mart_migration_summary[legacy_contacts])
+		formatString: #,0
+		lineageTag: 60b6d5d8-1537-5d1f-a319-fdfe1c324a72
+		displayFolder: 08 Data quality
+
+	/// Legacy contacts with no match in the new CRM.
+	measure 'Missing after migration' = SUM(mart_migration_summary[missing_contacts])
+		formatString: #,0
+		lineageTag: 29d43f55-d16a-5c6c-bd3b-32a337f7c498
+		displayFolder: 08 Data quality
+
+	/// Migrated contacts whose owner survived the move.
+	measure 'Owner match' = AVERAGE(mart_migration_summary[owner_match_rate])
+		formatString: 0.0%
+		lineageTag: 35cebff1-09c9-52cf-9eef-e47f7582b880
+		displayFolder: 08 Data quality
+
+	/// Migrated contacts whose original source survived the move.
+	measure 'Source match' = AVERAGE(mart_migration_summary[source_match_rate])
+		formatString: 0.0%
+		lineageTag: 3972bad0-b972-5afc-bde6-0cbddc03cfc4
+		displayFolder: 08 Data quality
+
+	/// Migrated contacts whose lifecycle stage survived the move.
+	measure 'Stage match' = AVERAGE(mart_migration_summary[stage_match_rate])
+		formatString: 0.0%
+		lineageTag: ba17eb70-f688-524d-a266-d0f1694ec94d
+		displayFolder: 08 Data quality
+
+	/// Community subscriptions due for renewal from the as-of date.
+	measure 'Renewals due' = COUNTROWS(mart_renewal_risk)
+		formatString: #,0
+		lineageTag: 515eab84-d717-5fc7-8679-47db217f2ad4
+		displayFolder: 08 Data quality
+
+	/// Renewals due within 14 days (medium), or overdue or with a failed card attempt (high).
+	measure 'Renewals at risk' = CALCULATE(COUNTROWS(mart_renewal_risk), mart_renewal_risk[risk_level] IN {"high", "medium"})
+		formatString: #,0
+		lineageTag: 76a46776-1b3c-5498-aab2-708f510b484f
+		displayFolder: 08 Data quality
+
+	/// Card declines on renewals that are still open.
+	measure 'Failed renewal attempts' = SUM(mart_renewal_risk[failed_attempts])
+		formatString: #,0
+		lineageTag: 3e12645b-5e2b-57a0-87e6-b8ce7bf7b6bd
+		displayFolder: 08 Data quality
+
+	/// Logged incidents with no end date.
+	measure 'Open incidents' = COUNTROWS(FILTER(incident_register, ISBLANK(incident_register[ended_on])))
+		formatString: #,0
+		lineageTag: 1cc63ba8-4247-5e08-9b49-7df45523093d
+		displayFolder: 08 Data quality
+
+	/// Logged incidents.
+	measure 'Incidents' = COUNTROWS(incident_register)
+		formatString: #,0
+		lineageTag: 9c3222c5-7618-5000-bb23-c917bb10e369
+		displayFolder: 08 Data quality
+
+	/// The share of records passing a data-quality check.
+	measure 'Check rate' = AVERAGE(quality_scorecard[rate])
+		formatString: 0.0%
+		lineageTag: 28269357-1ba4-556a-8c71-eea7aeebfc32
+		displayFolder: 08 Data quality
+
+	/// The level the check is held to.
+	measure 'Check target' = AVERAGE(quality_scorecard[target])
+		formatString: 0.0%
+		lineageTag: 262960c3-2232-5665-a0f7-f92328f195a4
+		displayFolder: 08 Data quality
+
+	/// Data-quality checks under their target.
+	measure 'Checks below target' = COUNTROWS(FILTER(quality_scorecard, quality_scorecard[rate] < quality_scorecard[target]))
+		formatString: #,0
+		lineageTag: 54fb9fb0-eb66-5d19-9c86-3216389923f6
+		displayFolder: 08 Data quality
+
+	/// Red where a check is under its target.
+	measure 'Check colour' = IF([Check rate] < [Check target], "#ef6f61", "#3987e5")
+		lineageTag: fb6b69c9-6d1e-5069-a953-96c40be55220
+		displayFolder: 13 Colours
+
+	/// Red where a campaign returned less cash than it cost.
+	measure 'ROAS colour' = IF([Cash ROAS] < 1, "#ef6f61", "#3987e5")
+		lineageTag: a6bf565c-6a6d-5836-904a-16621650802e
+		displayFolder: 13 Colours
+
+	/// Red where a campaign qualifies leads at under three-quarters of the paid average.
+	measure 'MQL rate colour' =
+			VAR vAll = CALCULATE([Paid MQL rate], REMOVEFILTERS(dim_campaign))
+			RETURN IF([Paid MQL rate] < 0.75 * vAll, "#ef6f61", "#3987e5")
+		lineageTag: f7fd1db5-cec9-54b8-9bf8-a407cd337c5f
+		displayFolder: 13 Colours
+
+	/// Net cash over the same number of days immediately before the dates in view.
+	measure 'Net cash prior period' =
+			VAR vStart = MIN(dim_date[date])
+			VAR vEnd = MAX(dim_date[date])
+			VAR vDays = INT(vEnd - vStart) + 1
+			RETURN CALCULATE([Net cash], REMOVEFILTERS(dim_date),
+			    dim_date[date] >= vStart - vDays, dim_date[date] < vStart)
+		formatString: \$#,0
+		lineageTag: a5fac156-228b-5008-9804-9d6f210bfca5
+		displayFolder: 09 Windows
+
+	/// Net cash against the period before.
+	measure 'Net cash vs prior' = DIVIDE([Net cash] - [Net cash prior period], ABS([Net cash prior period]))
+		formatString: +0.0%;-0.0%;0.0%
+		lineageTag: 4cdd9764-11aa-5840-85b7-45d1e1877159
+		displayFolder: 09 Windows
+
+	/// Tile caption for Net cash.
+	measure 'Net cash caption' = IF(ISBLANK([Net cash vs prior]), "all dates in view · pick months to compare", FORMAT([Net cash vs prior], "+0%;-0%;0%") & " vs prior period")
+		lineageTag: 1e880777-a96d-5d98-bc70-ae1ad6f31b38
+		displayFolder: 10 Captions
+
+	/// Ad spend over the same number of days immediately before the dates in view.
+	measure 'Ad spend prior period' =
+			VAR vStart = MIN(dim_date[date])
+			VAR vEnd = MAX(dim_date[date])
+			VAR vDays = INT(vEnd - vStart) + 1
+			RETURN CALCULATE([Ad spend], REMOVEFILTERS(dim_date),
+			    dim_date[date] >= vStart - vDays, dim_date[date] < vStart)
+		formatString: \$#,0
+		lineageTag: 09615307-5594-58a8-85a6-a590f6e5324b
+		displayFolder: 09 Windows
+
+	/// Ad spend against the period before.
+	measure 'Ad spend vs prior' = DIVIDE([Ad spend] - [Ad spend prior period], ABS([Ad spend prior period]))
+		formatString: +0.0%;-0.0%;0.0%
+		lineageTag: d6e0adb8-121f-5c28-8abe-4c9d9c181929
+		displayFolder: 09 Windows
+
+	/// Tile caption for Ad spend.
+	measure 'Ad spend caption' = IF(ISBLANK([Ad spend vs prior]), "all dates in view · pick months to compare", FORMAT([Ad spend vs prior], "+0%;-0%;0%") & " vs prior period")
+		lineageTag: 54fdc977-5e90-51ca-926b-4b9c1166eed1
+		displayFolder: 10 Captions
+
+	/// Leads over the same number of days immediately before the dates in view.
+	measure 'Leads prior period' =
+			VAR vStart = MIN(dim_date[date])
+			VAR vEnd = MAX(dim_date[date])
+			VAR vDays = INT(vEnd - vStart) + 1
+			RETURN CALCULATE([Leads], REMOVEFILTERS(dim_date),
+			    dim_date[date] >= vStart - vDays, dim_date[date] < vStart)
+		formatString: #,0
+		lineageTag: 68b9f592-ad3d-5c0c-87fb-a378e0b37584
+		displayFolder: 09 Windows
+
+	/// Leads against the period before.
+	measure 'Leads vs prior' = DIVIDE([Leads] - [Leads prior period], ABS([Leads prior period]))
+		formatString: +0.0%;-0.0%;0.0%
+		lineageTag: 3bb007ee-c2fb-5ff1-b8ab-6022761431c8
+		displayFolder: 09 Windows
+
+	/// Tile caption for Leads.
+	measure 'Leads caption' = IF(ISBLANK([Leads vs prior]), "all dates in view · pick months to compare", FORMAT([Leads vs prior], "+0%;-0%;0%") & " vs prior period")
+		lineageTag: da33dc75-ffa8-514a-b493-ba2dc905a087
+		displayFolder: 10 Captions
+
+	/// MQL rate over the same number of days immediately before the dates in view.
+	measure 'MQL rate prior period' =
+			VAR vStart = MIN(dim_date[date])
+			VAR vEnd = MAX(dim_date[date])
+			VAR vDays = INT(vEnd - vStart) + 1
+			RETURN CALCULATE([MQL rate], REMOVEFILTERS(dim_date),
+			    dim_date[date] >= vStart - vDays, dim_date[date] < vStart)
+		formatString: 0.0%
+		lineageTag: cbdf3f2b-8a67-5530-ab16-7b2d358a4c27
+		displayFolder: 09 Windows
+
+	/// MQL rate against the period before (points).
+	measure 'MQL rate vs prior' = IF(NOT ISBLANK([MQL rate prior period]), [MQL rate] - [MQL rate prior period])
+		formatString: +0.00%;-0.00%;0.00%
+		lineageTag: bd5ecf48-78e0-569e-8e2a-258b48a1aaad
+		displayFolder: 09 Windows
+
+	/// Tile caption for MQL rate.
+	measure 'MQL rate caption' = IF(ISBLANK([MQL rate vs prior]), "all dates in view · pick months to compare", FORMAT([MQL rate vs prior] * 100, "+0.0;-0.0;0.0") & " pts" & " vs prior period")
+		lineageTag: 3431cda6-84ec-5e2a-abcd-5906a316b039
+		displayFolder: 10 Captions
+
+	/// Paid spend over the same number of days immediately before the dates in view.
+	measure 'Paid spend prior period' =
+			VAR vStart = MIN(dim_date[date])
+			VAR vEnd = MAX(dim_date[date])
+			VAR vDays = INT(vEnd - vStart) + 1
+			RETURN CALCULATE([Paid spend], REMOVEFILTERS(dim_date),
+			    dim_date[date] >= vStart - vDays, dim_date[date] < vStart)
+		formatString: \$#,0
+		lineageTag: 2a0ea95d-64ba-5826-8458-60124a5dcf6d
+		displayFolder: 09 Windows
+
+	/// Paid spend against the period before.
+	measure 'Paid spend vs prior' = DIVIDE([Paid spend] - [Paid spend prior period], ABS([Paid spend prior period]))
+		formatString: +0.0%;-0.0%;0.0%
+		lineageTag: 7e6bc15c-f65a-5dbd-9885-fc3d867b99bd
+		displayFolder: 09 Windows
+
+	/// Tile caption for Paid spend.
+	measure 'Paid spend caption' = IF(ISBLANK([Paid spend vs prior]), "all dates in view · pick months to compare", FORMAT([Paid spend vs prior], "+0%;-0%;0%") & " vs prior period")
+		lineageTag: 220c6f7e-3175-51bb-beae-cb1abc7d2124
+		displayFolder: 10 Captions
+
+	/// Cost per lead over the same number of days immediately before the dates in view.
+	measure 'Cost per lead prior period' =
+			VAR vStart = MIN(dim_date[date])
+			VAR vEnd = MAX(dim_date[date])
+			VAR vDays = INT(vEnd - vStart) + 1
+			RETURN CALCULATE([Cost per lead], REMOVEFILTERS(dim_date),
+			    dim_date[date] >= vStart - vDays, dim_date[date] < vStart)
+		formatString: \$#,0.00
+		lineageTag: 7d4bf682-d545-53dc-a5f6-ea61533a2869
+		displayFolder: 09 Windows
+
+	/// Cost per lead against the period before.
+	measure 'Cost per lead vs prior' = DIVIDE([Cost per lead] - [Cost per lead prior period], ABS([Cost per lead prior period]))
+		formatString: +0.0%;-0.0%;0.0%
+		lineageTag: f01cd1db-5751-532b-acc0-7bf1a65b7138
+		displayFolder: 09 Windows
+
+	/// Tile caption for Cost per lead.
+	measure 'Cost per lead caption' = IF(ISBLANK([Cost per lead vs prior]), "all dates in view · pick months to compare", FORMAT([Cost per lead vs prior], "+0%;-0%;0%") & " vs prior period")
+		lineageTag: 5e2e5178-0f48-57f6-bf90-3654f635a678
+		displayFolder: 10 Captions
+
+	/// Cost per booked call over the same number of days immediately before the dates in view.
+	measure 'Cost per booked call prior period' =
+			VAR vStart = MIN(dim_date[date])
+			VAR vEnd = MAX(dim_date[date])
+			VAR vDays = INT(vEnd - vStart) + 1
+			RETURN CALCULATE([Cost per booked call], REMOVEFILTERS(dim_date),
+			    dim_date[date] >= vStart - vDays, dim_date[date] < vStart)
+		formatString: \$#,0.00
+		lineageTag: c1499dbd-e73a-5f45-bcfc-69a922f3a3c4
+		displayFolder: 09 Windows
+
+	/// Cost per booked call against the period before.
+	measure 'Cost per booked call vs prior' = DIVIDE([Cost per booked call] - [Cost per booked call prior period], ABS([Cost per booked call prior period]))
+		formatString: +0.0%;-0.0%;0.0%
+		lineageTag: fa0859e6-48e2-5446-9571-171147f78a83
+		displayFolder: 09 Windows
+
+	/// Tile caption for Cost per booked call.
+	measure 'Cost per booked call caption' = IF(ISBLANK([Cost per booked call vs prior]), "all dates in view · pick months to compare", FORMAT([Cost per booked call vs prior], "+0%;-0%;0%") & " vs prior period")
+		lineageTag: aa1f748c-71e4-55ac-8332-81a00aaafd04
+		displayFolder: 10 Captions
+
+	/// CTR over the same number of days immediately before the dates in view.
+	measure 'CTR prior period' =
+			VAR vStart = MIN(dim_date[date])
+			VAR vEnd = MAX(dim_date[date])
+			VAR vDays = INT(vEnd - vStart) + 1
+			RETURN CALCULATE([CTR], REMOVEFILTERS(dim_date),
+			    dim_date[date] >= vStart - vDays, dim_date[date] < vStart)
+		formatString: 0.00%
+		lineageTag: 4122069d-d423-5837-ae49-f395f52fb792
+		displayFolder: 09 Windows
+
+	/// CTR against the period before (points).
+	measure 'CTR vs prior' = IF(NOT ISBLANK([CTR prior period]), [CTR] - [CTR prior period])
+		formatString: +0.00%;-0.00%;0.00%
+		lineageTag: 99eea684-9ef3-5eee-a58f-ccca13006a7f
+		displayFolder: 09 Windows
+
+	/// Tile caption for CTR.
+	measure 'CTR caption' = IF(ISBLANK([CTR vs prior]), "all dates in view · pick months to compare", FORMAT([CTR vs prior] * 100, "+0.0;-0.0;0.0") & " pts" & " vs prior period")
+		lineageTag: d44bee8f-92a2-5274-b43e-6a7494eb3529
+		displayFolder: 10 Captions
+
+	/// Paid MQL rate over the same number of days immediately before the dates in view.
+	measure 'Paid MQL rate prior period' =
+			VAR vStart = MIN(dim_date[date])
+			VAR vEnd = MAX(dim_date[date])
+			VAR vDays = INT(vEnd - vStart) + 1
+			RETURN CALCULATE([Paid MQL rate], REMOVEFILTERS(dim_date),
+			    dim_date[date] >= vStart - vDays, dim_date[date] < vStart)
+		formatString: 0.0%
+		lineageTag: 06bc9566-19ed-5100-af7b-4c9b25d92e68
+		displayFolder: 09 Windows
+
+	/// Paid MQL rate against the period before (points).
+	measure 'Paid MQL rate vs prior' = IF(NOT ISBLANK([Paid MQL rate prior period]), [Paid MQL rate] - [Paid MQL rate prior period])
+		formatString: +0.00%;-0.00%;0.00%
+		lineageTag: 2d766f88-18c9-53ff-8712-2a88379dcd33
+		displayFolder: 09 Windows
+
+	/// Tile caption for Paid MQL rate.
+	measure 'Paid MQL rate caption' = IF(ISBLANK([Paid MQL rate vs prior]), "all dates in view · pick months to compare", FORMAT([Paid MQL rate vs prior] * 100, "+0.0;-0.0;0.0") & " pts" & " vs prior period")
+		lineageTag: 9bef8880-61e0-5a05-a6a4-1c74c26f3e10
+		displayFolder: 10 Captions
+
+	/// Calls booked over the same number of days immediately before the dates in view.
+	measure 'Calls booked prior period' =
+			VAR vStart = MIN(dim_date[date])
+			VAR vEnd = MAX(dim_date[date])
+			VAR vDays = INT(vEnd - vStart) + 1
+			RETURN CALCULATE([Calls booked], REMOVEFILTERS(dim_date),
+			    dim_date[date] >= vStart - vDays, dim_date[date] < vStart)
+		formatString: #,0
+		lineageTag: 76c45ed0-1dfb-579e-87bd-865ed8f4ede7
+		displayFolder: 09 Windows
+
+	/// Calls booked against the period before.
+	measure 'Calls booked vs prior' = DIVIDE([Calls booked] - [Calls booked prior period], ABS([Calls booked prior period]))
+		formatString: +0.0%;-0.0%;0.0%
+		lineageTag: 4998598d-a1a1-5ff0-bb50-1c7b9f251d7d
+		displayFolder: 09 Windows
+
+	/// Tile caption for Calls booked.
+	measure 'Calls booked caption' = IF(ISBLANK([Calls booked vs prior]), "all dates in view · pick months to compare", FORMAT([Calls booked vs prior], "+0%;-0%;0%") & " vs prior period")
+		lineageTag: fc76b5b6-0423-5c91-8f00-39f216990580
+		displayFolder: 10 Captions
+
+	/// Deals won over the same number of days immediately before the dates in view.
+	measure 'Deals won prior period' =
+			VAR vStart = MIN(dim_date[date])
+			VAR vEnd = MAX(dim_date[date])
+			VAR vDays = INT(vEnd - vStart) + 1
+			RETURN CALCULATE([Deals won], REMOVEFILTERS(dim_date),
+			    dim_date[date] >= vStart - vDays, dim_date[date] < vStart)
+		formatString: #,0
+		lineageTag: fee6d70c-a063-5264-a4e9-b16f9e4596dd
+		displayFolder: 09 Windows
+
+	/// Deals won against the period before.
+	measure 'Deals won vs prior' = DIVIDE([Deals won] - [Deals won prior period], ABS([Deals won prior period]))
+		formatString: +0.0%;-0.0%;0.0%
+		lineageTag: 62c30a5e-3523-53c4-ae88-42dd73ea2b15
+		displayFolder: 09 Windows
+
+	/// Tile caption for Deals won.
+	measure 'Deals won caption' = IF(ISBLANK([Deals won vs prior]), "all dates in view · pick months to compare", FORMAT([Deals won vs prior], "+0%;-0%;0%") & " vs prior period")
+		lineageTag: c93ab573-1020-525f-a3b9-d8d773fe43e7
+		displayFolder: 10 Captions
+
+	/// Attributed net cash over the same number of days immediately before the dates in view.
+	measure 'Attributed net cash prior period' =
+			VAR vStart = MIN(dim_date[date])
+			VAR vEnd = MAX(dim_date[date])
+			VAR vDays = INT(vEnd - vStart) + 1
+			RETURN CALCULATE([Attributed net cash], REMOVEFILTERS(dim_date),
+			    dim_date[date] >= vStart - vDays, dim_date[date] < vStart)
+		formatString: \$#,0
+		lineageTag: cec38f2a-264b-5cb4-b2f8-2d705eaf7d27
+		displayFolder: 09 Windows
+
+	/// Attributed net cash against the period before.
+	measure 'Attributed net cash vs prior' = DIVIDE([Attributed net cash] - [Attributed net cash prior period], ABS([Attributed net cash prior period]))
+		formatString: +0.0%;-0.0%;0.0%
+		lineageTag: 8b57f2c0-f50b-579d-8db8-88a1bbac0649
+		displayFolder: 09 Windows
+
+	/// Tile caption for Attributed net cash.
+	measure 'Attributed net cash caption' = IF(ISBLANK([Attributed net cash vs prior]), "all dates in view · pick months to compare", FORMAT([Attributed net cash vs prior], "+0%;-0%;0%") & " vs prior period")
+		lineageTag: 0387f9b2-7c30-5a77-ad52-c4d29e6ff046
+		displayFolder: 10 Captions
+
+	/// Cash ROAS over the same number of days immediately before the dates in view.
+	measure 'Cash ROAS prior period' =
+			VAR vStart = MIN(dim_date[date])
+			VAR vEnd = MAX(dim_date[date])
+			VAR vDays = INT(vEnd - vStart) + 1
+			RETURN CALCULATE([Cash ROAS], REMOVEFILTERS(dim_date),
+			    dim_date[date] >= vStart - vDays, dim_date[date] < vStart)
+		formatString: 0.00"x"
+		lineageTag: 4879c9ac-8b0e-582d-8a5c-7e9e0c427d74
+		displayFolder: 09 Windows
+
+	/// Cash ROAS against the period before.
+	measure 'Cash ROAS vs prior' = IF(NOT ISBLANK([Cash ROAS prior period]), [Cash ROAS] - [Cash ROAS prior period])
+		formatString: +0.00"x";-0.00"x";0.00"x"
+		lineageTag: 66e90193-4e23-54f7-be5b-05cd268202e8
+		displayFolder: 09 Windows
+
+	/// Tile caption for Cash ROAS.
+	measure 'Cash ROAS caption' = IF(ISBLANK([Cash ROAS vs prior]), "all dates in view · pick months to compare", FORMAT([Cash ROAS vs prior], "+0.00;-0.00;0.00") & "x" & " vs prior period")
+		lineageTag: c4f14bc8-b0b6-5bcc-ac5a-f6e2ff708d81
+		displayFolder: 10 Captions
+
+	/// Emails delivered over the same number of days immediately before the dates in view.
+	measure 'Emails delivered prior period' =
+			VAR vStart = MIN(dim_date[date])
+			VAR vEnd = MAX(dim_date[date])
+			VAR vDays = INT(vEnd - vStart) + 1
+			RETURN CALCULATE([Emails delivered], REMOVEFILTERS(dim_date),
+			    dim_date[date] >= vStart - vDays, dim_date[date] < vStart)
+		formatString: #,0
+		lineageTag: 40172326-fdae-5021-889e-d8be57c3eda7
+		displayFolder: 09 Windows
+
+	/// Emails delivered against the period before.
+	measure 'Emails delivered vs prior' = DIVIDE([Emails delivered] - [Emails delivered prior period], ABS([Emails delivered prior period]))
+		formatString: +0.0%;-0.0%;0.0%
+		lineageTag: 26818151-b1aa-5a2a-98f9-5c68fcd1bf14
+		displayFolder: 09 Windows
+
+	/// Tile caption for Emails delivered.
+	measure 'Emails delivered caption' = IF(ISBLANK([Emails delivered vs prior]), "all dates in view · pick months to compare", FORMAT([Emails delivered vs prior], "+0%;-0%;0%") & " vs prior period")
+		lineageTag: 49d4d9f9-d5ca-5e30-a93b-0928a0e01f35
+		displayFolder: 10 Captions
+
+	/// Human open rate over the same number of days immediately before the dates in view.
+	measure 'Human open rate prior period' =
+			VAR vStart = MIN(dim_date[date])
+			VAR vEnd = MAX(dim_date[date])
+			VAR vDays = INT(vEnd - vStart) + 1
+			RETURN CALCULATE([Human open rate], REMOVEFILTERS(dim_date),
+			    dim_date[date] >= vStart - vDays, dim_date[date] < vStart)
+		formatString: 0.0%
+		lineageTag: fe4585d2-de98-5f81-95ec-ffafaeb82590
+		displayFolder: 09 Windows
+
+	/// Human open rate against the period before (points).
+	measure 'Human open rate vs prior' = IF(NOT ISBLANK([Human open rate prior period]), [Human open rate] - [Human open rate prior period])
+		formatString: +0.00%;-0.00%;0.00%
+		lineageTag: dd5a2e01-4236-5b95-88e9-8f0404af6922
+		displayFolder: 09 Windows
+
+	/// Tile caption for Human open rate.
+	measure 'Human open rate caption' = IF(ISBLANK([Human open rate vs prior]), "all dates in view · pick months to compare", FORMAT([Human open rate vs prior] * 100, "+0.0;-0.0;0.0") & " pts" & " vs prior period")
+		lineageTag: 1e5851e0-a148-5727-a89d-2a1798c10dd8
+		displayFolder: 10 Captions
+
+	/// Bounce rate over the same number of days immediately before the dates in view.
+	measure 'Bounce rate prior period' =
+			VAR vStart = MIN(dim_date[date])
+			VAR vEnd = MAX(dim_date[date])
+			VAR vDays = INT(vEnd - vStart) + 1
+			RETURN CALCULATE([Bounce rate], REMOVEFILTERS(dim_date),
+			    dim_date[date] >= vStart - vDays, dim_date[date] < vStart)
+		formatString: 0.00%
+		lineageTag: cad202b7-bc10-531f-baca-6dc67f419464
+		displayFolder: 09 Windows
+
+	/// Bounce rate against the period before (points).
+	measure 'Bounce rate vs prior' = IF(NOT ISBLANK([Bounce rate prior period]), [Bounce rate] - [Bounce rate prior period])
+		formatString: +0.00%;-0.00%;0.00%
+		lineageTag: 555de930-f096-56a9-ac47-58b0ee44c5a4
+		displayFolder: 09 Windows
+
+	/// Tile caption for Bounce rate.
+	measure 'Bounce rate caption' = IF(ISBLANK([Bounce rate vs prior]), "all dates in view · pick months to compare", FORMAT([Bounce rate vs prior] * 100, "+0.0;-0.0;0.0") & " pts" & " vs prior period")
+		lineageTag: f14eb33c-5350-5352-856c-5db096aa4681
+		displayFolder: 10 Captions
+
+	/// Complaint rate over the same number of days immediately before the dates in view.
+	measure 'Complaint rate prior period' =
+			VAR vStart = MIN(dim_date[date])
+			VAR vEnd = MAX(dim_date[date])
+			VAR vDays = INT(vEnd - vStart) + 1
+			RETURN CALCULATE([Complaint rate], REMOVEFILTERS(dim_date),
+			    dim_date[date] >= vStart - vDays, dim_date[date] < vStart)
+		formatString: 0.000%
+		lineageTag: 541b50b3-ea82-5e70-ab81-6ee5034c01e4
+		displayFolder: 09 Windows
+
+	/// Complaint rate against the period before (points).
+	measure 'Complaint rate vs prior' = IF(NOT ISBLANK([Complaint rate prior period]), [Complaint rate] - [Complaint rate prior period])
+		formatString: +0.00%;-0.00%;0.00%
+		lineageTag: 2f60fd13-647f-5c16-9351-51fd5eccae6b
+		displayFolder: 09 Windows
+
+	/// Tile caption for Complaint rate.
+	measure 'Complaint rate caption' = IF(ISBLANK([Complaint rate vs prior]), "all dates in view · pick months to compare", FORMAT([Complaint rate vs prior] * 100, "+0.0;-0.0;0.0") & " pts" & " vs prior period")
+		lineageTag: 09ef69fe-9c50-5093-8e43-afeef480bd11
+		displayFolder: 10 Captions
+
+	/// Net cash in the 28 days ending on the as-of date.
+	measure 'Net cash, last 28 days' = CALCULATE([Net cash], REMOVEFILTERS(dim_date), dim_date[is_last_28_days] = TRUE())
+		formatString: \$#,0
+		lineageTag: 0796ed99-364c-5837-b1ea-c1358b65b56f
+		displayFolder: 11 Last 28 days
+
+	/// Net cash in the 28 days before those.
+	measure 'Net cash, prior 28 days' = CALCULATE([Net cash], REMOVEFILTERS(dim_date), dim_date[is_prior_28_days] = TRUE())
+		formatString: \$#,0
+		lineageTag: 32628acf-b8bb-52d6-b7ec-552f4906a2d4
+		displayFolder: 11 Last 28 days
+
+	/// Net cash, last 28 days against the 28 days before.
+	measure 'Net cash, 28-day change' = DIVIDE([Net cash, last 28 days] - [Net cash, prior 28 days], ABS([Net cash, prior 28 days]))
+		formatString: +0.0%;-0.0%;0.0%
+		lineageTag: 95172a1c-48cd-5091-9089-99b4dd671d5a
+		displayFolder: 11 Last 28 days
+
+	/// Tile caption for Net cash, last 28 days.
+	measure 'Net cash, 28-day caption' = IF(ISBLANK([Net cash, 28-day change]), "all dates in view · pick months to compare", FORMAT([Net cash, 28-day change], "+0%;-0%;0%") & " vs prior 28 days")
+		lineageTag: 7c475413-f9ed-5dfc-a590-32d5fc79281d
+		displayFolder: 10 Captions
+
+	/// Ad spend in the 28 days ending on the as-of date.
+	measure 'Ad spend, last 28 days' = CALCULATE([Ad spend], REMOVEFILTERS(dim_date), dim_date[is_last_28_days] = TRUE())
+		formatString: \$#,0
+		lineageTag: fda3c56f-9692-584a-baad-056c30123a5e
+		displayFolder: 11 Last 28 days
+
+	/// Ad spend in the 28 days before those.
+	measure 'Ad spend, prior 28 days' = CALCULATE([Ad spend], REMOVEFILTERS(dim_date), dim_date[is_prior_28_days] = TRUE())
+		formatString: \$#,0
+		lineageTag: 53dab1f2-e1a4-5ea4-8f63-89568c621c2f
+		displayFolder: 11 Last 28 days
+
+	/// Ad spend, last 28 days against the 28 days before.
+	measure 'Ad spend, 28-day change' = DIVIDE([Ad spend, last 28 days] - [Ad spend, prior 28 days], ABS([Ad spend, prior 28 days]))
+		formatString: +0.0%;-0.0%;0.0%
+		lineageTag: 10ca6268-6154-551e-a778-b1676e491d5a
+		displayFolder: 11 Last 28 days
+
+	/// Tile caption for Ad spend, last 28 days.
+	measure 'Ad spend, 28-day caption' = IF(ISBLANK([Ad spend, 28-day change]), "all dates in view · pick months to compare", FORMAT([Ad spend, 28-day change], "+0%;-0%;0%") & " vs prior 28 days")
+		lineageTag: e8b94ea8-5b12-5801-a009-c84950afc4c7
+		displayFolder: 10 Captions
+
+	/// Leads in the 28 days ending on the as-of date.
+	measure 'Leads, last 28 days' = CALCULATE([Leads], REMOVEFILTERS(dim_date), dim_date[is_last_28_days] = TRUE())
+		formatString: #,0
+		lineageTag: fe810cb5-6fb0-5cf3-a679-2d0f89fef069
+		displayFolder: 11 Last 28 days
+
+	/// Leads in the 28 days before those.
+	measure 'Leads, prior 28 days' = CALCULATE([Leads], REMOVEFILTERS(dim_date), dim_date[is_prior_28_days] = TRUE())
+		formatString: #,0
+		lineageTag: 3a394103-0547-5098-84a4-c3c30956e2c1
+		displayFolder: 11 Last 28 days
+
+	/// Leads, last 28 days against the 28 days before.
+	measure 'Leads, 28-day change' = DIVIDE([Leads, last 28 days] - [Leads, prior 28 days], ABS([Leads, prior 28 days]))
+		formatString: +0.0%;-0.0%;0.0%
+		lineageTag: aa5f9362-7465-59d2-a360-d8aa764a6c5a
+		displayFolder: 11 Last 28 days
+
+	/// Tile caption for Leads, last 28 days.
+	measure 'Leads, 28-day caption' = IF(ISBLANK([Leads, 28-day change]), "all dates in view · pick months to compare", FORMAT([Leads, 28-day change], "+0%;-0%;0%") & " vs prior 28 days")
+		lineageTag: 43acb1b1-9c0d-579b-be30-7c3321aeab6e
+		displayFolder: 10 Captions
+
+	/// MQL rate in the 28 days ending on the as-of date.
+	measure 'MQL rate, last 28 days' = CALCULATE([MQL rate], REMOVEFILTERS(dim_date), dim_date[is_last_28_days] = TRUE())
+		formatString: 0.0%
+		lineageTag: 8a2203f5-daef-5ad7-aaf4-8b050610fcb5
+		displayFolder: 11 Last 28 days
+
+	/// MQL rate in the 28 days before those.
+	measure 'MQL rate, prior 28 days' = CALCULATE([MQL rate], REMOVEFILTERS(dim_date), dim_date[is_prior_28_days] = TRUE())
+		formatString: 0.0%
+		lineageTag: af168b56-07a2-53fe-8421-1fb7bff19431
+		displayFolder: 11 Last 28 days
+
+	/// MQL rate, last 28 days against the 28 days before.
+	measure 'MQL rate, 28-day change' = IF(NOT ISBLANK([MQL rate, prior 28 days]), [MQL rate, last 28 days] - [MQL rate, prior 28 days])
+		formatString: +0.00%;-0.00%;0.00%
+		lineageTag: aa351bf5-82eb-53a0-85ae-d132d9b55145
+		displayFolder: 11 Last 28 days
+
+	/// Tile caption for MQL rate, last 28 days.
+	measure 'MQL rate, 28-day caption' = IF(ISBLANK([MQL rate, 28-day change]), "all dates in view · pick months to compare", FORMAT([MQL rate, 28-day change] * 100, "+0.0;-0.0;0.0") & " pts" & " vs prior 28 days")
+		lineageTag: b9e35549-30cc-5267-85c6-ebd271b68d83
+		displayFolder: 10 Captions
+
+	/// Paid spend in the 28 days ending on the as-of date.
+	measure 'Paid spend, last 28 days' = CALCULATE([Paid spend], REMOVEFILTERS(dim_date), dim_date[is_last_28_days] = TRUE())
+		formatString: \$#,0
+		lineageTag: 5212daed-24e1-54bf-8d35-e76f7cac7155
+		displayFolder: 11 Last 28 days
+
+	/// Paid spend in the 28 days before those.
+	measure 'Paid spend, prior 28 days' = CALCULATE([Paid spend], REMOVEFILTERS(dim_date), dim_date[is_prior_28_days] = TRUE())
+		formatString: \$#,0
+		lineageTag: 78934922-f8cc-55d5-a18e-512b62143575
+		displayFolder: 11 Last 28 days
+
+	/// Paid spend, last 28 days against the 28 days before.
+	measure 'Paid spend, 28-day change' = DIVIDE([Paid spend, last 28 days] - [Paid spend, prior 28 days], ABS([Paid spend, prior 28 days]))
+		formatString: +0.0%;-0.0%;0.0%
+		lineageTag: fdc74952-4fb9-5b31-b18b-58e6f746c1fc
+		displayFolder: 11 Last 28 days
+
+	/// Tile caption for Paid spend, last 28 days.
+	measure 'Paid spend, 28-day caption' = IF(ISBLANK([Paid spend, 28-day change]), "all dates in view · pick months to compare", FORMAT([Paid spend, 28-day change], "+0%;-0%;0%") & " vs prior 28 days")
+		lineageTag: 54785766-e86a-5619-b4a1-524938eb2856
+		displayFolder: 10 Captions
+
+	/// Paid leads in the 28 days ending on the as-of date.
+	measure 'Paid leads, last 28 days' = CALCULATE([Paid leads], REMOVEFILTERS(dim_date), dim_date[is_last_28_days] = TRUE())
+		formatString: #,0
+		lineageTag: dab53918-7ac1-5f68-832d-c425e265de9f
+		displayFolder: 11 Last 28 days
+
+	/// Paid leads in the 28 days before those.
+	measure 'Paid leads, prior 28 days' = CALCULATE([Paid leads], REMOVEFILTERS(dim_date), dim_date[is_prior_28_days] = TRUE())
+		formatString: #,0
+		lineageTag: ba61afcf-407e-5f5f-a7f5-0d3b862f9759
+		displayFolder: 11 Last 28 days
+
+	/// Paid leads, last 28 days against the 28 days before.
+	measure 'Paid leads, 28-day change' = DIVIDE([Paid leads, last 28 days] - [Paid leads, prior 28 days], ABS([Paid leads, prior 28 days]))
+		formatString: +0.0%;-0.0%;0.0%
+		lineageTag: 8770493e-b8bc-5a39-834b-929bc1b664e8
+		displayFolder: 11 Last 28 days
+
+	/// Tile caption for Paid leads, last 28 days.
+	measure 'Paid leads, 28-day caption' = IF(ISBLANK([Paid leads, 28-day change]), "all dates in view · pick months to compare", FORMAT([Paid leads, 28-day change], "+0%;-0%;0%") & " vs prior 28 days")
+		lineageTag: f6910df8-5675-5a3a-a614-af22c98a9849
+		displayFolder: 10 Captions
+
+	/// Paid MQLs in the 28 days ending on the as-of date.
+	measure 'Paid MQLs, last 28 days' = CALCULATE([Paid MQLs], REMOVEFILTERS(dim_date), dim_date[is_last_28_days] = TRUE())
+		formatString: #,0
+		lineageTag: 84b0a9ac-f8e7-5c75-83e2-20f93a63688b
+		displayFolder: 11 Last 28 days
+
+	/// Paid MQLs in the 28 days before those.
+	measure 'Paid MQLs, prior 28 days' = CALCULATE([Paid MQLs], REMOVEFILTERS(dim_date), dim_date[is_prior_28_days] = TRUE())
+		formatString: #,0
+		lineageTag: 059fda34-e3e5-57c0-a87e-68a89cd0a508
+		displayFolder: 11 Last 28 days
+
+	/// Paid MQLs, last 28 days against the 28 days before.
+	measure 'Paid MQLs, 28-day change' = DIVIDE([Paid MQLs, last 28 days] - [Paid MQLs, prior 28 days], ABS([Paid MQLs, prior 28 days]))
+		formatString: +0.0%;-0.0%;0.0%
+		lineageTag: ea6d2547-928e-57b2-ae72-e6446e8400a9
+		displayFolder: 11 Last 28 days
+
+	/// Tile caption for Paid MQLs, last 28 days.
+	measure 'Paid MQLs, 28-day caption' = IF(ISBLANK([Paid MQLs, 28-day change]), "all dates in view · pick months to compare", FORMAT([Paid MQLs, 28-day change], "+0%;-0%;0%") & " vs prior 28 days")
+		lineageTag: 937b78f3-039c-516c-a801-386024974f2c
+		displayFolder: 10 Captions
+
+	/// Cost per lead in the 28 days ending on the as-of date.
+	measure 'Cost per lead, last 28 days' = CALCULATE([Cost per lead], REMOVEFILTERS(dim_date), dim_date[is_last_28_days] = TRUE())
+		formatString: \$#,0.00
+		lineageTag: d2c279fd-9944-54a6-977a-7ad154d788d6
+		displayFolder: 11 Last 28 days
+
+	/// Cost per lead in the 28 days before those.
+	measure 'Cost per lead, prior 28 days' = CALCULATE([Cost per lead], REMOVEFILTERS(dim_date), dim_date[is_prior_28_days] = TRUE())
+		formatString: \$#,0.00
+		lineageTag: 453201be-ac9a-556a-9547-a17cb6531410
+		displayFolder: 11 Last 28 days
+
+	/// Cost per lead, last 28 days against the 28 days before.
+	measure 'Cost per lead, 28-day change' = DIVIDE([Cost per lead, last 28 days] - [Cost per lead, prior 28 days], ABS([Cost per lead, prior 28 days]))
+		formatString: +0.0%;-0.0%;0.0%
+		lineageTag: bb01c6bb-3dd3-5785-a39c-406e998ebab3
+		displayFolder: 11 Last 28 days
+
+	/// Tile caption for Cost per lead, last 28 days.
+	measure 'Cost per lead, 28-day caption' = IF(ISBLANK([Cost per lead, 28-day change]), "all dates in view · pick months to compare", FORMAT([Cost per lead, 28-day change], "+0%;-0%;0%") & " vs prior 28 days")
+		lineageTag: cd323584-52e1-50e0-a8cc-c6731bbf8b04
+		displayFolder: 10 Captions
+
+	/// Paid MQL rate in the 28 days ending on the as-of date.
+	measure 'Paid MQL rate, last 28 days' = CALCULATE([Paid MQL rate], REMOVEFILTERS(dim_date), dim_date[is_last_28_days] = TRUE())
+		formatString: 0.0%
+		lineageTag: f61d1e02-d0d1-5c3c-b9de-6fa45f52fa88
+		displayFolder: 11 Last 28 days
+
+	/// Paid MQL rate in the 28 days before those.
+	measure 'Paid MQL rate, prior 28 days' = CALCULATE([Paid MQL rate], REMOVEFILTERS(dim_date), dim_date[is_prior_28_days] = TRUE())
+		formatString: 0.0%
+		lineageTag: 545eac54-a9a2-5ee2-99b5-ad599826ddef
+		displayFolder: 11 Last 28 days
+
+	/// Paid MQL rate, last 28 days against the 28 days before.
+	measure 'Paid MQL rate, 28-day change' = IF(NOT ISBLANK([Paid MQL rate, prior 28 days]), [Paid MQL rate, last 28 days] - [Paid MQL rate, prior 28 days])
+		formatString: +0.00%;-0.00%;0.00%
+		lineageTag: 5633a489-51de-5984-9180-1443788e883f
+		displayFolder: 11 Last 28 days
+
+	/// Tile caption for Paid MQL rate, last 28 days.
+	measure 'Paid MQL rate, 28-day caption' = IF(ISBLANK([Paid MQL rate, 28-day change]), "all dates in view · pick months to compare", FORMAT([Paid MQL rate, 28-day change] * 100, "+0.0;-0.0;0.0") & " pts" & " vs prior 28 days")
+		lineageTag: 2e2e8243-0959-5ae9-ad7e-7dc50e116447
+		displayFolder: 10 Captions
+
+	/// Bounce rate in the 28 days ending on the as-of date.
+	measure 'Bounce rate, last 28 days' = CALCULATE([Bounce rate], REMOVEFILTERS(dim_date), dim_date[is_last_28_days] = TRUE())
+		formatString: 0.00%
+		lineageTag: d0494cdd-ecfd-5425-ad68-f459faf51807
+		displayFolder: 11 Last 28 days
+
+	/// Bounce rate in the 28 days before those.
+	measure 'Bounce rate, prior 28 days' = CALCULATE([Bounce rate], REMOVEFILTERS(dim_date), dim_date[is_prior_28_days] = TRUE())
+		formatString: 0.00%
+		lineageTag: 2ccc3622-7f79-514f-9696-f07cec431d53
+		displayFolder: 11 Last 28 days
+
+	/// Bounce rate, last 28 days against the 28 days before.
+	measure 'Bounce rate, 28-day change' = IF(NOT ISBLANK([Bounce rate, prior 28 days]), [Bounce rate, last 28 days] - [Bounce rate, prior 28 days])
+		formatString: +0.00%;-0.00%;0.00%
+		lineageTag: 8d58c498-94ec-5451-8639-39a9a9787383
+		displayFolder: 11 Last 28 days
+
+	/// Tile caption for Bounce rate, last 28 days.
+	measure 'Bounce rate, 28-day caption' = IF(ISBLANK([Bounce rate, 28-day change]), "all dates in view · pick months to compare", FORMAT([Bounce rate, 28-day change] * 100, "+0.0;-0.0;0.0") & " pts" & " vs prior 28 days")
+		lineageTag: 4deda3aa-8af5-5c81-8497-a0d2593d630a
+		displayFolder: 10 Captions
+
+	/// Calls booked in the 28 days ending on the as-of date.
+	measure 'Calls booked, last 28 days' = CALCULATE([Calls booked], REMOVEFILTERS(dim_date), dim_date[is_last_28_days] = TRUE())
+		formatString: #,0
+		lineageTag: 6fd5262f-2b68-5889-aa99-ae30a7687fbc
+		displayFolder: 11 Last 28 days
+
+	/// Calls booked in the 28 days before those.
+	measure 'Calls booked, prior 28 days' = CALCULATE([Calls booked], REMOVEFILTERS(dim_date), dim_date[is_prior_28_days] = TRUE())
+		formatString: #,0
+		lineageTag: 6297774e-aa02-57bb-a0e8-969ff95b1e5d
+		displayFolder: 11 Last 28 days
+
+	/// Calls booked, last 28 days against the 28 days before.
+	measure 'Calls booked, 28-day change' = DIVIDE([Calls booked, last 28 days] - [Calls booked, prior 28 days], ABS([Calls booked, prior 28 days]))
+		formatString: +0.0%;-0.0%;0.0%
+		lineageTag: 790145ec-fc69-567f-92bb-b1d197fe0911
+		displayFolder: 11 Last 28 days
+
+	/// Tile caption for Calls booked, last 28 days.
+	measure 'Calls booked, 28-day caption' = IF(ISBLANK([Calls booked, 28-day change]), "all dates in view · pick months to compare", FORMAT([Calls booked, 28-day change], "+0%;-0%;0%") & " vs prior 28 days")
+		lineageTag: 35ac397e-cf7a-5abc-a8a0-2d397a0b0fa9
+		displayFolder: 10 Captions
+
+	/// Tile caption: how far platform claims exceed cash.
+	measure 'Platform claim caption' = FORMAT([Claim multiple], "0.00") & "x the cash the warehouse can find"
+		lineageTag: 54f46cc4-41c7-529c-9ec9-d7b18760905a
+		displayFolder: 10 Captions
+
+	/// Tile caption: how far bookings run ahead of cash.
+	measure 'CRM booked caption' = FORMAT(DIVIDE([Booked (CRM, all time)], [Net collected (all time)]) - 1, "+0.0%") & " over net collected cash"
+		lineageTag: 5f44cad4-4f23-5c75-96a7-a0e3e265be11
+		displayFolder: 10 Captions
+
+	/// Tile caption: refunds taken out of gross.
+	measure 'Net collected caption' = "after " & FORMAT([Refunds (all time)] / 1000, "$#,0") & "K of refunds"
+		lineageTag: 00164a59-5f7b-5ea6-a4bb-ff70bbac9396
+		displayFolder: 10 Captions
+
+	/// Tile caption: refund rate.
+	measure 'Refund caption' = FORMAT([Refund rate], "0.0%") & " of gross collected"
+		lineageTag: 091ac2e7-62fa-5b5c-9d5c-70da943dc77a
+		displayFolder: 10 Captions
+
+	/// Tile caption: cash no campaign can claim.
+	measure 'Unattributed caption' = FORMAT([Unattributed net cash] / 1000, "$#,0") & "K with no creating touch"
+		lineageTag: 8e5b818c-ea1d-5c83-b092-e1bb16aa9c94
+		displayFolder: 10 Captions
+
+	/// Tile caption: views against buyers.
+	measure 'Content caption' = FORMAT([Content customers], "#,0") & " buyers from " & FORMAT([Content views] / 1000, "#,0") & "K views"
+		lineageTag: 1f10a2ad-da64-53e1-9ec3-32dcd29877d5
+		displayFolder: 10 Captions
+
+	/// Tile caption: clicks on defective links.
+	measure 'Links caption' = FORMAT([Defective link click share], "0%") & " of recent short-link clicks"
+		lineageTag: b5664826-3789-5ee3-b7c4-28f7aa8dce65
+		displayFolder: 10 Captions
+
+	/// Tile caption: renewal queue.
+	measure 'Renewals caption' = FORMAT([Failed renewal attempts], "#,0") & IF([Failed renewal attempts] = 1, " failed card attempt · ", " failed card attempts · ") & FORMAT([Renewals due], "#,0") & " due in total"
+		lineageTag: 955ab6dd-5bcb-5e7b-8b7a-cad54e31ab6d
+		displayFolder: 10 Captions
+
+	/// Tile caption: registry coverage.
+	measure 'UTM caption' = FORMAT([Registry coverage], "0.0%") & " of touches carry a registered campaign"
+		lineageTag: c99d772d-91cc-59c5-8a73-416c363394f4
+		displayFolder: 10 Captions
+
+	/// Tile caption: migration defects.
+	measure 'Migration caption' = FORMAT([Missing after migration], "#,0") & " legacy contacts missing · " & FORMAT([Duplicate contact rows], "#,0") & " duplicates"
+		lineageTag: 11d01683-fad3-5cfb-8bf4-a766cfa609ea
+		displayFolder: 10 Captions
+
+	/// Tile caption: lead to paid.
+	measure 'Funnel caption' = FORMAT([Lead to paid], "0.00%") & " of all leads became customers"
+		lineageTag: 0d08ae2a-eab8-5880-86a8-4d1df5415b9e
+		displayFolder: 10 Captions
+
+	/// Tile caption: the ROAS the platforms claim.
+	measure 'ROAS caption' = "platforms report " & FORMAT([Reported ROAS], "0.0") & "x on the same spend"
+		lineageTag: 1ca1324e-5c24-5697-8f4d-31e69d205ac6
+		displayFolder: 10 Captions
+
+	/// Tile caption: data-quality checks failing.
+	measure 'Quality caption' = FORMAT([Checks below target], "0") & " of " & FORMAT(COUNTROWS(quality_scorecard), "0") & " checks under target"
+		lineageTag: b9deadef-ed82-588e-8fd1-aa613f22f936
+		displayFolder: 10 Captions
+
+	/// Tile caption: complaint rate against the mailbox-provider limit.
+	measure 'Complaint caption' = IF([Complaint rate] > 0.001, "above", "within") & " the 0.1% limit · " & [Complaint rate caption]
+		lineageTag: 338f4f6a-734f-5fbc-82b5-5b73563ad9b0
+		displayFolder: 10 Captions
+
+	/// One-paragraph summary of the last 28 days, computed from the measures on the page.
+	measure 'Executive summary' =
+			VAR vDate = FORMAT([As-of date], "d mmm yyyy")
+			VAR vCash = [Net cash, last 28 days]
+			VAR vCashMove = [Net cash, 28-day change]
+			VAR vRateNow = [Paid MQL rate, last 28 days]
+			VAR vRateBefore = [Paid MQL rate, prior 28 days]
+			VAR vRanked =
+			    FILTER(
+			        ADDCOLUMNS(VALUES(dim_campaign[campaign_id]),
+			            "@leads", [Paid leads, last 28 days], "@rate", [Paid MQL rate, last 28 days]),
+			        [@leads] >= 50 && NOT ISBLANK([@rate]))
+			VAR vWorst = MINX(vRanked, [@rate])
+			VAR vWorstNames = CONCATENATEX(FILTER(vRanked, [@rate] = vWorst), dim_campaign[campaign_id], ", ")
+			VAR vBounce = [Bounce rate, last 28 days]
+			RETURN
+			    "28 days to " & vDate & ": " & FORMAT(vCash / 1000, "$#,0") & "K net cash ("
+			        & FORMAT(vCashMove, "+0%;-0%") & " on the 28 days before) on "
+			        & FORMAT([Ad spend, last 28 days] / 1000, "$#,0") & "K of ad spend. Paid media bought "
+			        & FORMAT([Paid leads, last 28 days], "#,0") & " leads at "
+			        & FORMAT([Cost per lead, last 28 days], "$#,0.00") & " each, but "
+			        & FORMAT(vRateNow, "0.0%") & " qualified (" & FORMAT(vRateBefore, "0.0%")
+			        & " before); the weakest at scale is " & vWorstNames & " at " & FORMAT(vWorst, "0.0%")
+			        & ". Email bounced at " & FORMAT(vBounce, "0.0%")
+			        & IF(vBounce > 0.02, ", above the 2% limit.", ", inside the 2% limit.")
+		lineageTag: e4227c00-8051-5d98-be14-5cc2edd32ce3
+		displayFolder: 12 Narrative
+
+	measure 'Header SVG - Executive summary' =
+			VAR vContext = "Page 1 of 7"
+			VAR vSvg =
+			    "<svg xmlns='http://www.w3.org/2000/svg' width='720' height='56' viewBox='0 0 720 56'>"
+			        & "<text x='0' y='24' font-family='Segoe UI Semibold' font-size='18' fill='#f2f2f4'>Executive summary</text>"
+			        & "<text x='0' y='46' font-family='Segoe UI' font-size='11' fill='#7d7d85'>" & vContext & "</text>"
+			        & "</svg>"
+			RETURN
+			    "data:image/svg+xml;utf8," & SUBSTITUTE(SUBSTITUTE(vSvg, "%", "%25"), "#", "%23")
+		lineageTag: 93cb60e9-f484-581f-a5c1-cc5b179cad2d
+		dataCategory: ImageUrl
+		displayFolder: Report UI
+
+	measure 'KPI SVG Net cash, last 28 days | Net cash, 28-day caption | up Net cash, 28-day change | Net cash · last 28 days @314' =
+			VAR vValue = [Net cash, last 28 days]
+			VAR vShown = IF(ISBLANK(vValue), "—", IF(ABS(vValue) >= 1000000, FORMAT(vValue / 1000000, "\$#,0.00") & "M", FORMAT(vValue, "\$#,0")))
+			VAR vCaptionRaw = SUBSTITUTE(SUBSTITUTE(COALESCE([Net cash, 28-day caption], ""), "&", "&amp;"), "<", "&lt;")
+			VAR vCaption = IF(LEN(vCaptionRaw) > 61, LEFT(vCaptionRaw, 59) & "…", vCaptionRaw)
+			VAR vTrend = [Net cash, 28-day change]
+			VAR vTone = IF(ISBLANK(vTrend) || ROUND(vTrend, 4) = 0, "#7d7d85", IF(vTrend > 0, "#3fb96b", "#ef6f61"))
+			VAR vArrow = IF(ISBLANK(vTrend) || ROUND(vTrend, 4) = 0, "", IF(vTrend > 0, "▲ ", "▼ "))
+			VAR vSvg =
+			    "<svg xmlns='http://www.w3.org/2000/svg' width='314' height='112' viewBox='0 0 314 112'>"
+			        & "<rect x='0' y='18' width='3' height='76' rx='1.5' fill='#3987e5'/>"
+			        & "<text x='16' y='28' font-family='Segoe UI' font-size='11' fill='#a6a6ad'>Net cash · last 28 days</text>"
+			        & "<text x='16' y='64' font-family='Segoe UI Light' font-size='30' fill='#f2f2f4'>" & vShown & "</text>"
+			        & ""
+			        & "<text x='16' y='90' font-family='Segoe UI' font-size='10' fill='" & vTone & "'>" & vArrow & vCaption & "</text>"
+			        & "</svg>"
+			RETURN
+			    "data:image/svg+xml;utf8," & SUBSTITUTE(SUBSTITUTE(vSvg, "%", "%25"), "#", "%23")
+		lineageTag: 0b68ef48-8fad-50ab-afbf-597c115eaa94
+		dataCategory: ImageUrl
+		displayFolder: Report UI
+
+	measure 'KPI SVG Ad spend, last 28 days | Ad spend, 28-day caption | Ad spend · last 28 days @310' =
+			VAR vValue = [Ad spend, last 28 days]
+			VAR vShown = IF(ISBLANK(vValue), "—", IF(ABS(vValue) >= 1000000, FORMAT(vValue / 1000000, "\$#,0.00") & "M", FORMAT(vValue, "\$#,0")))
+			VAR vCaptionRaw = SUBSTITUTE(SUBSTITUTE(COALESCE([Ad spend, 28-day caption], ""), "&", "&amp;"), "<", "&lt;")
+			VAR vCaption = IF(LEN(vCaptionRaw) > 61, LEFT(vCaptionRaw, 59) & "…", vCaptionRaw)
+			VAR vTone = "#7d7d85"
+			VAR vArrow = ""
+			VAR vSvg =
+			    "<svg xmlns='http://www.w3.org/2000/svg' width='310' height='112' viewBox='0 0 310 112'>"
+			        & "<rect x='0' y='18' width='3' height='76' rx='1.5' fill='#3987e5'/>"
+			        & "<text x='16' y='28' font-family='Segoe UI' font-size='11' fill='#a6a6ad'>Ad spend · last 28 days</text>"
+			        & "<text x='16' y='64' font-family='Segoe UI Light' font-size='30' fill='#f2f2f4'>" & vShown & "</text>"
+			        & ""
+			        & "<text x='16' y='90' font-family='Segoe UI' font-size='10' fill='" & vTone & "'>" & vArrow & vCaption & "</text>"
+			        & "</svg>"
+			RETURN
+			    "data:image/svg+xml;utf8," & SUBSTITUTE(SUBSTITUTE(vSvg, "%", "%25"), "#", "%23")
+		lineageTag: a343b5d3-7b6f-51c1-b97e-811a13dd3bf8
+		dataCategory: ImageUrl
+		displayFolder: Report UI
+
+	measure 'KPI SVG Cost per lead, last 28 days | Cost per lead, 28-day caption | down Cost per lead, 28-day change | Paid cost per lead · last 28 days @314' =
+			VAR vValue = [Cost per lead, last 28 days]
+			VAR vShown = IF(ISBLANK(vValue), "—", IF(ABS(vValue) >= 1000000, FORMAT(vValue / 1000000, "\$#,0.00") & "M", FORMAT(vValue, "\$#,0.00")))
+			VAR vCaptionRaw = SUBSTITUTE(SUBSTITUTE(COALESCE([Cost per lead, 28-day caption], ""), "&", "&amp;"), "<", "&lt;")
+			VAR vCaption = IF(LEN(vCaptionRaw) > 61, LEFT(vCaptionRaw, 59) & "…", vCaptionRaw)
+			VAR vTrend = [Cost per lead, 28-day change]
+			VAR vTone = IF(ISBLANK(vTrend) || ROUND(vTrend, 4) = 0, "#7d7d85", IF(vTrend < 0, "#3fb96b", "#ef6f61"))
+			VAR vArrow = IF(ISBLANK(vTrend) || ROUND(vTrend, 4) = 0, "", IF(vTrend > 0, "▲ ", "▼ "))
+			VAR vSvg =
+			    "<svg xmlns='http://www.w3.org/2000/svg' width='314' height='112' viewBox='0 0 314 112'>"
+			        & "<rect x='0' y='18' width='3' height='76' rx='1.5' fill='#3987e5'/>"
+			        & "<text x='16' y='28' font-family='Segoe UI' font-size='11' fill='#a6a6ad'>Paid cost per lead · last 28 days</text>"
+			        & "<text x='16' y='64' font-family='Segoe UI Light' font-size='30' fill='#f2f2f4'>" & vShown & "</text>"
+			        & ""
+			        & "<text x='16' y='90' font-family='Segoe UI' font-size='10' fill='" & vTone & "'>" & vArrow & vCaption & "</text>"
+			        & "</svg>"
+			RETURN
+			    "data:image/svg+xml;utf8," & SUBSTITUTE(SUBSTITUTE(vSvg, "%", "%25"), "#", "%23")
+		lineageTag: 42c2dccb-925e-54a0-91f8-2562b3d1e559
+		dataCategory: ImageUrl
+		displayFolder: Report UI
+
+	measure 'KPI SVG Paid MQL rate, last 28 days | Paid MQL rate, 28-day caption | up Paid MQL rate, 28-day change | Paid MQL rate · last 28 days @333' =
+			VAR vValue = [Paid MQL rate, last 28 days]
+			VAR vShown = IF(ISBLANK(vValue), "—", FORMAT(vValue, "0.0%"))
+			VAR vCaptionRaw = SUBSTITUTE(SUBSTITUTE(COALESCE([Paid MQL rate, 28-day caption], ""), "&", "&amp;"), "<", "&lt;")
+			VAR vCaption = IF(LEN(vCaptionRaw) > 66, LEFT(vCaptionRaw, 64) & "…", vCaptionRaw)
+			VAR vTrend = [Paid MQL rate, 28-day change]
+			VAR vTone = IF(ISBLANK(vTrend) || ROUND(vTrend, 4) = 0, "#7d7d85", IF(vTrend > 0, "#3fb96b", "#ef6f61"))
+			VAR vArrow = IF(ISBLANK(vTrend) || ROUND(vTrend, 4) = 0, "", IF(vTrend > 0, "▲ ", "▼ "))
+			VAR vRail = ROUND(301 * MAX(0, MIN(1, COALESCE(vValue, 0))), 0)
+			VAR vSvg =
+			    "<svg xmlns='http://www.w3.org/2000/svg' width='333' height='112' viewBox='0 0 333 112'>"
+			        & "<rect x='0' y='18' width='3' height='76' rx='1.5' fill='#3987e5'/>"
+			        & "<text x='16' y='28' font-family='Segoe UI' font-size='11' fill='#a6a6ad'>Paid MQL rate · last 28 days</text>"
+			        & "<text x='16' y='64' font-family='Segoe UI Light' font-size='30' fill='#f2f2f4'>" & vShown & "</text>"
+			        & "<rect x='16' y='76' width='301' height='6' rx='3' fill='#26262a'/>" & "<rect x='16' y='76' width='" & vRail & "' height='6' rx='3' fill='#3987e5'/>"
+			        & "<text x='16' y='100' font-family='Segoe UI' font-size='10' fill='" & vTone & "'>" & vArrow & vCaption & "</text>"
+			        & "</svg>"
+			RETURN
+			    "data:image/svg+xml;utf8," & SUBSTITUTE(SUBSTITUTE(vSvg, "%", "%25"), "#", "%23")
+		lineageTag: 6304eaac-02eb-58c0-b658-75b55bf7d9ee
+		dataCategory: ImageUrl
+		displayFolder: Report UI
+
+	measure 'Filter Context - Revenue truth' =
+			VAR vText = IF(ISFILTERED('mart_platform_comparison'[platform]), CONCATENATEX(VALUES('mart_platform_comparison'[platform]), 'mart_platform_comparison'[platform], ", "), "all platforms")
+			RETURN IF(LEN(vText) > 72, LEFT(vText, 70) & "…", vText)
+		lineageTag: 379df91f-e51d-56ab-b0e7-5811bfed2b6e
+		displayFolder: Report UI
+
+	measure 'Header SVG - Revenue truth' =
+			VAR vContext = "Page 2 of 7 · " & SUBSTITUTE(SUBSTITUTE([Filter Context - Revenue truth], "&", "&amp;"), "<", "&lt;")
+			VAR vSvg =
+			    "<svg xmlns='http://www.w3.org/2000/svg' width='720' height='56' viewBox='0 0 720 56'>"
+			        & "<text x='0' y='24' font-family='Segoe UI Semibold' font-size='18' fill='#f2f2f4'>Revenue truth</text>"
+			        & "<text x='0' y='46' font-family='Segoe UI' font-size='11' fill='#7d7d85'>" & vContext & "</text>"
+			        & "</svg>"
+			RETURN
+			    "data:image/svg+xml;utf8," & SUBSTITUTE(SUBSTITUTE(vSvg, "%", "%25"), "#", "%23")
+		lineageTag: 4ff58ce4-6497-5699-b142-f5005807da50
+		dataCategory: ImageUrl
+		displayFolder: Report UI
+
+	measure 'Filter Button Label - Revenue truth' =
+			VAR vOn = INT(ISFILTERED('mart_platform_comparison'[platform]))
+			RETURN IF(vOn = 0, "Filters", "Filters · " & vOn)
+		lineageTag: 7f4667a2-b452-5184-a0fe-3d8f7ad76c16
+		displayFolder: Report UI
+
+	measure 'KPI SVG Platform-reported value | Platform claim caption | Ad platforms claim @314' =
+			VAR vValue = [Platform-reported value]
+			VAR vShown = IF(ISBLANK(vValue), "—", IF(ABS(vValue) >= 1000000, FORMAT(vValue / 1000000, "\$#,0.00") & "M", FORMAT(vValue, "\$#,0")))
+			VAR vCaptionRaw = SUBSTITUTE(SUBSTITUTE(COALESCE([Platform claim caption], ""), "&", "&amp;"), "<", "&lt;")
+			VAR vCaption = IF(LEN(vCaptionRaw) > 61, LEFT(vCaptionRaw, 59) & "…", vCaptionRaw)
+			VAR vTone = "#7d7d85"
+			VAR vArrow = ""
+			VAR vSvg =
+			    "<svg xmlns='http://www.w3.org/2000/svg' width='314' height='112' viewBox='0 0 314 112'>"
+			        & "<rect x='0' y='18' width='3' height='76' rx='1.5' fill='#3987e5'/>"
+			        & "<text x='16' y='28' font-family='Segoe UI' font-size='11' fill='#a6a6ad'>Ad platforms claim</text>"
+			        & "<text x='16' y='64' font-family='Segoe UI Light' font-size='30' fill='#f2f2f4'>" & vShown & "</text>"
+			        & ""
+			        & "<text x='16' y='90' font-family='Segoe UI' font-size='10' fill='" & vTone & "'>" & vArrow & vCaption & "</text>"
+			        & "</svg>"
+			RETURN
+			    "data:image/svg+xml;utf8," & SUBSTITUTE(SUBSTITUTE(vSvg, "%", "%25"), "#", "%23")
+		lineageTag: 9db2d5a0-40ea-5001-918d-c57f6754f9f6
+		dataCategory: ImageUrl
+		displayFolder: Report UI
+
+	measure 'KPI SVG Booked (CRM, all time) | CRM booked caption | The CRM books @310' =
+			VAR vValue = [Booked (CRM, all time)]
+			VAR vShown = IF(ISBLANK(vValue), "—", IF(ABS(vValue) >= 1000000, FORMAT(vValue / 1000000, "\$#,0.00") & "M", FORMAT(vValue, "\$#,0")))
+			VAR vCaptionRaw = SUBSTITUTE(SUBSTITUTE(COALESCE([CRM booked caption], ""), "&", "&amp;"), "<", "&lt;")
+			VAR vCaption = IF(LEN(vCaptionRaw) > 61, LEFT(vCaptionRaw, 59) & "…", vCaptionRaw)
+			VAR vTone = "#7d7d85"
+			VAR vArrow = ""
+			VAR vSvg =
+			    "<svg xmlns='http://www.w3.org/2000/svg' width='310' height='112' viewBox='0 0 310 112'>"
+			        & "<rect x='0' y='18' width='3' height='76' rx='1.5' fill='#3987e5'/>"
+			        & "<text x='16' y='28' font-family='Segoe UI' font-size='11' fill='#a6a6ad'>The CRM books</text>"
+			        & "<text x='16' y='64' font-family='Segoe UI Light' font-size='30' fill='#f2f2f4'>" & vShown & "</text>"
+			        & ""
+			        & "<text x='16' y='90' font-family='Segoe UI' font-size='10' fill='" & vTone & "'>" & vArrow & vCaption & "</text>"
+			        & "</svg>"
+			RETURN
+			    "data:image/svg+xml;utf8," & SUBSTITUTE(SUBSTITUTE(vSvg, "%", "%25"), "#", "%23")
+		lineageTag: f7ad9425-0448-5227-860c-d23ee053f220
+		dataCategory: ImageUrl
+		displayFolder: Report UI
+
+	measure 'KPI SVG Net collected (all time) | Net collected caption | The bank collected (net) @314' =
+			VAR vValue = [Net collected (all time)]
+			VAR vShown = IF(ISBLANK(vValue), "—", IF(ABS(vValue) >= 1000000, FORMAT(vValue / 1000000, "\$#,0.00") & "M", FORMAT(vValue, "\$#,0")))
+			VAR vCaptionRaw = SUBSTITUTE(SUBSTITUTE(COALESCE([Net collected caption], ""), "&", "&amp;"), "<", "&lt;")
+			VAR vCaption = IF(LEN(vCaptionRaw) > 61, LEFT(vCaptionRaw, 59) & "…", vCaptionRaw)
+			VAR vTone = "#7d7d85"
+			VAR vArrow = ""
+			VAR vSvg =
+			    "<svg xmlns='http://www.w3.org/2000/svg' width='314' height='112' viewBox='0 0 314 112'>"
+			        & "<rect x='0' y='18' width='3' height='76' rx='1.5' fill='#3987e5'/>"
+			        & "<text x='16' y='28' font-family='Segoe UI' font-size='11' fill='#a6a6ad'>The bank collected (net)</text>"
+			        & "<text x='16' y='64' font-family='Segoe UI Light' font-size='30' fill='#f2f2f4'>" & vShown & "</text>"
+			        & ""
+			        & "<text x='16' y='90' font-family='Segoe UI' font-size='10' fill='" & vTone & "'>" & vArrow & vCaption & "</text>"
+			        & "</svg>"
+			RETURN
+			    "data:image/svg+xml;utf8," & SUBSTITUTE(SUBSTITUTE(vSvg, "%", "%25"), "#", "%23")
+		lineageTag: c8ce2a05-fa52-5d30-810e-df4bc11a6676
+		dataCategory: ImageUrl
+		displayFolder: Report UI
+
+	measure 'KPI SVG Warehouse ROAS | ROAS caption | Paid ROAS on net cash @333' =
+			VAR vValue = [Warehouse ROAS]
+			VAR vShown = IF(ISBLANK(vValue), "—", FORMAT(vValue, "0.00""x"""))
+			VAR vCaptionRaw = SUBSTITUTE(SUBSTITUTE(COALESCE([ROAS caption], ""), "&", "&amp;"), "<", "&lt;")
+			VAR vCaption = IF(LEN(vCaptionRaw) > 66, LEFT(vCaptionRaw, 64) & "…", vCaptionRaw)
+			VAR vTone = "#7d7d85"
+			VAR vArrow = ""
+			VAR vSvg =
+			    "<svg xmlns='http://www.w3.org/2000/svg' width='333' height='112' viewBox='0 0 333 112'>"
+			        & "<rect x='0' y='18' width='3' height='76' rx='1.5' fill='#3987e5'/>"
+			        & "<text x='16' y='28' font-family='Segoe UI' font-size='11' fill='#a6a6ad'>Paid ROAS on net cash</text>"
+			        & "<text x='16' y='64' font-family='Segoe UI Light' font-size='30' fill='#f2f2f4'>" & vShown & "</text>"
+			        & ""
+			        & "<text x='16' y='90' font-family='Segoe UI' font-size='10' fill='" & vTone & "'>" & vArrow & vCaption & "</text>"
+			        & "</svg>"
+			RETURN
+			    "data:image/svg+xml;utf8," & SUBSTITUTE(SUBSTITUTE(vSvg, "%", "%25"), "#", "%23")
+		lineageTag: 5296ebdf-12d9-570f-83a3-9f8cbc3e59c8
+		dataCategory: ImageUrl
+		displayFolder: Report UI
+
+	measure 'Filter Context - Paid media efficiency' =
+			VAR vText = IF(ISFILTERED('dim_date'[month_label]), CONCATENATEX(VALUES('dim_date'[month_label]), 'dim_date'[month_label], ", "), "all months") & " · " & IF(ISFILTERED('dim_campaign'[platform]), CONCATENATEX(VALUES('dim_campaign'[platform]), 'dim_campaign'[platform], ", "), "all platforms") & " · " & IF(ISFILTERED('dim_campaign'[campaign_id]), CONCATENATEX(VALUES('dim_campaign'[campaign_id]), 'dim_campaign'[campaign_id], ", "), "all campaigns")
+			RETURN IF(LEN(vText) > 72, LEFT(vText, 70) & "…", vText)
+		lineageTag: fd8d2e0a-aaf3-5a30-808d-b6fbd0030454
+		displayFolder: Report UI
+
+	measure 'Header SVG - Paid media efficiency' =
+			VAR vContext = "Page 3 of 7 · " & SUBSTITUTE(SUBSTITUTE([Filter Context - Paid media efficiency], "&", "&amp;"), "<", "&lt;")
+			VAR vSvg =
+			    "<svg xmlns='http://www.w3.org/2000/svg' width='720' height='56' viewBox='0 0 720 56'>"
+			        & "<text x='0' y='24' font-family='Segoe UI Semibold' font-size='18' fill='#f2f2f4'>Paid media efficiency</text>"
+			        & "<text x='0' y='46' font-family='Segoe UI' font-size='11' fill='#7d7d85'>" & vContext & "</text>"
+			        & "</svg>"
+			RETURN
+			    "data:image/svg+xml;utf8," & SUBSTITUTE(SUBSTITUTE(vSvg, "%", "%25"), "#", "%23")
+		lineageTag: 7fec2713-4933-503f-8ac0-00be50fdfffa
+		dataCategory: ImageUrl
+		displayFolder: Report UI
+
+	measure 'Filter Button Label - Paid media efficiency' =
+			VAR vOn = INT(ISFILTERED('dim_date'[month_label])) + INT(ISFILTERED('dim_campaign'[platform])) + INT(ISFILTERED('dim_campaign'[campaign_id]))
+			RETURN IF(vOn = 0, "Filters", "Filters · " & vOn)
+		lineageTag: efcce453-2e38-53ad-975b-a0f41fec1776
+		displayFolder: Report UI
+
+	measure 'KPI SVG Paid spend | Paid spend caption @314' =
+			VAR vValue = [Paid spend]
+			VAR vShown = IF(ISBLANK(vValue), "—", IF(ABS(vValue) >= 1000000, FORMAT(vValue / 1000000, "\$#,0.00") & "M", FORMAT(vValue, "\$#,0")))
+			VAR vCaptionRaw = SUBSTITUTE(SUBSTITUTE(COALESCE([Paid spend caption], ""), "&", "&amp;"), "<", "&lt;")
+			VAR vCaption = IF(LEN(vCaptionRaw) > 61, LEFT(vCaptionRaw, 59) & "…", vCaptionRaw)
+			VAR vTone = "#7d7d85"
+			VAR vArrow = ""
+			VAR vSvg =
+			    "<svg xmlns='http://www.w3.org/2000/svg' width='314' height='112' viewBox='0 0 314 112'>"
+			        & "<rect x='0' y='18' width='3' height='76' rx='1.5' fill='#3987e5'/>"
+			        & "<text x='16' y='28' font-family='Segoe UI' font-size='11' fill='#a6a6ad'>Paid spend</text>"
+			        & "<text x='16' y='64' font-family='Segoe UI Light' font-size='30' fill='#f2f2f4'>" & vShown & "</text>"
+			        & ""
+			        & "<text x='16' y='90' font-family='Segoe UI' font-size='10' fill='" & vTone & "'>" & vArrow & vCaption & "</text>"
+			        & "</svg>"
+			RETURN
+			    "data:image/svg+xml;utf8," & SUBSTITUTE(SUBSTITUTE(vSvg, "%", "%25"), "#", "%23")
+		lineageTag: cd5ec0a4-4a21-587b-bce7-b067b541ab02
+		dataCategory: ImageUrl
+		displayFolder: Report UI
+
+	measure 'KPI SVG Cost per lead | Cost per lead caption | down Cost per lead vs prior @310' =
+			VAR vValue = [Cost per lead]
+			VAR vShown = IF(ISBLANK(vValue), "—", IF(ABS(vValue) >= 1000000, FORMAT(vValue / 1000000, "\$#,0.00") & "M", FORMAT(vValue, "\$#,0.00")))
+			VAR vCaptionRaw = SUBSTITUTE(SUBSTITUTE(COALESCE([Cost per lead caption], ""), "&", "&amp;"), "<", "&lt;")
+			VAR vCaption = IF(LEN(vCaptionRaw) > 61, LEFT(vCaptionRaw, 59) & "…", vCaptionRaw)
+			VAR vTrend = [Cost per lead vs prior]
+			VAR vTone = IF(ISBLANK(vTrend) || ROUND(vTrend, 4) = 0, "#7d7d85", IF(vTrend < 0, "#3fb96b", "#ef6f61"))
+			VAR vArrow = IF(ISBLANK(vTrend) || ROUND(vTrend, 4) = 0, "", IF(vTrend > 0, "▲ ", "▼ "))
+			VAR vSvg =
+			    "<svg xmlns='http://www.w3.org/2000/svg' width='310' height='112' viewBox='0 0 310 112'>"
+			        & "<rect x='0' y='18' width='3' height='76' rx='1.5' fill='#3987e5'/>"
+			        & "<text x='16' y='28' font-family='Segoe UI' font-size='11' fill='#a6a6ad'>Cost per lead</text>"
+			        & "<text x='16' y='64' font-family='Segoe UI Light' font-size='30' fill='#f2f2f4'>" & vShown & "</text>"
+			        & ""
+			        & "<text x='16' y='90' font-family='Segoe UI' font-size='10' fill='" & vTone & "'>" & vArrow & vCaption & "</text>"
+			        & "</svg>"
+			RETURN
+			    "data:image/svg+xml;utf8," & SUBSTITUTE(SUBSTITUTE(vSvg, "%", "%25"), "#", "%23")
+		lineageTag: 50cdaac5-3966-5df7-98af-ce1104cbdf01
+		dataCategory: ImageUrl
+		displayFolder: Report UI
+
+	measure 'KPI SVG Cost per booked call | Cost per booked call caption | down Cost per booked call vs prior @314' =
+			VAR vValue = [Cost per booked call]
+			VAR vShown = IF(ISBLANK(vValue), "—", IF(ABS(vValue) >= 1000000, FORMAT(vValue / 1000000, "\$#,0.00") & "M", FORMAT(vValue, "\$#,0.00")))
+			VAR vCaptionRaw = SUBSTITUTE(SUBSTITUTE(COALESCE([Cost per booked call caption], ""), "&", "&amp;"), "<", "&lt;")
+			VAR vCaption = IF(LEN(vCaptionRaw) > 61, LEFT(vCaptionRaw, 59) & "…", vCaptionRaw)
+			VAR vTrend = [Cost per booked call vs prior]
+			VAR vTone = IF(ISBLANK(vTrend) || ROUND(vTrend, 4) = 0, "#7d7d85", IF(vTrend < 0, "#3fb96b", "#ef6f61"))
+			VAR vArrow = IF(ISBLANK(vTrend) || ROUND(vTrend, 4) = 0, "", IF(vTrend > 0, "▲ ", "▼ "))
+			VAR vSvg =
+			    "<svg xmlns='http://www.w3.org/2000/svg' width='314' height='112' viewBox='0 0 314 112'>"
+			        & "<rect x='0' y='18' width='3' height='76' rx='1.5' fill='#3987e5'/>"
+			        & "<text x='16' y='28' font-family='Segoe UI' font-size='11' fill='#a6a6ad'>Cost per booked call</text>"
+			        & "<text x='16' y='64' font-family='Segoe UI Light' font-size='30' fill='#f2f2f4'>" & vShown & "</text>"
+			        & ""
+			        & "<text x='16' y='90' font-family='Segoe UI' font-size='10' fill='" & vTone & "'>" & vArrow & vCaption & "</text>"
+			        & "</svg>"
+			RETURN
+			    "data:image/svg+xml;utf8," & SUBSTITUTE(SUBSTITUTE(vSvg, "%", "%25"), "#", "%23")
+		lineageTag: 7f24dab5-ea0b-5285-8355-b8349e02ac3b
+		dataCategory: ImageUrl
+		displayFolder: Report UI
+
+	measure 'KPI SVG CTR | CTR caption | up CTR vs prior | no rail @333' =
+			VAR vValue = [CTR]
+			VAR vShown = IF(ISBLANK(vValue), "—", FORMAT(vValue, "0.00%"))
+			VAR vCaptionRaw = SUBSTITUTE(SUBSTITUTE(COALESCE([CTR caption], ""), "&", "&amp;"), "<", "&lt;")
+			VAR vCaption = IF(LEN(vCaptionRaw) > 66, LEFT(vCaptionRaw, 64) & "…", vCaptionRaw)
+			VAR vTrend = [CTR vs prior]
+			VAR vTone = IF(ISBLANK(vTrend) || ROUND(vTrend, 4) = 0, "#7d7d85", IF(vTrend > 0, "#3fb96b", "#ef6f61"))
+			VAR vArrow = IF(ISBLANK(vTrend) || ROUND(vTrend, 4) = 0, "", IF(vTrend > 0, "▲ ", "▼ "))
+			VAR vSvg =
+			    "<svg xmlns='http://www.w3.org/2000/svg' width='333' height='112' viewBox='0 0 333 112'>"
+			        & "<rect x='0' y='18' width='3' height='76' rx='1.5' fill='#3987e5'/>"
+			        & "<text x='16' y='28' font-family='Segoe UI' font-size='11' fill='#a6a6ad'>CTR</text>"
+			        & "<text x='16' y='64' font-family='Segoe UI Light' font-size='30' fill='#f2f2f4'>" & vShown & "</text>"
+			        & ""
+			        & "<text x='16' y='90' font-family='Segoe UI' font-size='10' fill='" & vTone & "'>" & vArrow & vCaption & "</text>"
+			        & "</svg>"
+			RETURN
+			    "data:image/svg+xml;utf8," & SUBSTITUTE(SUBSTITUTE(vSvg, "%", "%25"), "#", "%23")
+		lineageTag: 2fe493ef-8777-5a64-b4e4-74b5639a536e
+		dataCategory: ImageUrl
+		displayFolder: Report UI
+
+	measure 'Filter Context - Funnel and lead quality' =
+			VAR vText = IF(ISFILTERED('dim_date'[month_label]), CONCATENATEX(VALUES('dim_date'[month_label]), 'dim_date'[month_label], ", "), "all months") & " · " & IF(ISFILTERED('dim_campaign'[channel_group]), CONCATENATEX(VALUES('dim_campaign'[channel_group]), 'dim_campaign'[channel_group], ", "), "all channels")
+			RETURN IF(LEN(vText) > 72, LEFT(vText, 70) & "…", vText)
+		lineageTag: ec2fcea1-19d5-59f2-8dfe-eaedf1f1f38a
+		displayFolder: Report UI
+
+	measure 'Header SVG - Funnel and lead quality' =
+			VAR vContext = "Page 4 of 7 · " & SUBSTITUTE(SUBSTITUTE([Filter Context - Funnel and lead quality], "&", "&amp;"), "<", "&lt;")
+			VAR vSvg =
+			    "<svg xmlns='http://www.w3.org/2000/svg' width='720' height='56' viewBox='0 0 720 56'>"
+			        & "<text x='0' y='24' font-family='Segoe UI Semibold' font-size='18' fill='#f2f2f4'>Funnel and lead quality</text>"
+			        & "<text x='0' y='46' font-family='Segoe UI' font-size='11' fill='#7d7d85'>" & vContext & "</text>"
+			        & "</svg>"
+			RETURN
+			    "data:image/svg+xml;utf8," & SUBSTITUTE(SUBSTITUTE(vSvg, "%", "%25"), "#", "%23")
+		lineageTag: 57fce9c3-22d2-5996-b1ca-ae828a66eac3
+		dataCategory: ImageUrl
+		displayFolder: Report UI
+
+	measure 'Filter Button Label - Funnel and lead quality' =
+			VAR vOn = INT(ISFILTERED('dim_date'[month_label])) + INT(ISFILTERED('dim_campaign'[channel_group]))
+			RETURN IF(vOn = 0, "Filters", "Filters · " & vOn)
+		lineageTag: a8af9b8d-15d0-536a-8af9-4a35e68ce13d
+		displayFolder: Report UI
+
+	measure 'KPI SVG Leads | Leads caption | up Leads vs prior @314' =
+			VAR vValue = [Leads]
+			VAR vShown = IF(ISBLANK(vValue), "—", FORMAT(vValue, "#,0"))
+			VAR vCaptionRaw = SUBSTITUTE(SUBSTITUTE(COALESCE([Leads caption], ""), "&", "&amp;"), "<", "&lt;")
+			VAR vCaption = IF(LEN(vCaptionRaw) > 61, LEFT(vCaptionRaw, 59) & "…", vCaptionRaw)
+			VAR vTrend = [Leads vs prior]
+			VAR vTone = IF(ISBLANK(vTrend) || ROUND(vTrend, 4) = 0, "#7d7d85", IF(vTrend > 0, "#3fb96b", "#ef6f61"))
+			VAR vArrow = IF(ISBLANK(vTrend) || ROUND(vTrend, 4) = 0, "", IF(vTrend > 0, "▲ ", "▼ "))
+			VAR vSvg =
+			    "<svg xmlns='http://www.w3.org/2000/svg' width='314' height='112' viewBox='0 0 314 112'>"
+			        & "<rect x='0' y='18' width='3' height='76' rx='1.5' fill='#3987e5'/>"
+			        & "<text x='16' y='28' font-family='Segoe UI' font-size='11' fill='#a6a6ad'>Leads</text>"
+			        & "<text x='16' y='64' font-family='Segoe UI Light' font-size='30' fill='#f2f2f4'>" & vShown & "</text>"
+			        & ""
+			        & "<text x='16' y='90' font-family='Segoe UI' font-size='10' fill='" & vTone & "'>" & vArrow & vCaption & "</text>"
+			        & "</svg>"
+			RETURN
+			    "data:image/svg+xml;utf8," & SUBSTITUTE(SUBSTITUTE(vSvg, "%", "%25"), "#", "%23")
+		lineageTag: daaa44a5-d585-5873-94c2-d67a85fbdb0f
+		dataCategory: ImageUrl
+		displayFolder: Report UI
+
+	measure 'KPI SVG MQL rate | MQL rate caption | up MQL rate vs prior @310' =
+			VAR vValue = [MQL rate]
+			VAR vShown = IF(ISBLANK(vValue), "—", FORMAT(vValue, "0.0%"))
+			VAR vCaptionRaw = SUBSTITUTE(SUBSTITUTE(COALESCE([MQL rate caption], ""), "&", "&amp;"), "<", "&lt;")
+			VAR vCaption = IF(LEN(vCaptionRaw) > 61, LEFT(vCaptionRaw, 59) & "…", vCaptionRaw)
+			VAR vTrend = [MQL rate vs prior]
+			VAR vTone = IF(ISBLANK(vTrend) || ROUND(vTrend, 4) = 0, "#7d7d85", IF(vTrend > 0, "#3fb96b", "#ef6f61"))
+			VAR vArrow = IF(ISBLANK(vTrend) || ROUND(vTrend, 4) = 0, "", IF(vTrend > 0, "▲ ", "▼ "))
+			VAR vRail = ROUND(278 * MAX(0, MIN(1, COALESCE(vValue, 0))), 0)
+			VAR vSvg =
+			    "<svg xmlns='http://www.w3.org/2000/svg' width='310' height='112' viewBox='0 0 310 112'>"
+			        & "<rect x='0' y='18' width='3' height='76' rx='1.5' fill='#3987e5'/>"
+			        & "<text x='16' y='28' font-family='Segoe UI' font-size='11' fill='#a6a6ad'>MQL rate</text>"
+			        & "<text x='16' y='64' font-family='Segoe UI Light' font-size='30' fill='#f2f2f4'>" & vShown & "</text>"
+			        & "<rect x='16' y='76' width='278' height='6' rx='3' fill='#26262a'/>" & "<rect x='16' y='76' width='" & vRail & "' height='6' rx='3' fill='#3987e5'/>"
+			        & "<text x='16' y='100' font-family='Segoe UI' font-size='10' fill='" & vTone & "'>" & vArrow & vCaption & "</text>"
+			        & "</svg>"
+			RETURN
+			    "data:image/svg+xml;utf8," & SUBSTITUTE(SUBSTITUTE(vSvg, "%", "%25"), "#", "%23")
+		lineageTag: 39d51f0e-1e15-50a1-8cc4-a4582c308ac9
+		dataCategory: ImageUrl
+		displayFolder: Report UI
+
+	measure 'KPI SVG Calls booked | Calls booked caption | up Calls booked vs prior @314' =
+			VAR vValue = [Calls booked]
+			VAR vShown = IF(ISBLANK(vValue), "—", FORMAT(vValue, "#,0"))
+			VAR vCaptionRaw = SUBSTITUTE(SUBSTITUTE(COALESCE([Calls booked caption], ""), "&", "&amp;"), "<", "&lt;")
+			VAR vCaption = IF(LEN(vCaptionRaw) > 61, LEFT(vCaptionRaw, 59) & "…", vCaptionRaw)
+			VAR vTrend = [Calls booked vs prior]
+			VAR vTone = IF(ISBLANK(vTrend) || ROUND(vTrend, 4) = 0, "#7d7d85", IF(vTrend > 0, "#3fb96b", "#ef6f61"))
+			VAR vArrow = IF(ISBLANK(vTrend) || ROUND(vTrend, 4) = 0, "", IF(vTrend > 0, "▲ ", "▼ "))
+			VAR vSvg =
+			    "<svg xmlns='http://www.w3.org/2000/svg' width='314' height='112' viewBox='0 0 314 112'>"
+			        & "<rect x='0' y='18' width='3' height='76' rx='1.5' fill='#3987e5'/>"
+			        & "<text x='16' y='28' font-family='Segoe UI' font-size='11' fill='#a6a6ad'>Calls booked</text>"
+			        & "<text x='16' y='64' font-family='Segoe UI Light' font-size='30' fill='#f2f2f4'>" & vShown & "</text>"
+			        & ""
+			        & "<text x='16' y='90' font-family='Segoe UI' font-size='10' fill='" & vTone & "'>" & vArrow & vCaption & "</text>"
+			        & "</svg>"
+			RETURN
+			    "data:image/svg+xml;utf8," & SUBSTITUTE(SUBSTITUTE(vSvg, "%", "%25"), "#", "%23")
+		lineageTag: 2b07e0b0-7ecc-5b9b-95bb-4e510f548914
+		dataCategory: ImageUrl
+		displayFolder: Report UI
+
+	measure 'KPI SVG Deals won | Deals won caption | up Deals won vs prior @333' =
+			VAR vValue = [Deals won]
+			VAR vShown = IF(ISBLANK(vValue), "—", FORMAT(vValue, "#,0"))
+			VAR vCaptionRaw = SUBSTITUTE(SUBSTITUTE(COALESCE([Deals won caption], ""), "&", "&amp;"), "<", "&lt;")
+			VAR vCaption = IF(LEN(vCaptionRaw) > 66, LEFT(vCaptionRaw, 64) & "…", vCaptionRaw)
+			VAR vTrend = [Deals won vs prior]
+			VAR vTone = IF(ISBLANK(vTrend) || ROUND(vTrend, 4) = 0, "#7d7d85", IF(vTrend > 0, "#3fb96b", "#ef6f61"))
+			VAR vArrow = IF(ISBLANK(vTrend) || ROUND(vTrend, 4) = 0, "", IF(vTrend > 0, "▲ ", "▼ "))
+			VAR vSvg =
+			    "<svg xmlns='http://www.w3.org/2000/svg' width='333' height='112' viewBox='0 0 333 112'>"
+			        & "<rect x='0' y='18' width='3' height='76' rx='1.5' fill='#3987e5'/>"
+			        & "<text x='16' y='28' font-family='Segoe UI' font-size='11' fill='#a6a6ad'>Deals won</text>"
+			        & "<text x='16' y='64' font-family='Segoe UI Light' font-size='30' fill='#f2f2f4'>" & vShown & "</text>"
+			        & ""
+			        & "<text x='16' y='90' font-family='Segoe UI' font-size='10' fill='" & vTone & "'>" & vArrow & vCaption & "</text>"
+			        & "</svg>"
+			RETURN
+			    "data:image/svg+xml;utf8," & SUBSTITUTE(SUBSTITUTE(vSvg, "%", "%25"), "#", "%23")
+		lineageTag: 8720a314-12fb-5ceb-a274-676537930470
+		dataCategory: ImageUrl
+		displayFolder: Report UI
+
+	measure 'Filter Context - Attribution and content' =
+			VAR vText = IF(ISFILTERED('dim_date'[month_label]), CONCATENATEX(VALUES('dim_date'[month_label]), 'dim_date'[month_label], ", "), "all months") & " · " & IF(ISFILTERED('dim_campaign'[channel_group]), CONCATENATEX(VALUES('dim_campaign'[channel_group]), 'dim_campaign'[channel_group], ", "), "all channels")
+			RETURN IF(LEN(vText) > 72, LEFT(vText, 70) & "…", vText)
+		lineageTag: 36e9df77-ed98-59c5-86ff-d7f5842d78dc
+		displayFolder: Report UI
+
+	measure 'Header SVG - Attribution and content' =
+			VAR vContext = "Page 5 of 7 · " & SUBSTITUTE(SUBSTITUTE([Filter Context - Attribution and content], "&", "&amp;"), "<", "&lt;")
+			VAR vSvg =
+			    "<svg xmlns='http://www.w3.org/2000/svg' width='720' height='56' viewBox='0 0 720 56'>"
+			        & "<text x='0' y='24' font-family='Segoe UI Semibold' font-size='18' fill='#f2f2f4'>Attribution and content</text>"
+			        & "<text x='0' y='46' font-family='Segoe UI' font-size='11' fill='#7d7d85'>" & vContext & "</text>"
+			        & "</svg>"
+			RETURN
+			    "data:image/svg+xml;utf8," & SUBSTITUTE(SUBSTITUTE(vSvg, "%", "%25"), "#", "%23")
+		lineageTag: 0ee73a6b-bbcc-56d8-8019-0e1faefca2af
+		dataCategory: ImageUrl
+		displayFolder: Report UI
+
+	measure 'Filter Button Label - Attribution and content' =
+			VAR vOn = INT(ISFILTERED('dim_date'[month_label])) + INT(ISFILTERED('dim_campaign'[channel_group]))
+			RETURN IF(vOn = 0, "Filters", "Filters · " & vOn)
+		lineageTag: d644a509-31cc-5582-aac6-c8615f62d994
+		displayFolder: Report UI
+
+	measure 'KPI SVG Attributed net cash | Attributed net cash caption | up Attributed net cash vs prior | Net cash by payment date @314' =
+			VAR vValue = [Attributed net cash]
+			VAR vShown = IF(ISBLANK(vValue), "—", IF(ABS(vValue) >= 1000000, FORMAT(vValue / 1000000, "\$#,0.00") & "M", FORMAT(vValue, "\$#,0")))
+			VAR vCaptionRaw = SUBSTITUTE(SUBSTITUTE(COALESCE([Attributed net cash caption], ""), "&", "&amp;"), "<", "&lt;")
+			VAR vCaption = IF(LEN(vCaptionRaw) > 61, LEFT(vCaptionRaw, 59) & "…", vCaptionRaw)
+			VAR vTrend = [Attributed net cash vs prior]
+			VAR vTone = IF(ISBLANK(vTrend) || ROUND(vTrend, 4) = 0, "#7d7d85", IF(vTrend > 0, "#3fb96b", "#ef6f61"))
+			VAR vArrow = IF(ISBLANK(vTrend) || ROUND(vTrend, 4) = 0, "", IF(vTrend > 0, "▲ ", "▼ "))
+			VAR vSvg =
+			    "<svg xmlns='http://www.w3.org/2000/svg' width='314' height='112' viewBox='0 0 314 112'>"
+			        & "<rect x='0' y='18' width='3' height='76' rx='1.5' fill='#3987e5'/>"
+			        & "<text x='16' y='28' font-family='Segoe UI' font-size='11' fill='#a6a6ad'>Net cash by payment date</text>"
+			        & "<text x='16' y='64' font-family='Segoe UI Light' font-size='30' fill='#f2f2f4'>" & vShown & "</text>"
+			        & ""
+			        & "<text x='16' y='90' font-family='Segoe UI' font-size='10' fill='" & vTone & "'>" & vArrow & vCaption & "</text>"
+			        & "</svg>"
+			RETURN
+			    "data:image/svg+xml;utf8," & SUBSTITUTE(SUBSTITUTE(vSvg, "%", "%25"), "#", "%23")
+		lineageTag: 48c2d2e2-1035-5f3c-a41c-376842a1a0f0
+		dataCategory: ImageUrl
+		displayFolder: Report UI
+
+	measure 'KPI SVG Cash ROAS | Cash ROAS caption | up Cash ROAS vs prior @310' =
+			VAR vValue = [Cash ROAS]
+			VAR vShown = IF(ISBLANK(vValue), "—", FORMAT(vValue, "0.00""x"""))
+			VAR vCaptionRaw = SUBSTITUTE(SUBSTITUTE(COALESCE([Cash ROAS caption], ""), "&", "&amp;"), "<", "&lt;")
+			VAR vCaption = IF(LEN(vCaptionRaw) > 61, LEFT(vCaptionRaw, 59) & "…", vCaptionRaw)
+			VAR vTrend = [Cash ROAS vs prior]
+			VAR vTone = IF(ISBLANK(vTrend) || ROUND(vTrend, 4) = 0, "#7d7d85", IF(vTrend > 0, "#3fb96b", "#ef6f61"))
+			VAR vArrow = IF(ISBLANK(vTrend) || ROUND(vTrend, 4) = 0, "", IF(vTrend > 0, "▲ ", "▼ "))
+			VAR vSvg =
+			    "<svg xmlns='http://www.w3.org/2000/svg' width='310' height='112' viewBox='0 0 310 112'>"
+			        & "<rect x='0' y='18' width='3' height='76' rx='1.5' fill='#3987e5'/>"
+			        & "<text x='16' y='28' font-family='Segoe UI' font-size='11' fill='#a6a6ad'>Cash ROAS</text>"
+			        & "<text x='16' y='64' font-family='Segoe UI Light' font-size='30' fill='#f2f2f4'>" & vShown & "</text>"
+			        & ""
+			        & "<text x='16' y='90' font-family='Segoe UI' font-size='10' fill='" & vTone & "'>" & vArrow & vCaption & "</text>"
+			        & "</svg>"
+			RETURN
+			    "data:image/svg+xml;utf8," & SUBSTITUTE(SUBSTITUTE(vSvg, "%", "%25"), "#", "%23")
+		lineageTag: 5682f117-24b7-55ca-bf39-fdb5d58effb5
+		dataCategory: ImageUrl
+		displayFolder: Report UI
+
+	measure 'KPI SVG Unattributed share | Unattributed caption | no rail @314' =
+			VAR vValue = [Unattributed share]
+			VAR vShown = IF(ISBLANK(vValue), "—", FORMAT(vValue, "0.0%"))
+			VAR vCaptionRaw = SUBSTITUTE(SUBSTITUTE(COALESCE([Unattributed caption], ""), "&", "&amp;"), "<", "&lt;")
+			VAR vCaption = IF(LEN(vCaptionRaw) > 61, LEFT(vCaptionRaw, 59) & "…", vCaptionRaw)
+			VAR vTone = "#7d7d85"
+			VAR vArrow = ""
+			VAR vSvg =
+			    "<svg xmlns='http://www.w3.org/2000/svg' width='314' height='112' viewBox='0 0 314 112'>"
+			        & "<rect x='0' y='18' width='3' height='76' rx='1.5' fill='#3987e5'/>"
+			        & "<text x='16' y='28' font-family='Segoe UI' font-size='11' fill='#a6a6ad'>Unattributed share</text>"
+			        & "<text x='16' y='64' font-family='Segoe UI Light' font-size='30' fill='#f2f2f4'>" & vShown & "</text>"
+			        & ""
+			        & "<text x='16' y='90' font-family='Segoe UI' font-size='10' fill='" & vTone & "'>" & vArrow & vCaption & "</text>"
+			        & "</svg>"
+			RETURN
+			    "data:image/svg+xml;utf8," & SUBSTITUTE(SUBSTITUTE(vSvg, "%", "%25"), "#", "%23")
+		lineageTag: 7bb86618-9ced-5de6-97e2-41941cd957de
+		dataCategory: ImageUrl
+		displayFolder: Report UI
+
+	measure 'KPI SVG Content-influenced cash | Content caption @333' =
+			VAR vValue = [Content-influenced cash]
+			VAR vShown = IF(ISBLANK(vValue), "—", IF(ABS(vValue) >= 1000000, FORMAT(vValue / 1000000, "\$#,0.00") & "M", FORMAT(vValue, "\$#,0")))
+			VAR vCaptionRaw = SUBSTITUTE(SUBSTITUTE(COALESCE([Content caption], ""), "&", "&amp;"), "<", "&lt;")
+			VAR vCaption = IF(LEN(vCaptionRaw) > 66, LEFT(vCaptionRaw, 64) & "…", vCaptionRaw)
+			VAR vTone = "#7d7d85"
+			VAR vArrow = ""
+			VAR vSvg =
+			    "<svg xmlns='http://www.w3.org/2000/svg' width='333' height='112' viewBox='0 0 333 112'>"
+			        & "<rect x='0' y='18' width='3' height='76' rx='1.5' fill='#3987e5'/>"
+			        & "<text x='16' y='28' font-family='Segoe UI' font-size='11' fill='#a6a6ad'>Content-influenced cash</text>"
+			        & "<text x='16' y='64' font-family='Segoe UI Light' font-size='30' fill='#f2f2f4'>" & vShown & "</text>"
+			        & ""
+			        & "<text x='16' y='90' font-family='Segoe UI' font-size='10' fill='" & vTone & "'>" & vArrow & vCaption & "</text>"
+			        & "</svg>"
+			RETURN
+			    "data:image/svg+xml;utf8," & SUBSTITUTE(SUBSTITUTE(vSvg, "%", "%25"), "#", "%23")
+		lineageTag: 397948c3-41a4-5e59-9d74-46959131fb13
+		dataCategory: ImageUrl
+		displayFolder: Report UI
+
+	measure 'Filter Context - Email and deliverability' =
+			VAR vText = IF(ISFILTERED('dim_date'[month_label]), CONCATENATEX(VALUES('dim_date'[month_label]), 'dim_date'[month_label], ", "), "all months") & " · " & IF(ISFILTERED('mart_email_performance'[email_type]), CONCATENATEX(VALUES('mart_email_performance'[email_type]), 'mart_email_performance'[email_type], ", "), "all email types") & " · " & IF(ISFILTERED('mart_email_performance'[sending_domain]), CONCATENATEX(VALUES('mart_email_performance'[sending_domain]), 'mart_email_performance'[sending_domain], ", "), "all sending domains")
+			RETURN IF(LEN(vText) > 72, LEFT(vText, 70) & "…", vText)
+		lineageTag: fcfeea41-9a68-5e13-9503-b4ceba72c6be
+		displayFolder: Report UI
+
+	measure 'Header SVG - Email and deliverability' =
+			VAR vContext = "Page 6 of 7 · " & SUBSTITUTE(SUBSTITUTE([Filter Context - Email and deliverability], "&", "&amp;"), "<", "&lt;")
+			VAR vSvg =
+			    "<svg xmlns='http://www.w3.org/2000/svg' width='720' height='56' viewBox='0 0 720 56'>"
+			        & "<text x='0' y='24' font-family='Segoe UI Semibold' font-size='18' fill='#f2f2f4'>Email and deliverability</text>"
+			        & "<text x='0' y='46' font-family='Segoe UI' font-size='11' fill='#7d7d85'>" & vContext & "</text>"
+			        & "</svg>"
+			RETURN
+			    "data:image/svg+xml;utf8," & SUBSTITUTE(SUBSTITUTE(vSvg, "%", "%25"), "#", "%23")
+		lineageTag: 1fbab202-462c-55f6-aa85-c05ebbf6f759
+		dataCategory: ImageUrl
+		displayFolder: Report UI
+
+	measure 'Filter Button Label - Email and deliverability' =
+			VAR vOn = INT(ISFILTERED('dim_date'[month_label])) + INT(ISFILTERED('mart_email_performance'[email_type])) + INT(ISFILTERED('mart_email_performance'[sending_domain]))
+			RETURN IF(vOn = 0, "Filters", "Filters · " & vOn)
+		lineageTag: 0d19c69f-f072-5f71-8df8-b1c4c80a02dd
+		displayFolder: Report UI
+
+	measure 'KPI SVG Emails delivered | Emails delivered caption @314' =
+			VAR vValue = [Emails delivered]
+			VAR vShown = IF(ISBLANK(vValue), "—", FORMAT(vValue, "#,0"))
+			VAR vCaptionRaw = SUBSTITUTE(SUBSTITUTE(COALESCE([Emails delivered caption], ""), "&", "&amp;"), "<", "&lt;")
+			VAR vCaption = IF(LEN(vCaptionRaw) > 61, LEFT(vCaptionRaw, 59) & "…", vCaptionRaw)
+			VAR vTone = "#7d7d85"
+			VAR vArrow = ""
+			VAR vSvg =
+			    "<svg xmlns='http://www.w3.org/2000/svg' width='314' height='112' viewBox='0 0 314 112'>"
+			        & "<rect x='0' y='18' width='3' height='76' rx='1.5' fill='#3987e5'/>"
+			        & "<text x='16' y='28' font-family='Segoe UI' font-size='11' fill='#a6a6ad'>Emails delivered</text>"
+			        & "<text x='16' y='64' font-family='Segoe UI Light' font-size='30' fill='#f2f2f4'>" & vShown & "</text>"
+			        & ""
+			        & "<text x='16' y='90' font-family='Segoe UI' font-size='10' fill='" & vTone & "'>" & vArrow & vCaption & "</text>"
+			        & "</svg>"
+			RETURN
+			    "data:image/svg+xml;utf8," & SUBSTITUTE(SUBSTITUTE(vSvg, "%", "%25"), "#", "%23")
+		lineageTag: 05981923-09d0-5d13-b17d-a7b46a87b266
+		dataCategory: ImageUrl
+		displayFolder: Report UI
+
+	measure 'KPI SVG Human open rate | Human open rate caption | up Human open rate vs prior @310' =
+			VAR vValue = [Human open rate]
+			VAR vShown = IF(ISBLANK(vValue), "—", FORMAT(vValue, "0.0%"))
+			VAR vCaptionRaw = SUBSTITUTE(SUBSTITUTE(COALESCE([Human open rate caption], ""), "&", "&amp;"), "<", "&lt;")
+			VAR vCaption = IF(LEN(vCaptionRaw) > 61, LEFT(vCaptionRaw, 59) & "…", vCaptionRaw)
+			VAR vTrend = [Human open rate vs prior]
+			VAR vTone = IF(ISBLANK(vTrend) || ROUND(vTrend, 4) = 0, "#7d7d85", IF(vTrend > 0, "#3fb96b", "#ef6f61"))
+			VAR vArrow = IF(ISBLANK(vTrend) || ROUND(vTrend, 4) = 0, "", IF(vTrend > 0, "▲ ", "▼ "))
+			VAR vRail = ROUND(278 * MAX(0, MIN(1, COALESCE(vValue, 0))), 0)
+			VAR vSvg =
+			    "<svg xmlns='http://www.w3.org/2000/svg' width='310' height='112' viewBox='0 0 310 112'>"
+			        & "<rect x='0' y='18' width='3' height='76' rx='1.5' fill='#3987e5'/>"
+			        & "<text x='16' y='28' font-family='Segoe UI' font-size='11' fill='#a6a6ad'>Human open rate</text>"
+			        & "<text x='16' y='64' font-family='Segoe UI Light' font-size='30' fill='#f2f2f4'>" & vShown & "</text>"
+			        & "<rect x='16' y='76' width='278' height='6' rx='3' fill='#26262a'/>" & "<rect x='16' y='76' width='" & vRail & "' height='6' rx='3' fill='#3987e5'/>"
+			        & "<text x='16' y='100' font-family='Segoe UI' font-size='10' fill='" & vTone & "'>" & vArrow & vCaption & "</text>"
+			        & "</svg>"
+			RETURN
+			    "data:image/svg+xml;utf8," & SUBSTITUTE(SUBSTITUTE(vSvg, "%", "%25"), "#", "%23")
+		lineageTag: 507cd155-a523-503f-a5f4-3e1f77757ca5
+		dataCategory: ImageUrl
+		displayFolder: Report UI
+
+	measure 'KPI SVG Bounce rate | Bounce rate caption | down Bounce rate vs prior | no rail @314' =
+			VAR vValue = [Bounce rate]
+			VAR vShown = IF(ISBLANK(vValue), "—", FORMAT(vValue, "0.00%"))
+			VAR vCaptionRaw = SUBSTITUTE(SUBSTITUTE(COALESCE([Bounce rate caption], ""), "&", "&amp;"), "<", "&lt;")
+			VAR vCaption = IF(LEN(vCaptionRaw) > 61, LEFT(vCaptionRaw, 59) & "…", vCaptionRaw)
+			VAR vTrend = [Bounce rate vs prior]
+			VAR vTone = IF(ISBLANK(vTrend) || ROUND(vTrend, 4) = 0, "#7d7d85", IF(vTrend < 0, "#3fb96b", "#ef6f61"))
+			VAR vArrow = IF(ISBLANK(vTrend) || ROUND(vTrend, 4) = 0, "", IF(vTrend > 0, "▲ ", "▼ "))
+			VAR vSvg =
+			    "<svg xmlns='http://www.w3.org/2000/svg' width='314' height='112' viewBox='0 0 314 112'>"
+			        & "<rect x='0' y='18' width='3' height='76' rx='1.5' fill='#3987e5'/>"
+			        & "<text x='16' y='28' font-family='Segoe UI' font-size='11' fill='#a6a6ad'>Bounce rate</text>"
+			        & "<text x='16' y='64' font-family='Segoe UI Light' font-size='30' fill='#f2f2f4'>" & vShown & "</text>"
+			        & ""
+			        & "<text x='16' y='90' font-family='Segoe UI' font-size='10' fill='" & vTone & "'>" & vArrow & vCaption & "</text>"
+			        & "</svg>"
+			RETURN
+			    "data:image/svg+xml;utf8," & SUBSTITUTE(SUBSTITUTE(vSvg, "%", "%25"), "#", "%23")
+		lineageTag: c235ab8e-103e-5435-8859-f51aa47b1248
+		dataCategory: ImageUrl
+		displayFolder: Report UI
+
+	measure 'KPI SVG Complaint rate | Complaint caption | down Complaint rate vs prior | no rail @333' =
+			VAR vValue = [Complaint rate]
+			VAR vShown = IF(ISBLANK(vValue), "—", FORMAT(vValue, "0.000%"))
+			VAR vCaptionRaw = SUBSTITUTE(SUBSTITUTE(COALESCE([Complaint caption], ""), "&", "&amp;"), "<", "&lt;")
+			VAR vCaption = IF(LEN(vCaptionRaw) > 66, LEFT(vCaptionRaw, 64) & "…", vCaptionRaw)
+			VAR vTrend = [Complaint rate vs prior]
+			VAR vTone = IF(ISBLANK(vTrend) || ROUND(vTrend, 4) = 0, "#7d7d85", IF(vTrend < 0, "#3fb96b", "#ef6f61"))
+			VAR vArrow = IF(ISBLANK(vTrend) || ROUND(vTrend, 4) = 0, "", IF(vTrend > 0, "▲ ", "▼ "))
+			VAR vSvg =
+			    "<svg xmlns='http://www.w3.org/2000/svg' width='333' height='112' viewBox='0 0 333 112'>"
+			        & "<rect x='0' y='18' width='3' height='76' rx='1.5' fill='#3987e5'/>"
+			        & "<text x='16' y='28' font-family='Segoe UI' font-size='11' fill='#a6a6ad'>Complaint rate</text>"
+			        & "<text x='16' y='64' font-family='Segoe UI Light' font-size='30' fill='#f2f2f4'>" & vShown & "</text>"
+			        & ""
+			        & "<text x='16' y='90' font-family='Segoe UI' font-size='10' fill='" & vTone & "'>" & vArrow & vCaption & "</text>"
+			        & "</svg>"
+			RETURN
+			    "data:image/svg+xml;utf8," & SUBSTITUTE(SUBSTITUTE(vSvg, "%", "%25"), "#", "%23")
+		lineageTag: 6c74a6c6-a9b5-5954-8135-3a8e3689ec8e
+		dataCategory: ImageUrl
+		displayFolder: Report UI
+
+	measure 'Filter Context - Tracking, data quality and operations' =
+			VAR vText = IF(ISFILTERED('mart_link_hygiene'[channel]), CONCATENATEX(VALUES('mart_link_hygiene'[channel]), 'mart_link_hygiene'[channel], ", "), "all link channels")
+			RETURN IF(LEN(vText) > 72, LEFT(vText, 70) & "…", vText)
+		lineageTag: f7d9d2d4-62f5-5f43-9b93-07cbd8b43396
+		displayFolder: Report UI
+
+	measure 'Header SVG - Tracking, data quality and operations' =
+			VAR vContext = "Page 7 of 7 · " & SUBSTITUTE(SUBSTITUTE([Filter Context - Tracking, data quality and operations], "&", "&amp;"), "<", "&lt;")
+			VAR vSvg =
+			    "<svg xmlns='http://www.w3.org/2000/svg' width='720' height='56' viewBox='0 0 720 56'>"
+			        & "<text x='0' y='24' font-family='Segoe UI Semibold' font-size='18' fill='#f2f2f4'>Tracking, data quality and operations</text>"
+			        & "<text x='0' y='46' font-family='Segoe UI' font-size='11' fill='#7d7d85'>" & vContext & "</text>"
+			        & "</svg>"
+			RETURN
+			    "data:image/svg+xml;utf8," & SUBSTITUTE(SUBSTITUTE(vSvg, "%", "%25"), "#", "%23")
+		lineageTag: 901c6ec3-2343-5608-8b85-3b46ffe73b70
+		dataCategory: ImageUrl
+		displayFolder: Report UI
+
+	measure 'Filter Button Label - Tracking, data quality and operations' =
+			VAR vOn = INT(ISFILTERED('mart_link_hygiene'[channel]))
+			RETURN IF(vOn = 0, "Filters", "Filters · " & vOn)
+		lineageTag: c8887aff-fd5e-54fd-98a9-7edca1b743f7
+		displayFolder: Report UI
+
+	measure 'KPI SVG UTM completeness | UTM caption @314' =
+			VAR vValue = [UTM completeness]
+			VAR vShown = IF(ISBLANK(vValue), "—", FORMAT(vValue, "0.0%"))
+			VAR vCaptionRaw = SUBSTITUTE(SUBSTITUTE(COALESCE([UTM caption], ""), "&", "&amp;"), "<", "&lt;")
+			VAR vCaption = IF(LEN(vCaptionRaw) > 61, LEFT(vCaptionRaw, 59) & "…", vCaptionRaw)
+			VAR vTone = "#7d7d85"
+			VAR vArrow = ""
+			VAR vRail = ROUND(282 * MAX(0, MIN(1, COALESCE(vValue, 0))), 0)
+			VAR vSvg =
+			    "<svg xmlns='http://www.w3.org/2000/svg' width='314' height='112' viewBox='0 0 314 112'>"
+			        & "<rect x='0' y='18' width='3' height='76' rx='1.5' fill='#3987e5'/>"
+			        & "<text x='16' y='28' font-family='Segoe UI' font-size='11' fill='#a6a6ad'>UTM completeness</text>"
+			        & "<text x='16' y='64' font-family='Segoe UI Light' font-size='30' fill='#f2f2f4'>" & vShown & "</text>"
+			        & "<rect x='16' y='76' width='282' height='6' rx='3' fill='#26262a'/>" & "<rect x='16' y='76' width='" & vRail & "' height='6' rx='3' fill='#3987e5'/>"
+			        & "<text x='16' y='100' font-family='Segoe UI' font-size='10' fill='" & vTone & "'>" & vArrow & vCaption & "</text>"
+			        & "</svg>"
+			RETURN
+			    "data:image/svg+xml;utf8," & SUBSTITUTE(SUBSTITUTE(vSvg, "%", "%25"), "#", "%23")
+		lineageTag: 395ed756-3916-5e1d-bfd8-45a551190cfb
+		dataCategory: ImageUrl
+		displayFolder: Report UI
+
+	measure 'KPI SVG Links with defects | Links caption | Short links with UTM defects @310' =
+			VAR vValue = [Links with defects]
+			VAR vShown = IF(ISBLANK(vValue), "—", FORMAT(vValue, "#,0"))
+			VAR vCaptionRaw = SUBSTITUTE(SUBSTITUTE(COALESCE([Links caption], ""), "&", "&amp;"), "<", "&lt;")
+			VAR vCaption = IF(LEN(vCaptionRaw) > 61, LEFT(vCaptionRaw, 59) & "…", vCaptionRaw)
+			VAR vTone = "#7d7d85"
+			VAR vArrow = ""
+			VAR vSvg =
+			    "<svg xmlns='http://www.w3.org/2000/svg' width='310' height='112' viewBox='0 0 310 112'>"
+			        & "<rect x='0' y='18' width='3' height='76' rx='1.5' fill='#3987e5'/>"
+			        & "<text x='16' y='28' font-family='Segoe UI' font-size='11' fill='#a6a6ad'>Short links with UTM defects</text>"
+			        & "<text x='16' y='64' font-family='Segoe UI Light' font-size='30' fill='#f2f2f4'>" & vShown & "</text>"
+			        & ""
+			        & "<text x='16' y='90' font-family='Segoe UI' font-size='10' fill='" & vTone & "'>" & vArrow & vCaption & "</text>"
+			        & "</svg>"
+			RETURN
+			    "data:image/svg+xml;utf8," & SUBSTITUTE(SUBSTITUTE(vSvg, "%", "%25"), "#", "%23")
+		lineageTag: 1388b5a1-b5af-5fc9-9d35-cb610089da62
+		dataCategory: ImageUrl
+		displayFolder: Report UI
+
+	measure 'KPI SVG Checks below target | Quality caption | Data-quality checks failing @314' =
+			VAR vValue = [Checks below target]
+			VAR vShown = IF(ISBLANK(vValue), "—", FORMAT(vValue, "#,0"))
+			VAR vCaptionRaw = SUBSTITUTE(SUBSTITUTE(COALESCE([Quality caption], ""), "&", "&amp;"), "<", "&lt;")
+			VAR vCaption = IF(LEN(vCaptionRaw) > 61, LEFT(vCaptionRaw, 59) & "…", vCaptionRaw)
+			VAR vTone = "#7d7d85"
+			VAR vArrow = ""
+			VAR vSvg =
+			    "<svg xmlns='http://www.w3.org/2000/svg' width='314' height='112' viewBox='0 0 314 112'>"
+			        & "<rect x='0' y='18' width='3' height='76' rx='1.5' fill='#3987e5'/>"
+			        & "<text x='16' y='28' font-family='Segoe UI' font-size='11' fill='#a6a6ad'>Data-quality checks failing</text>"
+			        & "<text x='16' y='64' font-family='Segoe UI Light' font-size='30' fill='#f2f2f4'>" & vShown & "</text>"
+			        & ""
+			        & "<text x='16' y='90' font-family='Segoe UI' font-size='10' fill='" & vTone & "'>" & vArrow & vCaption & "</text>"
+			        & "</svg>"
+			RETURN
+			    "data:image/svg+xml;utf8," & SUBSTITUTE(SUBSTITUTE(vSvg, "%", "%25"), "#", "%23")
+		lineageTag: 793d0727-3d18-596d-9b9f-09805f91898c
+		dataCategory: ImageUrl
+		displayFolder: Report UI
+
+	measure 'KPI SVG Renewals at risk | Renewals caption @333' =
+			VAR vValue = [Renewals at risk]
+			VAR vShown = IF(ISBLANK(vValue), "—", FORMAT(vValue, "#,0"))
+			VAR vCaptionRaw = SUBSTITUTE(SUBSTITUTE(COALESCE([Renewals caption], ""), "&", "&amp;"), "<", "&lt;")
+			VAR vCaption = IF(LEN(vCaptionRaw) > 66, LEFT(vCaptionRaw, 64) & "…", vCaptionRaw)
+			VAR vTone = "#7d7d85"
+			VAR vArrow = ""
+			VAR vSvg =
+			    "<svg xmlns='http://www.w3.org/2000/svg' width='333' height='112' viewBox='0 0 333 112'>"
+			        & "<rect x='0' y='18' width='3' height='76' rx='1.5' fill='#3987e5'/>"
+			        & "<text x='16' y='28' font-family='Segoe UI' font-size='11' fill='#a6a6ad'>Renewals at risk</text>"
+			        & "<text x='16' y='64' font-family='Segoe UI Light' font-size='30' fill='#f2f2f4'>" & vShown & "</text>"
+			        & ""
+			        & "<text x='16' y='90' font-family='Segoe UI' font-size='10' fill='" & vTone & "'>" & vArrow & vCaption & "</text>"
+			        & "</svg>"
+			RETURN
+			    "data:image/svg+xml;utf8," & SUBSTITUTE(SUBSTITUTE(vSvg, "%", "%25"), "#", "%23")
+		lineageTag: de69d4f9-5751-542a-beba-8cacb8e013ef
+		dataCategory: ImageUrl
+		displayFolder: Report UI
+
+	column _placeholder
+		dataType: int64
+		isHidden
+		formatString: 0
+		lineageTag: 865fa469-fa8e-55ca-9b96-396829edd734
+		summarizeBy: none
+		sourceColumn: _placeholder
+
+	partition _Measures = m
+		mode: import
+		source =
+				let
+				    Source = #table(type table [_placeholder = Int64.Type], {{0}})
+				in
+				    Source

@@ -1,0 +1,148 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.0.0/schema.json",
+  "name": "v0507",
+  "position": {
+    "x": 20,
+    "y": 470,
+    "z": 1417,
+    "height": 234,
+    "width": 760,
+    "tabOrder": 1417
+  },
+  "visual": {
+    "visualType": "tableEx",
+    "query": {
+      "queryState": {
+        "Values": {
+          "projections": [
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "mart_content_performance"
+                    }
+                  },
+                  "Property": "title"
+                }
+              },
+              "queryRef": "mart_content_performance.title",
+              "nativeQueryRef": "title",
+              "displayName": "Title"
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "_Measures"
+                    }
+                  },
+                  "Property": "Content views"
+                }
+              },
+              "queryRef": "_Measures.Content views",
+              "nativeQueryRef": "Content views"
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "_Measures"
+                    }
+                  },
+                  "Property": "Content customers"
+                }
+              },
+              "queryRef": "_Measures.Content customers",
+              "nativeQueryRef": "Content customers"
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "_Measures"
+                    }
+                  },
+                  "Property": "Content-influenced cash"
+                }
+              },
+              "queryRef": "_Measures.Content-influenced cash",
+              "nativeQueryRef": "Content-influenced cash"
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "_Measures"
+                    }
+                  },
+                  "Property": "Cash per 1K views"
+                }
+              },
+              "queryRef": "_Measures.Cash per 1K views",
+              "nativeQueryRef": "Cash per 1K views"
+            }
+          ]
+        }
+      },
+      "sortDefinition": {
+        "sort": [
+          {
+            "field": {
+              "Measure": {
+                "Expression": {
+                  "SourceRef": {
+                    "Entity": "_Measures"
+                  }
+                },
+                "Property": "Content-influenced cash"
+              }
+            },
+            "direction": "Descending"
+          }
+        ],
+        "isDefaultSort": false
+      }
+    },
+    "drillFilterOtherVisuals": true,
+    "visualContainerObjects": {
+      "title": [
+        {
+          "properties": {
+            "text": {
+              "expr": {
+                "Literal": {
+                  "Value": "'Content to cash: views are not buyers'"
+                }
+              }
+            },
+            "show": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
+                }
+              }
+            }
+          }
+        }
+      ],
+      "general": [
+        {
+          "properties": {
+            "altText": {
+              "expr": {
+                "Literal": {
+                  "Value": "'Table titled Content to cash. Lists title, Content views, Content customers, Content-influenced cash and Cash per 1K views.'"
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

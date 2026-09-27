@@ -1,0 +1,130 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.0.0/schema.json",
+  "name": "v0408",
+  "position": {
+    "x": 654,
+    "y": 470,
+    "z": 1318,
+    "height": 234,
+    "width": 606,
+    "tabOrder": 1318
+  },
+  "visual": {
+    "visualType": "tableEx",
+    "query": {
+      "queryState": {
+        "Values": {
+          "projections": [
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "mart_experiment_variants"
+                    }
+                  },
+                  "Property": "label"
+                }
+              },
+              "queryRef": "mart_experiment_variants.label",
+              "nativeQueryRef": "label",
+              "displayName": "Variant"
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "_Measures"
+                    }
+                  },
+                  "Property": "Test visitors"
+                }
+              },
+              "queryRef": "_Measures.Test visitors",
+              "nativeQueryRef": "Test visitors"
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "_Measures"
+                    }
+                  },
+                  "Property": "Test lead rate"
+                }
+              },
+              "queryRef": "_Measures.Test lead rate",
+              "nativeQueryRef": "Test lead rate"
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "_Measures"
+                    }
+                  },
+                  "Property": "Test customers"
+                }
+              },
+              "queryRef": "_Measures.Test customers",
+              "nativeQueryRef": "Test customers"
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "_Measures"
+                    }
+                  },
+                  "Property": "Test cash per visitor"
+                }
+              },
+              "queryRef": "_Measures.Test cash per visitor",
+              "nativeQueryRef": "Test cash per visitor"
+            }
+          ]
+        }
+      }
+    },
+    "drillFilterOtherVisuals": true,
+    "visualContainerObjects": {
+      "title": [
+        {
+          "properties": {
+            "text": {
+              "expr": {
+                "Literal": {
+                  "Value": "'CTA test: more leads, not more cash (keep the control)'"
+                }
+              }
+            },
+            "show": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
+                }
+              }
+            }
+          }
+        }
+      ],
+      "general": [
+        {
+          "properties": {
+            "altText": {
+              "expr": {
+                "Literal": {
+                  "Value": "'Table titled CTA test. Lists label, Test visitors, Test lead rate, Test customers and Test cash per visitor.'"
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

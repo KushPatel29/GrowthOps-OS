@@ -1,41 +1,60 @@
 table mart_revenue_bridge
-	lineageTag: 08623742-c390-5668-b687-cf5d2944153c
+	lineageTag: 3d459148-4e8f-50c2-9f36-e5c3c9bd0c83
 
 	column ordinal
 		dataType: int64
-		lineageTag: 7a8b06d5-bef2-5338-a850-7503f9634314
+		formatString: 0
+		lineageTag: e3423501-0b05-5bbb-9a3e-b587f5d96e7d
 		summarizeBy: none
 		sourceColumn: ordinal
 
 	column step
 		dataType: string
-		lineageTag: 7b2ef253-48cc-527f-9661-17f7be17a5e5
+		lineageTag: 8f95240b-81f1-5d30-9a51-20c46c54d381
 		summarizeBy: none
 		sourceColumn: step
+		sortByColumn: ordinal
 
 	column kind
 		dataType: string
-		lineageTag: 070c60bf-3ac3-56dd-ae6d-f0bd0efedabd
+		lineageTag: c3659922-fd6c-5d1e-9a10-7ffce50aef12
 		summarizeBy: none
 		sourceColumn: kind
 
 	column cents
 		dataType: int64
-		lineageTag: 07aaa463-6c0a-5ddd-aa9d-ac087184dbe6
-		summarizeBy: none
+		formatString: #,0
+		lineageTag: ac52b580-a5b8-501a-b74e-b01d3caf525e
+		summarizeBy: sum
 		sourceColumn: cents
 
-	/// Value of each booked-to-net-cash reconciliation step, read at the individual step grain.
-	measure 'Revenue bridge step USD' = DIVIDE(SUM('mart_revenue_bridge'[cents]), 100)
-		formatString: "$"#,0
-		displayFolder: Reconciliation
-		lineageTag: cd69c256-7d3b-46fb-813f-fef308775685
+	column step_label
+		dataType: string
+		lineageTag: 6c3a52b7-b76e-55a0-8292-d14dfb254d81
+		summarizeBy: none
+		sourceColumn: step_label
+		sortByColumn: ordinal
+
+	column note
+		dataType: string
+		lineageTag: 245a0ac4-0f44-577e-bcb1-8e1faa509dd4
+		summarizeBy: none
+		sourceColumn: note
 
 	partition mart_revenue_bridge = m
 		mode: import
 		source =
 				let
-				  Source = Table.FromRows(Json.Document(Binary.Decompress(Binary.FromText("XY9RDoMgEETvwrdNxAXFsxhDKGwbUwSjmMbbd7UpreVnM5OXGabrGGcFs/OorzE+0JFIMRlPF6ACUdJjfdGxihy3Tn6wJqF2aPyyO+iToXsRKpNAOsSkN0zaRu/RpiM3s1y1daYFOWvwQ6ByPZltxJB+kwEgs5L0jAGf5/JKyYzUpO9zXJZTdZ7E2/L70eaIu63BnaZwACE/jNrH/A3JaaVs4E32Lw==", BinaryEncoding.Base64), Compression.Deflate)), let _t = ((type nullable text) meta [Serialized.Text = true]) in type table [ordinal = nullable text, step = nullable text, kind = nullable text, cents = nullable text]),
-				  #"Changed column type" = Table.TransformColumnTypes(Source, {{"ordinal", Int64.Type}, {"step", type text}, {"kind", type text}, {"cents", Int64.Type}})
+				    Source = #table(type table [#"ordinal" = nullable text, #"step" = nullable text, #"kind" = nullable text, #"cents" = nullable text, #"step_label" = nullable text, #"note" = nullable text], {
+				        {"1", "crm_booked", "total", "332340000", "CRM bookings", "Closed-won deal value in the CRM"},
+				        {"2", "duplicate_deals", "delta", "-480000", "Duplicate deals", "Deals the CRM migration created twice"},
+				        {"3", "not_yet_collected", "delta", "-18960000", "Not yet collected", "Booked, with instalments still to come"},
+				        {"4", "unlinked_payments", "delta", "3330000", "Unlinked payments", "Cash whose deal link the migration lost"},
+				        {"5", "renewals", "delta", "2850000", "Renewals", "Subscription renewals, which never pass through a deal"},
+				        {"6", "gross_collected", "total", "319080000", "Gross collected", "Payments received"},
+				        {"7", "refunds", "delta", "-13345000", "Refunds", "Money returned"},
+				        {"8", "net_collected", "total", "305735000", "Net collected", "Cash the business kept"}
+				    }),
+				    Typed = Table.TransformColumnTypes(Source, {{"ordinal", Int64.Type}, {"step", type text}, {"kind", type text}, {"cents", Int64.Type}, {"step_label", type text}, {"note", type text}})
 				in
-				  #"Changed column type"
+				    Typed

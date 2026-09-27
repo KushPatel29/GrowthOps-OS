@@ -1,0 +1,191 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.0.0/schema.json",
+  "name": "v0607",
+  "position": {
+    "x": 20,
+    "y": 470,
+    "z": 1518,
+    "height": 234,
+    "width": 1240,
+    "tabOrder": 1518
+  },
+  "visual": {
+    "visualType": "tableEx",
+    "query": {
+      "queryState": {
+        "Values": {
+          "projections": [
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "mart_email_performance"
+                    }
+                  },
+                  "Property": "email_type"
+                }
+              },
+              "queryRef": "mart_email_performance.email_type",
+              "nativeQueryRef": "email_type",
+              "displayName": "Email type"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "mart_email_performance"
+                    }
+                  },
+                  "Property": "sending_domain"
+                }
+              },
+              "queryRef": "mart_email_performance.sending_domain",
+              "nativeQueryRef": "sending_domain",
+              "displayName": "Sending domain"
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "_Measures"
+                    }
+                  },
+                  "Property": "Emails delivered"
+                }
+              },
+              "queryRef": "_Measures.Emails delivered",
+              "nativeQueryRef": "Emails delivered"
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "_Measures"
+                    }
+                  },
+                  "Property": "Human open rate"
+                }
+              },
+              "queryRef": "_Measures.Human open rate",
+              "nativeQueryRef": "Human open rate"
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "_Measures"
+                    }
+                  },
+                  "Property": "Click-to-open rate"
+                }
+              },
+              "queryRef": "_Measures.Click-to-open rate",
+              "nativeQueryRef": "Click-to-open rate"
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "_Measures"
+                    }
+                  },
+                  "Property": "Bounce rate"
+                }
+              },
+              "queryRef": "_Measures.Bounce rate",
+              "nativeQueryRef": "Bounce rate"
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "_Measures"
+                    }
+                  },
+                  "Property": "Complaint rate"
+                }
+              },
+              "queryRef": "_Measures.Complaint rate",
+              "nativeQueryRef": "Complaint rate"
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "_Measures"
+                    }
+                  },
+                  "Property": "Unsubscribe rate"
+                }
+              },
+              "queryRef": "_Measures.Unsubscribe rate",
+              "nativeQueryRef": "Unsubscribe rate"
+            }
+          ]
+        }
+      },
+      "sortDefinition": {
+        "sort": [
+          {
+            "field": {
+              "Measure": {
+                "Expression": {
+                  "SourceRef": {
+                    "Entity": "_Measures"
+                  }
+                },
+                "Property": "Emails delivered"
+              }
+            },
+            "direction": "Descending"
+          }
+        ],
+        "isDefaultSort": false
+      }
+    },
+    "drillFilterOtherVisuals": true,
+    "visualContainerObjects": {
+      "title": [
+        {
+          "properties": {
+            "text": {
+              "expr": {
+                "Literal": {
+                  "Value": "'By email type and sending domain'"
+                }
+              }
+            },
+            "show": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
+                }
+              }
+            }
+          }
+        }
+      ],
+      "general": [
+        {
+          "properties": {
+            "altText": {
+              "expr": {
+                "Literal": {
+                  "Value": "'Table titled By email type and sending domain. Lists email type, sending domain, Emails delivered, Human open rate, Click-to-open rate, Bounce rate, Complaint rate and Unsubscribe rate.'"
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

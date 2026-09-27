@@ -1,0 +1,40 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/bookmark/2.1.0/schema.json",
+  "displayName": "Funnel and lead quality - filters open",
+  "name": "p04FiltersOpen",
+  "options": {
+    "targetVisualNames": [
+      "p04FilterPanel",
+      "p04PanelBg",
+      "p04PanelTitle",
+      "p04PanelClose",
+      "v0409",
+      "v0410",
+      "p04PanelClear"
+    ],
+    "applyOnlyToTargetVisuals": true,
+    "suppressData": true,
+    "suppressActiveSection": true
+  },
+  "explorationState": {
+    "version": "1.3",
+    "activeSection": "p4_funnel",
+    "sections": {
+      "p4_funnel": {
+        "visualContainers": {
+          "p04PanelBg": {},
+          "p04PanelTitle": {},
+          "p04PanelClose": {},
+          "v0409": {},
+          "v0410": {},
+          "p04PanelClear": {}
+        },
+        "visualContainerGroups": {
+          "p04FilterPanel": {
+            "isHidden": false
+          }
+        }
+      }
+    }
+  }
+}

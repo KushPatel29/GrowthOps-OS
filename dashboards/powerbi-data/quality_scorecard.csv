@@ -1,0 +1,10 @@
+﻿check_order,area,check_name,rate,target
+1,Tracking,UTMs present,0.9751,0.95
+2,Tracking,Registered campaign,0.9238,0.95
+3,CRM,Owner assigned,0.9598,0.98
+4,Attribution,Buyer has a touch,0.9766,0.98
+5,Payments,Payment matched,0.9889,0.99
+6,Migration,Contact migrated,0.995,0.99
+7,Migration,Owner kept,0.9526,0.98
+8,Migration,Source kept,0.9222,0.98
+9,Migration,Stage kept,0.9871,0.98

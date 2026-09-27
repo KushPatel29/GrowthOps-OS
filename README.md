@@ -5,7 +5,7 @@
 [![GrowthOps checks](https://github.com/KushPatel29/GrowthOps-OS/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/KushPatel29/GrowthOps-OS/actions/workflows/ci.yml)
 [![guardrail eval](https://img.shields.io/badge/guardrail%20eval-30%2F30-brightgreen)](evals/narrative_guardrail_cases.json)
 
-[**Live dashboard**](https://growthops-os.streamlit.app/) · [Case study](docs/case-study.md) · [Metric catalog](docs/metric-catalog.md) · [API](docs/api-contracts.md)
+[**Live dashboard**](https://growthops-os.streamlit.app/) · [Power BI and Excel](docs/power-bi-handoff.md) · [Case study](docs/case-study.md) · [Metric catalog](docs/metric-catalog.md) · [API](docs/api-contracts.md)
 
 ScaleLab is a fictional coaching and education company that moved from a legacy CRM six months ago. Since
 then nobody trusts the numbers: Meta, Google, LinkedIn, the CRM and the payment processor each report a
@@ -52,7 +52,7 @@ if it ever stops doing so.
 | Experimentation that optimizes cash, not vanity conversion | [`experiments.py`](growthops/experiments.py) |
 | Content-to-pipeline analysis (views vs buyers) | Content section, `mart_content_performance` |
 | SQL modelling and analytics engineering: dbt staging → intermediate → marts with data tests | [`warehouse/dbt`](warehouse/dbt), verified against the Python reference in CI |
-| BI delivery: Streamlit, Power BI (PBIP/TMDL) and a formula-driven Excel workbook, all rebuilt from the same marts | [`dashboards/`](dashboards), [`export_bi.py`](growthops/export_bi.py), [`export_excel.py`](growthops/export_excel.py) |
+| BI delivery: a 7-page Power BI report (211 described measures, SVG KPI tiles, a filter panel, a written summary computed in DAX) generated from a spec and verified in Desktop, and an Excel workbook driven by one window control with a campaign scorecard and 14 zero-difference audit checks; both read the same governed snapshot and agree to the cent | [Power BI and Excel](docs/power-bi-handoff.md), [`growthops/bi`](growthops/bi), [`export_excel.py`](growthops/export_excel.py), [measure reference](docs/power-bi-measures.md) |
 | Lifecycle automation: payment → CRM → access, idempotency, retries, dead letters, operator replay | [`workflow.py`](growthops/workflow.py), [`api.py`](growthops/api.py) |
 | Keyless, local AI: ask-your-data answers from governed metrics or cited definitions using BM25, with local MiniLM added when its verified model is preloaded; it refuses unsupported questions and is held to an 83-question contract with zero wrong answers; no language model, no API key | [`ask_data.py`](growthops/ask_data.py), [`retrieval.py`](growthops/retrieval.py), [`evals/ask_questions.json`](evals/ask_questions.json) |
 | Evidence-bound narrative: a validator rejects invented numbers, dates or causal claims in any draft; 30-case eval set | [`narrator.py`](growthops/narrator.py), [`evals/`](evals/narrative_guardrail_cases.json) |
@@ -61,6 +61,22 @@ if it ever stops doing so.
 ![Email and links](docs/images/email-links.png)
 
 ![Diagnostics](docs/images/diagnostics.png)
+
+### Power BI and Excel
+
+The same snapshot, twice. On its own, the report's DAX summary and the workbook's formula summary both name `meta_broad_v17` as the weakest campaign at scale (8.3% of leads qualify) and flag email bouncing at 3.4%.
+
+![Power BI executive summary](docs/images/pbi-executive.png)
+
+| | |
+|---|---|
+| ![Revenue truth](docs/images/pbi-revenue-truth.png) | ![Paid media efficiency](docs/images/pbi-paid-media.png) |
+| ![Funnel and lead quality](docs/images/pbi-funnel.png) | ![Attribution and content](docs/images/pbi-attribution.png) |
+| ![Email and deliverability](docs/images/pbi-email.png) | ![Tracking and data quality](docs/images/pbi-data-quality.png) |
+
+![Excel dashboard](docs/images/excel-dashboard.png)
+
+![Excel campaign scorecard](docs/images/excel-scorecard.png)
 
 ## Architecture
 
@@ -109,7 +125,8 @@ python -m growthops.warehouse --database data/growthops-sample.db  # SQL marts
 python -m growthops.export_warehouse                               # dbt seeds
 (cd warehouse/dbt && dbt seed --profiles-dir . --full-refresh && dbt build --profiles-dir .)
 python -m growthops.verify_dbt                                     # DuckDB marts == Python reference
-python -m growthops.export_bi --refresh-pbip && python -m growthops.export_excel
+python -m growthops.export_bi --refresh-pbip                     # BI snapshot + generated Power BI project
+python -m growthops.export_excel --recalculate                   # Excel workbook, calculated in Excel (Windows)
 python -m growthops.narrator --eval                                # 30/30 guardrail cases
 python -m growthops.case_study                                     # regenerate docs/case-study.md
 python -m growthops.performance                                    # the written daily update
@@ -131,10 +148,11 @@ runs keyword-only and says so.
 
 ## How it is kept honest
 
-- **Nothing is hand-typed.** The case study, Power BI partitions and Excel workbook are generated from the
-  code; CI fails if any committed copy drifts.
+- **Nothing is hand-typed.** The case study, the whole Power BI project (model, measures, pages, theme) and the
+  Excel workbook are generated from the code; CI fails if any committed copy drifts.
 - **Every total ties out.** All attribution models sum to net cash; both revenue bridges have zero residual;
-  the Excel audit sheet's checks all equal zero; dbt marts match the Python reference.
+  the Excel audit sheet's 14 checks all equal zero; dbt marts match the Python reference; the workbook's
+  calculated values equal the same figures computed in Python, and Power BI's equal both.
 - **Ground truth.** The generator records the incidents it plants (`incidents` table); tests assert the
   detector finds each one with the right root cause.
 - **No model in the loop.** Ask-your-data retrieves; it never generates. Numbers come from governed functions,

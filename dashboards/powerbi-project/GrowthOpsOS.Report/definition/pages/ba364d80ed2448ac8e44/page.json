@@ -1,8 +1,0 @@
-{
-  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/page/2.1.0/schema.json",
-  "name": "ba364d80ed2448ac8e44",
-  "displayName": "Quality and lifecycle - Synthetic",
-  "displayOption": "FitToPage",
-  "width": 1280,
-  "height": 720
-}

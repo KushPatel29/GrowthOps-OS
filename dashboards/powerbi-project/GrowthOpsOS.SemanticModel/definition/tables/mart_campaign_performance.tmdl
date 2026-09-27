@@ -1,87 +1,77 @@
 table mart_campaign_performance
-	lineageTag: 1918ebad-1a83-426e-97b3-f90924ab54ef
-
-	measure 'Campaign Cash USD' = DIVIDE(SUM('mart_campaign_performance'[net_cash_cents]), 100)
-		formatString: "$"#,0
-
-	measure 'Paid Spend USD' = DIVIDE(CALCULATE(SUM('mart_campaign_performance'[spend_cents]), 'mart_campaign_performance'[medium] IN {"paid_search", "paid_social"}), 100)
-		formatString: "$"#,0
-		displayFolder: Acquisition
-		lineageTag: b9dae14a-44ab-4412-a8ae-4b25725aed30
-
-	measure 'Paid Leads' = CALCULATE(SUM('mart_campaign_performance'[leads]), 'mart_campaign_performance'[medium] IN {"paid_search", "paid_social"})
-		formatString: #,0
-		displayFolder: Acquisition
-		lineageTag: ffd52fbc-d531-4a79-a6f7-8fd8872d0f57
-
-	measure 'Paid CPL USD' = DIVIDE([Paid Spend USD], [Paid Leads])
-		formatString: "$"#,0.00
-		displayFolder: Acquisition
-		lineageTag: b2113b59-a7f0-4af0-aa55-005b360744f2
-
-	measure 'Paid Net Cash USD' = DIVIDE(CALCULATE(SUM('mart_campaign_performance'[net_cash_cents]), 'mart_campaign_performance'[medium] IN {"paid_search", "paid_social"}), 100)
-		formatString: "$"#,0
-		displayFolder: Acquisition
-		lineageTag: 38effb11-22cb-4bf0-817b-d41a4bf60531
-
-	measure 'Paid Cash ROAS' = DIVIDE([Paid Net Cash USD], [Paid Spend USD])
-		formatString: 0.00"x"
-		displayFolder: Acquisition
-		lineageTag: 9f444e3b-83e7-4f97-8d7b-d32e08ca4e24
+	lineageTag: b4535db9-5eea-5b26-8d02-ec85c2424de2
 
 	column campaign_id
 		dataType: string
-		lineageTag: c28e3d0b-99d5-4ca4-817e-4f3b93644a40
+		lineageTag: b89b1a36-1ba2-5f00-b9f3-e96f8351e748
 		summarizeBy: none
 		sourceColumn: campaign_id
 
 	column source
 		dataType: string
-		lineageTag: 48cde02d-97f2-4912-b329-6215c5598ade
+		lineageTag: 5d5d3d0c-6c01-5c4e-a313-01602c778ee1
 		summarizeBy: none
 		sourceColumn: source
 
 	column medium
 		dataType: string
-		lineageTag: cf3a8216-8a6f-4915-bfc6-2d54c8310040
+		lineageTag: 927c78c3-5c52-5226-84a2-0a6650ddc2d8
 		summarizeBy: none
 		sourceColumn: medium
 
 	column spend_cents
 		dataType: int64
-		lineageTag: 75006e8d-1f12-4352-a714-91ef6a9c1f9c
-		summarizeBy: none
+		formatString: #,0
+		lineageTag: 7b7eb554-b27f-57fc-9b32-9c6b5aa9f77b
+		summarizeBy: sum
 		sourceColumn: spend_cents
 
 	column leads
 		dataType: int64
-		lineageTag: 57705dad-2c67-43ea-8412-f86a634acf05
-		summarizeBy: none
+		formatString: #,0
+		lineageTag: 6cf95f51-12aa-5c48-bc73-44a6a2c9183b
+		summarizeBy: sum
 		sourceColumn: leads
 
 	column mqls
 		dataType: int64
-		lineageTag: 3c276623-266e-476b-9f65-5dbd28dac503
-		summarizeBy: none
+		formatString: #,0
+		lineageTag: 4e56c881-1423-59ab-ae37-a8e5a96e7a11
+		summarizeBy: sum
 		sourceColumn: mqls
+
+	column customers
+		dataType: int64
+		formatString: #,0
+		lineageTag: c5e432b2-1c37-5e50-b6ef-c8820f873d3d
+		summarizeBy: sum
+		sourceColumn: customers
 
 	column net_cash_cents
 		dataType: int64
-		lineageTag: 318fc966-3343-48be-846a-f93de0a62de1
-		summarizeBy: none
+		formatString: #,0
+		lineageTag: 8afdb82c-7749-573f-9e73-992305d11156
+		summarizeBy: sum
 		sourceColumn: net_cash_cents
-
-	/// Total campaign spend in dollars across all media; use Paid Spend USD for paid-only reporting.
-	measure 'Campaign Spend USD' = DIVIDE(SUM('mart_campaign_performance'[spend_cents]), 100)
-		formatString: "$"#,0
-		displayFolder: Acquisition
-		lineageTag: adba1c5d-41e3-5fe0-80ba-e6bbfc077992
 
 	partition mart_campaign_performance = m
 		mode: import
 		source =
 				let
-				  Source = Table.FromRows(Json.Document(Binary.Decompress(Binary.FromText("ZZDRCoMwDEX/xWeFaXXMVx/2EyLStVlX0GbUdrK/X+qkIi003HsDhyR9n927orPIZZaTpPLmWo4LCs0ncmV7oUeivlGpgmrKLRryPjOwLhM4B5byk8HVgBxh5jpQzoC6iYAveucfUCivJVBr9wFgFTdajB9qYIJgbUQoRDURweLqXtT6+7gIcCtC3LBkEcYiZAbHiyd6I7fpg01Oca0SQnWcQmoLwlEWhUED++DHH4Yf", BinaryEncoding.Base64), Compression.Deflate)), let _t = ((type nullable text) meta [Serialized.Text = true]) in type table [campaign_id = nullable text, source = nullable text, medium = nullable text, spend_cents = nullable text, leads = nullable text, mqls = nullable text, net_cash_cents = nullable text]),
-				  #"Changed column type" = Table.TransformColumnTypes(Source, {{"campaign_id", type text}, {"source", type text}, {"medium", type text}, {"spend_cents", Int64.Type}, {"leads", Int64.Type}, {"mqls", Int64.Type}, {"net_cash_cents", Int64.Type}})
+				    Source = #table(type table [#"campaign_id" = nullable text, #"source" = nullable text, #"medium" = nullable text, #"spend_cents" = nullable text, #"leads" = nullable text, #"mqls" = nullable text, #"customers" = nullable text, #"net_cash_cents" = nullable text], {
+				        {"linkedin_ceo_abm", "linkedin", "paid_social", "9197296", "581", "256", "53", "54820000"},
+				        {"google_brand_search", "google", "paid_search", "3095072", "1210", "611", "68", "51265000"},
+				        {"meta_prospecting_founder", "meta", "paid_social", "15857171", "3773", "872", "75", "47425000"},
+				        {"youtube_founder_guide", "youtube", "organic_video", "0", "1885", "451", "44", "32690000"},
+				        {"meta_retargeting_webinar", "meta", "paid_social", "4208155", "1297", "465", "43", "26005000"},
+				        {"google_nonbrand_growth", "google", "paid_search", "9394809", "1309", "359", "36", "20910000"},
+				        {"newsletter_weekly", "newsletter", "owned_email", "0", "1094", "348", "26", "17190000"},
+				        {"webinar_growth_os", "webinar", "event", "0", "368", "153", "23", "14760000"},
+				        {"partner_podcast", "partner", "referral", "0", "335", "132", "16", "13810000"},
+				        {"FB-Broad", "FB", "paid_social", "4281152", "1017", "209", "22", "12660000"},
+				        {"direct", "direct", "none", "0", "380", "103", "13", "9630000"},
+				        {"meta_broad_v17", "meta", "paid_social", "2205650", "965", "77", "2", "340000"}
+				    }),
+				    Typed = Table.TransformColumnTypes(Source, {{"campaign_id", type text}, {"source", type text}, {"medium", type text}, {"spend_cents", Int64.Type}, {"leads", Int64.Type}, {"mqls", Int64.Type}, {"customers", Int64.Type}, {"net_cash_cents", Int64.Type}})
 				in
-				  #"Changed column type"
+				    Typed

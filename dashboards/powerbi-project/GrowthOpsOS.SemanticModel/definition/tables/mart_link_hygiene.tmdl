@@ -1,95 +1,83 @@
 table mart_link_hygiene
-	lineageTag: 65eca8e4-a1fc-581b-856f-39c105b6fb96
+	lineageTag: e5cfa325-3f3f-599f-85cd-a282dfe4ef82
 
 	column link_id
 		dataType: string
-		lineageTag: dd4e14eb-3452-5376-b88b-becfea9d043f
+		lineageTag: 83f73821-e7b2-56bf-a7f2-9459e8a6ed67
 		summarizeBy: none
 		sourceColumn: link_id
 
 	column channel
 		dataType: string
-		lineageTag: 512814cc-4e45-501c-9d6b-dbbe52143765
+		lineageTag: 075a90ca-cb8e-5304-8b5c-69cf02ab2524
 		summarizeBy: none
 		sourceColumn: channel
 
 	column utm_source
 		dataType: string
-		lineageTag: 3bbb893c-60bb-5520-82fb-0e9807278b7c
+		lineageTag: c9f03021-a5fc-520f-9ba0-f41ec2e81393
 		summarizeBy: none
 		sourceColumn: utm_source
 
 	column utm_medium
 		dataType: string
-		lineageTag: aa14c1cc-a2c6-5eea-8c5f-cb72beadf7e0
+		lineageTag: 95e696d5-28ec-5e3e-a9b6-d60cb26bbb17
 		summarizeBy: none
 		sourceColumn: utm_medium
 
 	column utm_campaign
 		dataType: string
-		lineageTag: 8235ac2a-2459-5a9c-a0ea-11788ef4a9f8
+		lineageTag: d7b5d9e9-ebe6-5006-8a65-b3ce35cc5b71
 		summarizeBy: none
 		sourceColumn: utm_campaign
 
 	column missing_utm
 		dataType: boolean
-		lineageTag: 2185a0e5-3cfc-5998-a023-2f7c9ee01aa4
+		lineageTag: 746d14c8-6a2b-5a4c-a134-4d4d3d34b2f1
 		summarizeBy: none
 		sourceColumn: missing_utm
 
 	column unregistered_campaign
 		dataType: boolean
-		lineageTag: 930b988b-becb-5d67-ad87-96d9ece42884
+		lineageTag: 992d2601-8621-5985-a771-221f38a346d1
 		summarizeBy: none
 		sourceColumn: unregistered_campaign
 
 	column off_taxonomy
 		dataType: boolean
-		lineageTag: 2fdbbe37-918d-596c-bfbc-bef1a8b8561b
+		lineageTag: 1bb626a6-8414-5bf6-9890-ab608421acc4
 		summarizeBy: none
 		sourceColumn: off_taxonomy
 
 	column clicks
 		dataType: int64
-		lineageTag: 81ac925e-7f1c-5fd2-bab8-495c6e13ff86
-		summarizeBy: none
+		formatString: #,0
+		lineageTag: 1d896644-4502-53ff-829e-c181bc2bb1b8
+		summarizeBy: sum
 		sourceColumn: clicks
 
 	column recent_clicks
 		dataType: int64
-		lineageTag: 00d1fa05-d1bd-5ba4-96a0-4f949b246217
-		summarizeBy: none
+		formatString: #,0
+		lineageTag: 7fba0ae5-4039-51fd-96de-6ec7a531ad21
+		summarizeBy: sum
 		sourceColumn: recent_clicks
-
-	/// Short links with missing, unregistered or off-taxonomy UTMs.
-	measure 'Links with defects' = COUNTROWS(FILTER('mart_link_hygiene', 'mart_link_hygiene'[missing_utm] || 'mart_link_hygiene'[unregistered_campaign] || 'mart_link_hygiene'[off_taxonomy]))
-		formatString: #,0
-		displayFolder: Tracking
-		lineageTag: 5c974b22-3f1f-547d-aea6-481ca045d81d
-
-	/// Share of last-30-day short-link clicks that land without a valid campaign.
-	measure 'Recent clicks on defective links share' = DIVIDE(CALCULATE(SUM('mart_link_hygiene'[recent_clicks]), FILTER('mart_link_hygiene', 'mart_link_hygiene'[missing_utm] || 'mart_link_hygiene'[unregistered_campaign] || 'mart_link_hygiene'[off_taxonomy])), SUM('mart_link_hygiene'[recent_clicks]))
-		formatString: 0%
-		displayFolder: Tracking
-		lineageTag: 5c6a0db9-87a9-5497-a609-e531c9025795
-
-	/// Last-30-day clicks on links with missing, unregistered or off-taxonomy tracking.
-	measure 'Defective recent clicks' = CALCULATE(SUM('mart_link_hygiene'[recent_clicks]), FILTER('mart_link_hygiene', 'mart_link_hygiene'[missing_utm] || 'mart_link_hygiene'[unregistered_campaign] || 'mart_link_hygiene'[off_taxonomy]))
-		formatString: #,0
-		displayFolder: Tracking
-		lineageTag: 0c93ef7d-2532-4b4c-964a-562703f95be0
-
-	/// Share of audited short links with any tracking defect.
-	measure 'Link defect rate' = DIVIDE([Links with defects], COUNTROWS('mart_link_hygiene'))
-		formatString: 0.0%
-		displayFolder: Tracking
-		lineageTag: ce77da13-9907-4c38-a381-af54b07c5382
 
 	partition mart_link_hygiene = m
 		mode: import
 		source =
 				let
-				  Source = Table.FromRows(Json.Document(Binary.Decompress(Binary.FromText("tZPBboMwDIbfhXORAqHQvMDOO+xWVVEgLrWaJjSEor79Ega0dO2kTZqE/P/YMZ8ci+02wjou0USrCHXrRG3Fyfv5+bAdeHkTqr1Xus43XlhCot1qGymMleh0dfA5hfoIEvXStqZCoe5yvALDRXl68vGRmVA2xoDQKpYgpG8PNQ19q8A5sI8vptcgOZwEqkWJ9wBHdX2CmzQtkjGOvLpD+V+wnOapl4xuBlpjZCyaZmjxvhKtC05YpweQhT1YO1zgmOS3Y68YSUqKIITMDGiyZIF4n92vEOOK0mwdIkkHQA9ljPqCLpSmS/FJ1CLMABfQ7pbhtTW9O3DT/jBCRsiwFPY1wtXNS7maznXl0hlbC40Vv/gj5lbhe9Np6eeZel/RGCvCheUsm2hn+ifgmX5jPfxIGxbWTwtP2n0C", BinaryEncoding.Base64), Compression.Deflate)), let _t = ((type nullable text) meta [Serialized.Text = true]) in type table [link_id = nullable text, channel = nullable text, utm_source = nullable text, utm_medium = nullable text, utm_campaign = nullable text, missing_utm = nullable text, unregistered_campaign = nullable text, off_taxonomy = nullable text, clicks = nullable text, recent_clicks = nullable text]),
-				  #"Changed column type" = Table.TransformColumnTypes(Source, {{"link_id", type text}, {"channel", type text}, {"utm_source", type text}, {"utm_medium", type text}, {"utm_campaign", type text}, {"missing_utm", type logical}, {"unregistered_campaign", type logical}, {"off_taxonomy", type logical}, {"clicks", Int64.Type}, {"recent_clicks", Int64.Type}})
+				    Source = #table(type table [#"link_id" = nullable text, #"channel" = nullable text, #"utm_source" = nullable text, #"utm_medium" = nullable text, #"utm_campaign" = nullable text, #"missing_utm" = nullable text, #"unregistered_campaign" = nullable text, #"off_taxonomy" = nullable text, #"clicks" = nullable text, #"recent_clicks" = nullable text], {
+				        {"ig-bio", "instagram", null, null, null, "True", "False", "False", "3568", "910"},
+				        {"li-launch", "linkedin", "linkedin", "social", "linkedin_ceo_abm", "False", "False", "True", "139", "139"},
+				        {"nl-deadline", "newsletter", "newsletter", "owned_email", "newsletter_weekly", "False", "False", "False", "271", "271"},
+				        {"nl-guide", "newsletter", "newsletter", "owned_email", "newsletter_weekly", "False", "False", "False", "6362", "438"},
+				        {"pod-apply", "podcast", "partner", "referral", "partner_podcast", "False", "False", "False", "1207", "100"},
+				        {"pod-ep41", "podcast", "Podcast", "referral", "partner_podcast", "False", "False", "True", "245", "202"},
+				        {"web-invite", "email", "webinar", "event", "webinar_growth_os", "False", "False", "False", "4001", "290"},
+				        {"yt-guide", "youtube", "youtube", "organic_video", "youtube_founder_guide", "False", "False", "False", "9977", "694"},
+				        {"yt-q3-guide", "youtube", "youtube", "organic_video", "youtube_q3_guide", "False", "True", "False", "892", "374"}
+				    }),
+				    Typed = Table.TransformColumnTypes(Source, {{"link_id", type text}, {"channel", type text}, {"utm_source", type text}, {"utm_medium", type text}, {"utm_campaign", type text}, {"missing_utm", type logical}, {"unregistered_campaign", type logical}, {"off_taxonomy", type logical}, {"clicks", Int64.Type}, {"recent_clicks", Int64.Type}})
 				in
-				  #"Changed column type"
+				    Typed

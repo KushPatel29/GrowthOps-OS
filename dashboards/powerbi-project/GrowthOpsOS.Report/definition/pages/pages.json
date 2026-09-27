@@ -1,15 +1,13 @@
 {
-  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/pagesMetadata/1.0.0/schema.json",
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/pagesMetadata/1.1.0/schema.json",
   "pageOrder": [
-    "ddba85373ccd4a669912",
-    "33e0640d78ed4d02ac33",
-    "a0e52244b705589496d7",
-    "3dc3e21893ed4778b365",
-    "3c735b4798dc5af49048",
-    "ba364d80ed2448ac8e44",
-    "0a75cea45fcb5c6eb956",
-    "e41db4d1c8a95d39b518",
-    "99a191e6eed25d478993"
+    "p1_executive",
+    "p2_revenue_truth",
+    "p3_paid_media",
+    "p4_funnel",
+    "p5_attribution",
+    "p6_email",
+    "p7_data_quality"
   ],
-  "activePageName": "ddba85373ccd4a669912"
+  "activePageName": "p1_executive"
 }

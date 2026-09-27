@@ -1,8 +1,0 @@
-{
-  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/page/2.1.0/schema.json",
-  "name": "3c735b4798dc5af49048",
-  "displayName": "Email health - Synthetic",
-  "displayOption": "FitToPage",
-  "width": 1280,
-  "height": 720
-}

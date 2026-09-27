@@ -1,0 +1,62 @@
+table incident_register
+	lineageTag: 7821b07e-a73b-526e-8b31-f7479efa9ddd
+
+	column incident_id
+		dataType: string
+		lineageTag: 556f9569-6b58-575e-a573-197c915a443c
+		summarizeBy: none
+		sourceColumn: incident_id
+
+	column kind
+		dataType: string
+		lineageTag: 1fa47e26-0ae2-575c-824a-acfcc87477e8
+		summarizeBy: none
+		sourceColumn: kind
+
+	column started_on
+		dataType: dateTime
+		formatString: yyyy-mm-dd
+		lineageTag: 578a10d1-0f26-55c7-85aa-6672e377e652
+		summarizeBy: none
+		sourceColumn: started_on
+
+	column ended_on
+		dataType: dateTime
+		formatString: yyyy-mm-dd
+		lineageTag: a2489774-703a-5ed9-a41e-2db7c1663f9c
+		summarizeBy: none
+		sourceColumn: ended_on
+
+	column entity
+		dataType: string
+		lineageTag: c310ca23-f7e6-59f4-a6b8-bfb5b3b71218
+		summarizeBy: none
+		sourceColumn: entity
+
+	column signal
+		dataType: string
+		lineageTag: 60560dd3-f559-51ad-a6fa-900290c2f1f1
+		summarizeBy: none
+		sourceColumn: signal
+
+	column description
+		dataType: string
+		lineageTag: abd363bb-8b99-5d2a-b830-7bd7048b1493
+		summarizeBy: none
+		sourceColumn: description
+
+	partition incident_register = m
+		mode: import
+		source =
+				let
+				    Source = #table(type table [#"incident_id" = nullable text, #"kind" = nullable text, #"started_on" = nullable text, #"ended_on" = nullable text, #"entity" = nullable text, #"signal" = nullable text, #"description" = nullable text], {
+				        {"inc_crm_migration", "migration", "2026-03-15", null, "system:crm", "migration_defects", "Legacy CRM cut-over created duplicates, blank owners, overwritten sources and lost deal links."},
+				        {"inc_untagged_links", "tracking", "2026-06-01", null, "short_links", "link_utm_defects", "Four short links (Instagram bio, a podcast episode, a YouTube guide and a LinkedIn launch post) carry missing, unregistered or off-taxonomy UTM parameters."},
+				        {"inc_meta_broad_quality", "lead_quality", "2026-08-10", null, "campaign:meta_broad_v17", "mql_rate_down", "Broad-audience Meta campaign launched; lead volume rose while qualification fell."},
+				        {"inc_email_domain_switch", "deliverability", "2026-09-01", null, "sending_domain:news.scalelab.example", "email_bounce_rate_up", "Bulk email moved to a new sending subdomain without warm-up or DKIM alignment; bounces and complaints rose and inbox placement fell before the enrollment deadline."},
+				        {"inc_webinar_utm_break", "tracking", "2026-09-03", "2026-09-14", "landing_page:/webinar", "utm_completeness_down", "A landing-page release stripped UTM parameters from the webinar registration form."},
+				        {"inc_access_outage", "automation", "2026-09-18", "2026-09-18", "provider:community_access", "workflow_failures_up", "Community-access provider returned HTTP 503 for six hours."}
+				    }),
+				    Typed = Table.TransformColumnTypes(Source, {{"incident_id", type text}, {"kind", type text}, {"started_on", type date}, {"ended_on", type date}, {"entity", type text}, {"signal", type text}, {"description", type text}})
+				in
+				    Typed

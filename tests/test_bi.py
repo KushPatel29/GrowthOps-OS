@@ -1,135 +1,151 @@
-import base64
+"""The governed BI snapshot and the Excel workbook built on it.
+
+The workbook is checked three ways: its structure (formulas, named ranges, controls,
+protection), that the committed copy carries the same formulas as a fresh build, and
+that the values Excel calculated for the committed copy equal the same figures
+computed here in Python from the CSVs. The last is what makes "every figure is a
+formula" worth saying: the formulas are right, not just present.
+"""
+
+from __future__ import annotations
+
 import csv
-import json
-import re
-import zlib
+from datetime import date, timedelta
 from pathlib import Path
 
 import openpyxl
+import pytest
 
-from growthops.export_bi import MARTS, PROJECT
-from growthops.export_excel import build
+from growthops.export_bi import DATE_KEYS, TABLES, date_dimension
+from growthops.export_excel import DATA_SHEETS, REPORT_SHEETS, WINDOWS, build
 
 ROOT = Path(__file__).resolve().parent.parent
 CSV_DIR = ROOT / "dashboards" / "powerbi-data"
+COMMITTED = ROOT / "dashboards" / "GrowthOps_OS_Excel_Dashboard.xlsx"
 
 
-def test_every_power_bi_partition_embeds_the_committed_mart_exactly():
-    model = (ROOT / PROJECT / "model.tmdl").read_text(encoding="utf-8")
-    for mart in MARTS:
-        assert f"ref table {mart}" in model, mart
-        tmdl = (ROOT / PROJECT / "tables" / f"{mart}.tmdl").read_text(encoding="utf-8")
-        encoded = re.search(r'Binary\.FromText\("([^"]+)"', tmdl).group(1)
-        embedded = json.loads(zlib.decompress(base64.b64decode(encoded), -15))
-        with (CSV_DIR / f"{mart}.csv").open(encoding="utf-8-sig", newline="") as file:
-            rows = list(csv.reader(file))
-        assert embedded == rows[1:], mart
-        for column in rows[0]:
-            assert f"\tcolumn {column}\n" in tmdl, f"{mart}.{column}"
+def _rows(name: str) -> list[dict]:
+    with (CSV_DIR / f"{name}.csv").open(encoding="utf-8-sig", newline="") as file:
+        return list(csv.DictReader(file))
 
 
-def test_excel_dashboard_is_formula_driven_and_audited(tmp_path):
-    workbook = openpyxl.load_workbook(build(tmp_path / "dashboard.xlsx"))
-    dashboard = workbook["Dashboard"]
-    kpis = [dashboard.cell(row, 2).value for row in range(4, 15)]
-    assert all(isinstance(value, str) and value.startswith("=") for value in kpis)
-    audit = workbook["Audit"]
-    checks = [audit.cell(row, 2).value for row in range(3, audit.max_row + 1) if audit.cell(row, 1).value]
-    assert len(checks) >= 6 and all(str(value).startswith("=") for value in checks)
-    assert all(value != "=0" for value in checks), "Audit checks must test source data"
-    assert "SUMIFS(" in workbook["Period analysis"]["B9"].value
-    committed = ROOT / "dashboards" / "GrowthOps_OS_Excel_Dashboard.xlsx"
-    delivered = openpyxl.load_workbook(committed)
-    assert delivered.sheetnames == workbook.sheetnames
-    assert set(delivered.defined_names) == set(workbook.defined_names)
-    for generated_sheet, delivered_sheet in zip(workbook.worksheets, delivered.worksheets):
-        assert (delivered_sheet.max_row, delivered_sheet.max_column) == (
-            generated_sheet.max_row, generated_sheet.max_column
-        ), generated_sheet.title
-        assert delivered_sheet.protection.sheet == generated_sheet.protection.sheet
-        assert delivered_sheet.auto_filter.ref == generated_sheet.auto_filter.ref
-        assert len(delivered_sheet._charts) == len(generated_sheet._charts)
-        assert len(delivered_sheet.data_validations.dataValidation) == len(
-            generated_sheet.data_validations.dataValidation
-        )
-        for generated_row, delivered_row in zip(generated_sheet, delivered_sheet):
-            assert [(cell.value, cell.number_format) for cell in delivered_row] == [
-                (cell.value, cell.number_format) for cell in generated_row
-            ], generated_sheet.title
-    cached = openpyxl.load_workbook(committed, data_only=True)
-    assert cached["Dashboard"]["B4"].value == cached["Revenue"]["D2"].value / 100
-    assert cached["Period analysis"]["B7"].value == "Ready"
-    assert cached["Audit"]["B13"].value == "Yes"
-    assert [cached["Audit"].cell(row, 2).value for row in range(3, 12)] == [0] * 9
+@pytest.fixture(scope="module")
+def built(tmp_path_factory):
+    return openpyxl.load_workbook(build(tmp_path_factory.mktemp("xl") / "workbook.xlsx"))
 
 
-def test_power_bi_model_has_date_dimension_relationships_and_documented_measures():
-    from growthops.export_bi import DATE_KEYS, MEASURES
+# --------------------------------------------------------------------------- the snapshot
 
-    definition = ROOT / PROJECT
-    assert "ref table dim_date" in (definition / "model.tmdl").read_text(encoding="utf-8")
-    date_table = (definition / "tables" / "dim_date.tmdl").read_text(encoding="utf-8")
-    assert "partition dim_date = calculated" in date_table and "\t\tisKey\n" in date_table
-    relationships = (definition / "relationships.tmdl").read_text(encoding="utf-8")
+
+def test_every_bi_table_is_exported():
+    assert {path.stem for path in CSV_DIR.glob("*.csv")} == set(TABLES)
+
+
+def test_attribution_conserves_net_cash_to_the_cent():
+    attributed = sum(int(r["net_cash_cents"]) for r in _rows("fact_cash_attribution"))
+    assert attributed == int(_rows("mart_revenue")[0]["net_collected_cents"])
+    assert attributed == sum(int(r["net_cash_cents"]) for r in _rows("mart_growth_daily"))
+
+
+def test_the_calendar_covers_every_dated_fact():
+    days = {r["date"] for r in _rows("dim_date")}
     for table, column in DATE_KEYS.items():
-        assert f"fromColumn: {table}.{column}\n\ttoColumn: dim_date.Date" in relationships
-    for table, measures in MEASURES.items():
-        tmdl = (definition / "tables" / f"{table}.tmdl").read_text(encoding="utf-8")
-        for name, _, fmt, folder, description in measures:
-            block = tmdl.split(f"measure '{name}' = ", 1)
-            assert len(block) == 2, f"{table}: {name}"
-            assert f"/// {description}\n\t" in block[0][-len(description) - 12:], name
-            assert f"formatString: {fmt}" in block[1][:400] and f"displayFolder: {folder}" in block[1][:400]
+        assert {r[column] for r in _rows(table)} <= days, table
 
 
-def test_excel_workbook_has_controls_and_marketing_kpis(tmp_path):
-    workbook = openpyxl.load_workbook(build(tmp_path / "dashboard.xlsx"))
-    assert {"Marketing KPIs", "Paid daily", "Email", "Links", "Definitions"} <= set(workbook.sheetnames)
-    assert set(workbook.defined_names) >= {"StartDate", "EndDate", "FirstDataDate", "LastDataDate"}
-    analysis = workbook["Period analysis"]
-    assert {str(item.sqref) for item in analysis.data_validations.dataValidation} == {"B4", "B5"}
-    assert "B5>=B4" in analysis.data_validations.dataValidation[1].formula1
-    assert not analysis["B4"].protection.locked and analysis["B9"].protection.locked
-    assert all(sheet.protection.sheet for sheet in workbook.worksheets)
-    kpis = workbook["Marketing KPIs"]
-    assert kpis["B7"].value.startswith("=IFERROR(B5/B6") and "StartDate" in kpis["B5"].value
-    assert "'Period analysis'!$B$7" in kpis["B5"].value
-    assert len(workbook["Dashboard"]._charts) == 2
-    assert "'Period analysis'!" in workbook["Dashboard"]._charts[1].series[0].val.numRef.f
-    assert workbook["Dashboard"]["H1"].value.startswith("=MAX(Daily!")
-    definitions = [row[0] for row in workbook["Definitions"].iter_rows(min_row=4, values_only=True)]
-    assert "Human open rate" in definitions and "Cost per booked call (CPDM)" in definitions
+def test_date_dimension_windows():
+    header, rows = date_dimension(date(2026, 1, 1), date(2026, 3, 31))
+    last = [r for r in rows if r[header.index("is_last_28_days")]]
+    prior = [r for r in rows if r[header.index("is_prior_28_days")]]
+    assert len(last) == len(prior) == 28 and last[-1][0] == "2026-03-31" and prior[-1][0] == "2026-03-03"
+    assert rows[0][header.index("month_index")] == 0 and rows[-1][header.index("month_index")] == 2
 
 
-def _shape(node):
-    """Key structure of a JSON document (lists collapse to their first element), for comparing visuals."""
-    if isinstance(node, dict):
-        return {key: _shape(value) for key, value in node.items() if key not in ("projections",)}
-    if isinstance(node, list):
-        return [_shape(node[0])] if node else []
-    return type(node).__name__
+# --------------------------------------------------------------------------- structure
 
 
-def test_marketing_report_page_matches_existing_visual_shapes_and_model_fields():
-    from growthops.export_bi import MARKETING_PAGE, REPORT
+def test_sheets_controls_and_names(built):
+    assert built.sheetnames == [*REPORT_SHEETS, *(title for title, _, _ in DATA_SHEETS)]
+    names = set(built.defined_names)
+    assert {"AsOf", "WinStart", "WinEnd", "PriorStart", "PriorEnd", "WindowList", "AllChecksPass"} <= names
+    assert {"pd_spend_cents", "em_bounces", "att_net_cash_cents", "dly_day"} <= names
+    dashboard = built["Dashboard"]
+    assert dashboard["E5"].value == "Last 28 days"
+    choice = next(v for v in dashboard.data_validations.dataValidation if str(v.sqref) == "E5")
+    assert choice.type == "list" and choice.formula1 == "=WindowList"
+    assert [built["Calc"].cell(r, 5).value for r in range(6, 6 + len(WINDOWS))] == list(WINDOWS)
+    for cell in ("E5", "I5", "L5"):
+        assert not dashboard[cell].protection.locked
+    assert dashboard["B9"].protection.locked
+    assert all(sheet.protection.sheet for sheet in built.worksheets)
 
-    pages = ROOT / REPORT / "pages"
-    order = json.loads((pages / "pages.json").read_text())["pageOrder"]
-    page = next(p for p in order if json.loads((pages / p / "page.json").read_text())["displayName"] == MARKETING_PAGE)
-    existing = {}
-    for path in pages.glob("*/visuals/*/visual.json"):
-        if path.parts[-4] != page:
-            visual = json.loads(path.read_text())
-            existing.setdefault(visual["visual"]["visualType"], _shape(visual))
-    tables = {path.stem: path.read_text(encoding="utf-8") for path in (ROOT / PROJECT / "tables").glob("*.tmdl")}
-    new = [json.loads(path.read_text()) for path in (pages / page / "visuals").glob("*/visual.json")]
-    assert {v["visual"]["visualType"] for v in new} == {"cardVisual", "clusteredBarChart", "lineChart", "tableEx"}
-    for visual in new:
-        assert _shape(visual) == existing[visual["visual"]["visualType"]], visual["name"]
-        for role in visual["visual"]["query"]["queryState"].values():
-            for projection in role["projections"]:
-                kind, spec = next(iter(projection["field"].items()))
-                table, name = spec["Expression"]["SourceRef"]["Entity"], spec["Property"]
-                pattern = f"measure '{name}' = " if kind == "Measure" else (
-                    f"\tcolumn '{name}'" if " " in name else f"\tcolumn {name}")
-                assert pattern in tables[table], f"{table}.{name}"
+
+def test_report_figures_are_formulas_over_named_ranges(built):
+    dashboard = built["Dashboard"]
+    for col in ("B", "E", "H", "K", "N", "Q"):
+        assert str(dashboard[f"{col}9"].value).startswith("=") and "WinStart" in dashboard[f"{col}9"].value
+    scorecard = built["Campaign scorecard"]
+    assert "pd_spend_cents" in scorecard["D7"].value and "$B7" in scorecard["D7"].value
+    audit = built["Audit"]
+    checks = [audit.cell(r, 3).value for r in range(7, 21)]
+    assert all(str(c).startswith("=") and c != "=0" for c in checks)
+
+
+def test_the_committed_workbook_has_the_formulas_of_a_fresh_build(built):
+    delivered = openpyxl.load_workbook(COMMITTED)
+    assert delivered.sheetnames == built.sheetnames
+    assert set(delivered.defined_names) == set(built.defined_names)
+    for fresh, committed in zip(built.worksheets, delivered.worksheets):
+        assert len(committed._charts) == len(fresh._charts), fresh.title
+        for fresh_row, committed_row in zip(fresh.iter_rows(), committed.iter_rows()):
+            assert [c.value for c in committed_row] == [c.value for c in fresh_row], fresh.title
+
+
+# --------------------------------------------------------------------------- values
+
+
+@pytest.fixture(scope="module")
+def cached():
+    return openpyxl.load_workbook(COMMITTED, data_only=True)
+
+
+def _window(rows, column, start, end, key="day", where=None):
+    return sum(float(r[column]) for r in rows
+               if start <= r[key] <= end and (where is None or where(r)))
+
+
+def test_the_committed_workbook_was_calculated_and_reconciles(cached):
+    assert cached["Audit"]["C22"].value == "Yes"
+    assert [cached["Audit"].cell(r, 3).value for r in range(7, 21)] == [0] * 14
+
+
+def test_dashboard_values_equal_python_on_the_same_csvs(cached):
+    daily, paid, email = _rows("mart_growth_daily"), _rows("mart_paid_efficiency_daily"), _rows(
+        "mart_email_performance")
+    as_of = date.fromisoformat(max(r["day"] for r in daily))
+    start, end = (as_of - timedelta(days=27)).isoformat(), as_of.isoformat()
+    prior_start, prior_end = (as_of - timedelta(days=55)).isoformat(), (as_of - timedelta(days=28)).isoformat()
+    sheet = cached["Dashboard"]
+    assert sheet["B9"].value == pytest.approx(_window(daily, "net_cash_cents", start, end) / 100)
+    spend = _window(paid, "spend_cents", start, end) / 100
+    leads = _window(paid, "leads", start, end)
+    assert sheet["E9"].value == pytest.approx(spend)
+    assert sheet["H9"].value == pytest.approx(spend / leads)
+    assert sheet["K9"].value == pytest.approx(_window(paid, "mqls", start, end) / leads)
+    bounce = _window(email, "bounces", start, end, "sent_date") / _window(email, "sends", start, end, "sent_date")
+    assert sheet["Q9"].value == pytest.approx(bounce)
+    prior = _window(daily, "net_cash_cents", prior_start, prior_end) / 100
+    assert sheet["B11"].value == pytest.approx(sheet["B9"].value / prior - 1)
+    # The written summary names the planted lead-quality incident without being told about it.
+    assert "meta_broad_v17" in cached["Dashboard"]["B16"].value
+
+
+def test_scorecard_rows_equal_python(cached):
+    paid = _rows("mart_paid_efficiency_daily")
+    as_of = date.fromisoformat(max(r["day"] for r in _rows("mart_growth_daily")))
+    start, end = (as_of - timedelta(days=27)).isoformat(), as_of.isoformat()
+    sheet = cached["Campaign scorecard"]
+    for row in range(7, 14):
+        campaign = sheet.cell(row, 2).value
+        spend = _window(paid, "spend_cents", start, end, where=lambda r: r["campaign_id"] == campaign) / 100
+        assert sheet.cell(row, 4).value == pytest.approx(spend), campaign

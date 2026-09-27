@@ -14,3 +14,6 @@ warehouse/dbt/.user.yml
 .env
 *.inspect.ndjson
 ~$*.xlsx
+# Power BI Desktop's machine-local state for an opened PBIP
+**/.pbi/localSettings.json
+**/.pbi/cache.abf

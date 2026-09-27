@@ -25,6 +25,7 @@ def verify(sqlite_database: str, duckdb_database: str) -> None:
         raise FileNotFoundError(duckdb_database)
     source = connect(sqlite_database)
     warehouse = duckdb.connect(duckdb_database, read_only=True)
+    warehouse.execute("SET TimeZone = 'UTC'")  # same day boundaries on every machine
     try:
         reference = metrics(source)
         revenue_query = warehouse.execute("select * from mart_revenue")

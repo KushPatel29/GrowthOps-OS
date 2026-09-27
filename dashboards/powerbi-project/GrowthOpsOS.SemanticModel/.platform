@@ -2,10 +2,10 @@
   "$schema": "https://developer.microsoft.com/json-schemas/fabric/gitIntegration/platformProperties/2.0.0/schema.json",
   "metadata": {
     "type": "SemanticModel",
-    "displayName": "GrowthOps OS Synthetic Marts"
+    "displayName": "GrowthOpsOS"
   },
   "config": {
     "version": "2.0",
-    "logicalId": "251b9f8a-38ea-4944-bdd0-2bdb917ba341"
+    "logicalId": "b6fcc1ef-b83e-53e1-941f-ad0da3755d73"
   }
 }

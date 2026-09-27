@@ -1,167 +1,290 @@
 table mart_email_performance
-	lineageTag: c76b62c2-98a1-558f-970b-005b7502fb37
+	lineageTag: 2596ed71-a176-5024-a721-b37c6512bf19
 
 	column email_id
 		dataType: string
-		lineageTag: ae789bb5-9b80-57ce-8029-a21fb5a91996
+		lineageTag: 001bad9d-f9b2-5cc4-983e-096a42c71f4c
 		summarizeBy: none
 		sourceColumn: email_id
 
 	column sent_date
 		dataType: dateTime
-		lineageTag: 81385a6d-7096-5b06-a734-32fc9738cebf
+		formatString: yyyy-mm-dd
+		lineageTag: 9840d6ed-f335-5e3d-88c6-08cb1a1d9ea8
 		summarizeBy: none
 		sourceColumn: sent_date
 
 	column email_type
 		dataType: string
-		lineageTag: 5c0fdc48-cde1-5244-a5b5-486b452102c0
+		lineageTag: 933310cd-cfac-576c-bf00-c4bb94ccbced
 		summarizeBy: none
 		sourceColumn: email_type
 
 	column subject
 		dataType: string
-		lineageTag: d0c2b106-7b4c-5206-aecb-aae28ad41c56
+		lineageTag: a904b0bb-0b81-56b2-accc-aebf898df674
 		summarizeBy: none
 		sourceColumn: subject
 
 	column sending_domain
 		dataType: string
-		lineageTag: d6633c8e-2fcf-51aa-89f5-a11c50c085e2
+		lineageTag: e5001b00-637d-569c-a7b1-b1df0d507667
 		summarizeBy: none
 		sourceColumn: sending_domain
 
 	column sends
 		dataType: int64
-		lineageTag: 78571f28-514c-5c0b-95f7-f9e4fb01586a
-		summarizeBy: none
+		formatString: #,0
+		lineageTag: 1f130c81-b545-53fe-bf9f-fcd5319d9cf7
+		summarizeBy: sum
 		sourceColumn: sends
 
 	column delivered
 		dataType: int64
-		lineageTag: fea63992-8118-59e4-9e85-538ecd728322
-		summarizeBy: none
+		formatString: #,0
+		lineageTag: 59e1dac3-ed19-5143-863e-797314cbf2f2
+		summarizeBy: sum
 		sourceColumn: delivered
 
 	column bounces
 		dataType: int64
-		lineageTag: 9de71f14-990f-56eb-b9c9-5f70118aeb1d
-		summarizeBy: none
+		formatString: #,0
+		lineageTag: ad59f90d-4dfa-5bcb-8bc0-3dcabd18c47e
+		summarizeBy: sum
 		sourceColumn: bounces
 
 	column opens
 		dataType: int64
-		lineageTag: 49a86e48-2177-5418-8f4e-2df48b3f1221
-		summarizeBy: none
+		formatString: #,0
+		lineageTag: 6f45d45e-c26b-5ebe-aa09-7123148040e3
+		summarizeBy: sum
 		sourceColumn: opens
 
 	column machine_opens
 		dataType: int64
-		lineageTag: cbb43733-65c7-5ea3-a0f6-73fa64a21cc2
-		summarizeBy: none
+		formatString: #,0
+		lineageTag: 152fbc57-cdb7-5925-b2ae-42ea02c15459
+		summarizeBy: sum
 		sourceColumn: machine_opens
 
 	column human_opens
 		dataType: int64
-		lineageTag: 59dcd9cc-da42-587e-afe6-b8e6c8f7a2be
-		summarizeBy: none
+		formatString: #,0
+		lineageTag: ee93f734-4b7b-5eed-9b7c-856f011d41c0
+		summarizeBy: sum
 		sourceColumn: human_opens
 
 	column clicks
 		dataType: int64
-		lineageTag: 591ce696-b82e-59a4-94cd-89c83ac77491
-		summarizeBy: none
+		formatString: #,0
+		lineageTag: 8cc6cbc8-4d3a-51b2-92a2-4faf672675a5
+		summarizeBy: sum
 		sourceColumn: clicks
 
 	column unsubscribes
 		dataType: int64
-		lineageTag: 7c4af4fd-c2f2-5647-a1f6-6f6cdac85f93
-		summarizeBy: none
+		formatString: #,0
+		lineageTag: 56005745-aab7-5194-8688-6ba6fe30e223
+		summarizeBy: sum
 		sourceColumn: unsubscribes
 
 	column spam_complaints
 		dataType: int64
-		lineageTag: 7181eff8-dab5-5511-9511-5a5e912e4192
-		summarizeBy: none
+		formatString: #,0
+		lineageTag: 66fea477-8016-5172-871f-b321a8a8f967
+		summarizeBy: sum
 		sourceColumn: spam_complaints
 
 	column bounce_rate
 		dataType: double
-		lineageTag: 51eee2bd-3556-55d8-b4c8-8229b975dbdf
+		formatString: 0.0%
+		lineageTag: d3f1945b-2fe9-5dbe-aa5b-14329c44114b
 		summarizeBy: none
 		sourceColumn: bounce_rate
 
 	column human_open_rate
 		dataType: double
-		lineageTag: 22b5f5d1-d4f8-5447-9e0b-b66d3cf74d00
+		formatString: 0.0%
+		lineageTag: 0ae0bc02-5f05-547c-ba6e-fea37ae9ae13
 		summarizeBy: none
 		sourceColumn: human_open_rate
 
 	column click_rate
 		dataType: double
-		lineageTag: 24c22ba1-caf3-536c-bed7-9371692cf90b
+		formatString: 0.0%
+		lineageTag: 2d30c9be-a3cc-5373-b1c0-e8489af4d2e7
 		summarizeBy: none
 		sourceColumn: click_rate
 
 	column click_to_open_rate
 		dataType: double
-		lineageTag: ddf13425-712e-5c2b-930a-fcedd5841597
+		formatString: 0.0%
+		lineageTag: 277125c4-c36e-5f5a-86a3-f3b613753941
 		summarizeBy: none
 		sourceColumn: click_to_open_rate
 
 	column complaint_rate
 		dataType: double
-		lineageTag: 1fbd9acb-01c3-5f3f-998b-ca717261b6c2
+		formatString: 0.0%
+		lineageTag: 9e7863fa-2e0a-566d-a87d-163ceac955ef
 		summarizeBy: none
 		sourceColumn: complaint_rate
-
-	/// Delivered sends.
-	measure 'Emails delivered' = SUM('mart_email_performance'[delivered])
-		formatString: #,0
-		displayFolder: Email
-		lineageTag: 5927c7a7-e81a-57e3-b086-5fe179ca99a9
-
-	/// Opens excluding privacy-proxy machine opens / delivered.
-	measure 'Human open rate' = DIVIDE(SUM('mart_email_performance'[human_opens]), [Emails delivered])
-		formatString: 0.0%
-		displayFolder: Email
-		lineageTag: 9fda25cd-5110-52bd-bb98-da7f254524f8
-
-	/// All opens / delivered; inflated by machine opens, shown only for comparison.
-	measure 'Reported open rate' = DIVIDE(SUM('mart_email_performance'[opens]), [Emails delivered])
-		formatString: 0.0%
-		displayFolder: Email
-		lineageTag: 5493fae1-cff0-561a-8f2a-773dee20a6da
-
-	/// Clicks / delivered (email CTR).
-	measure 'Email click rate' = DIVIDE(SUM('mart_email_performance'[clicks]), [Emails delivered])
-		formatString: 0.00%
-		displayFolder: Email
-		lineageTag: a660f156-0444-5bc3-8103-cca17982077e
-
-	/// Clicks / human opens.
-	measure 'Click-to-open rate' = DIVIDE(SUM('mart_email_performance'[clicks]), SUM('mart_email_performance'[human_opens]))
-		formatString: 0.0%
-		displayFolder: Email
-		lineageTag: ad881d07-c8ab-5270-8e1e-d1e52011d44b
-
-	/// Bounces / sends; above 2% flags the sending domain.
-	measure 'Bounce rate' = DIVIDE(SUM('mart_email_performance'[bounces]), SUM('mart_email_performance'[sends]))
-		formatString: 0.00%
-		displayFolder: Email
-		lineageTag: d323a570-8812-519d-930a-0ea7f41193a0
-
-	/// Spam complaints / delivered; limit 0.1%.
-	measure 'Complaint rate' = DIVIDE(SUM('mart_email_performance'[spam_complaints]), [Emails delivered])
-		formatString: 0.000%
-		displayFolder: Email
-		lineageTag: a0d16d8c-2ba5-5ece-b2b2-a7a700f0d0ab
 
 	partition mart_email_performance = m
 		mode: import
 		source =
 				let
-				  Source = Table.FromRows(Json.Document(Binary.Decompress(Binary.FromText("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", BinaryEncoding.Base64), Compression.Deflate)), let _t = ((type nullable text) meta [Serialized.Text = true]) in type table [email_id = nullable text, sent_date = nullable text, email_type = nullable text, subject = nullable text, sending_domain = nullable text, sends = nullable text, delivered = nullable text, bounces = nullable text, opens = nullable text, machine_opens = nullable text, human_opens = nullable text, clicks = nullable text, unsubscribes = nullable text, spam_complaints = nullable text, bounce_rate = nullable text, human_open_rate = nullable text, click_rate = nullable text, click_to_open_rate = nullable text, complaint_rate = nullable text]),
-				  #"Changed column type" = Table.TransformColumnTypes(Source, {{"email_id", type text}, {"sent_date", type date}, {"email_type", type text}, {"subject", type text}, {"sending_domain", type text}, {"sends", Int64.Type}, {"delivered", Int64.Type}, {"bounces", Int64.Type}, {"opens", Int64.Type}, {"machine_opens", Int64.Type}, {"human_opens", Int64.Type}, {"clicks", Int64.Type}, {"unsubscribes", Int64.Type}, {"spam_complaints", Int64.Type}, {"bounce_rate", type number}, {"human_open_rate", type number}, {"click_rate", type number}, {"click_to_open_rate", type number}, {"complaint_rate", type number}})
+				    Source = #table(type table [#"email_id" = nullable text, #"sent_date" = nullable text, #"email_type" = nullable text, #"subject" = nullable text, #"sending_domain" = nullable text, #"sends" = nullable text, #"delivered" = nullable text, #"bounces" = nullable text, #"opens" = nullable text, #"machine_opens" = nullable text, #"human_opens" = nullable text, #"clicks" = nullable text, #"unsubscribes" = nullable text, #"spam_complaints" = nullable text, #"bounce_rate" = nullable text, #"human_open_rate" = nullable text, #"click_rate" = nullable text, #"click_to_open_rate" = nullable text, #"complaint_rate" = nullable text], {
+				        {"em-20250701-newsletter", "2025-07-01", "newsletter", "The pricing conversation most founders avoid (issue 1)", "mail.scalelab.example", "12000", "11941", "59", "6013", "3051", "2962", "253", "20", "2", "0.0049", "0.2481", "0.0212", "0.0854", "0.0002"},
+				        {"em-20250703-nurture", "2025-07-03", "nurture", "Welcome sequence (weekly batch)", "mail.scalelab.example", "207", "206", "1", "135", "59", "76", "10", "0", "0", "0.0048", "0.3689", "0.0485", "0.1316", "0.0"},
+				        {"em-20250707-webinar_invite", "2025-07-07", "webinar_invite", "Live this Thursday: the Growth OS workshop (July)", "mail.scalelab.example", "12128", "12066", "62", "6764", "3618", "3146", "314", "18", "2", "0.0051", "0.2607", "0.026", "0.0998", "0.0002"},
+				        {"em-20250708-newsletter", "2025-07-08", "newsletter", "The discovery call, line by line (issue 4)", "mail.scalelab.example", "12126", "12067", "59", "6871", "3408", "3463", "244", "21", "2", "0.0049", "0.287", "0.0202", "0.0705", "0.0002"},
+				        {"em-20250710-nurture", "2025-07-10", "nurture", "Welcome sequence (weekly batch)", "mail.scalelab.example", "645", "642", "3", "413", "181", "232", "32", "1", "0", "0.0047", "0.3614", "0.0498", "0.1379", "0.0"},
+				        {"em-20250715-newsletter", "2025-07-15", "newsletter", "A calmer launch calendar (issue 6)", "mail.scalelab.example", "12299", "12237", "62", "7347", "3818", "3529", "257", "20", "2", "0.005", "0.2884", "0.021", "0.0728", "0.0002"},
+				        {"em-20250717-nurture", "2025-07-17", "nurture", "Welcome sequence (weekly batch)", "mail.scalelab.example", "765", "761", "4", "489", "192", "297", "45", "2", "0", "0.0052", "0.3903", "0.0591", "0.1515", "0.0"},
+				        {"em-20250722-newsletter", "2025-07-22", "newsletter", "Three numbers to review every Monday (issue 2)", "mail.scalelab.example", "12464", "12401", "63", "7517", "3763", "3754", "241", "20", "2", "0.0051", "0.3027", "0.0194", "0.0642", "0.0002"},
+				        {"em-20250724-nurture", "2025-07-24", "nurture", "Welcome sequence (weekly batch)", "mail.scalelab.example", "687", "683", "4", "437", "188", "249", "35", "2", "0", "0.0058", "0.3646", "0.0512", "0.1406", "0.0"},
+				        {"em-20250729-newsletter", "2025-07-29", "newsletter", "The discovery call, line by line (issue 4)", "mail.scalelab.example", "12622", "12562", "60", "7001", "3888", "3113", "287", "23", "2", "0.0048", "0.2478", "0.0228", "0.0922", "0.0002"},
+				        {"em-20250731-nurture", "2025-07-31", "nurture", "Welcome sequence (weekly batch)", "mail.scalelab.example", "651", "648", "3", "415", "184", "231", "33", "1", "0", "0.0046", "0.3565", "0.0509", "0.1429", "0.0"},
+				        {"em-20250805-newsletter", "2025-08-05", "newsletter", "A calmer launch calendar (issue 6)", "mail.scalelab.example", "12757", "12696", "61", "7064", "3799", "3265", "250", "25", "2", "0.0048", "0.2572", "0.0197", "0.0766", "0.0002"},
+				        {"em-20250807-nurture", "2025-08-07", "nurture", "Welcome sequence (weekly batch)", "mail.scalelab.example", "615", "612", "3", "410", "191", "219", "32", "1", "0", "0.0049", "0.3578", "0.0523", "0.1461", "0.0"},
+				        {"em-20250811-webinar_invite", "2025-08-11", "webinar_invite", "Live this Thursday: the Growth OS workshop (August)", "mail.scalelab.example", "12893", "12818", "75", "7189", "4085", "3104", "334", "19", "2", "0.0058", "0.2422", "0.0261", "0.1076", "0.0002"},
+				        {"em-20250812-newsletter", "2025-08-12", "newsletter", "How we would hire your first operator (issue 3)", "mail.scalelab.example", "12903", "12839", "64", "7614", "3989", "3625", "278", "21", "2", "0.005", "0.2823", "0.0217", "0.0767", "0.0002"},
+				        {"em-20250814-nurture", "2025-08-14", "nurture", "Welcome sequence (weekly batch)", "mail.scalelab.example", "666", "663", "3", "433", "164", "269", "33", "1", "0", "0.0045", "0.4057", "0.0498", "0.1227", "0.0"},
+				        {"em-20250819-newsletter", "2025-08-19", "newsletter", "Why busy founders stall at $1M (issue 5)", "mail.scalelab.example", "13034", "12960", "74", "7236", "3932", "3304", "271", "24", "2", "0.0057", "0.2549", "0.0209", "0.082", "0.0002"},
+				        {"em-20250821-nurture", "2025-08-21", "nurture", "Welcome sequence (weekly batch)", "mail.scalelab.example", "540", "537", "3", "357", "158", "199", "29", "1", "0", "0.0056", "0.3706", "0.054", "0.1457", "0.0"},
+				        {"em-20250826-newsletter", "2025-08-26", "newsletter", "The pricing conversation most founders avoid (issue 1)", "mail.scalelab.example", "13157", "13093", "64", "7541", "4025", "3516", "247", "20", "2", "0.0049", "0.2685", "0.0189", "0.0703", "0.0002"},
+				        {"em-20250828-nurture", "2025-08-28", "nurture", "Welcome sequence (weekly batch)", "mail.scalelab.example", "618", "615", "3", "377", "152", "225", "31", "1", "0", "0.0049", "0.3659", "0.0504", "0.1378", "0.0"},
+				        {"em-20250902-newsletter", "2025-09-02", "newsletter", "How we would hire your first operator (issue 3)", "mail.scalelab.example", "13285", "13219", "66", "7933", "3992", "3941", "292", "23", "2", "0.005", "0.2981", "0.0221", "0.0741", "0.0002"},
+				        {"em-20250904-nurture", "2025-09-04", "nurture", "Welcome sequence (weekly batch)", "mail.scalelab.example", "546", "543", "3", "352", "151", "201", "31", "1", "0", "0.0055", "0.3702", "0.0571", "0.1542", "0.0"},
+				        {"em-20250908-webinar_invite", "2025-09-08", "webinar_invite", "Live this Thursday: the Growth OS workshop (September)", "mail.scalelab.example", "13399", "13326", "73", "7486", "4281", "3205", "349", "20", "2", "0.0054", "0.2405", "0.0262", "0.1089", "0.0002"},
+				        {"em-20250909-newsletter", "2025-09-09", "newsletter", "A calmer launch calendar (issue 6)", "mail.scalelab.example", "13406", "13346", "60", "7945", "4115", "3830", "288", "26", "2", "0.0045", "0.287", "0.0216", "0.0752", "0.0001"},
+				        {"em-20250911-nurture", "2025-09-11", "nurture", "Welcome sequence (weekly batch)", "mail.scalelab.example", "660", "656", "4", "417", "176", "241", "35", "2", "0", "0.0061", "0.3674", "0.0534", "0.1452", "0.0"},
+				        {"em-20250916-newsletter", "2025-09-16", "newsletter", "Three numbers to review every Monday (issue 2)", "mail.scalelab.example", "13571", "13496", "75", "7777", "3915", "3862", "275", "22", "2", "0.0055", "0.2862", "0.0204", "0.0712", "0.0001"},
+				        {"em-20250918-nurture", "2025-09-18", "nurture", "Welcome sequence (weekly batch)", "mail.scalelab.example", "663", "660", "3", "428", "187", "241", "33", "2", "0", "0.0045", "0.3652", "0.05", "0.1369", "0.0"},
+				        {"em-20250923-newsletter", "2025-09-23", "newsletter", "The discovery call, line by line (issue 4)", "mail.scalelab.example", "13713", "13650", "63", "7638", "4033", "3605", "298", "23", "2", "0.0046", "0.2641", "0.0218", "0.0827", "0.0001"},
+				        {"em-20250925-nurture", "2025-09-25", "nurture", "Welcome sequence (weekly batch)", "mail.scalelab.example", "648", "645", "3", "408", "179", "229", "31", "1", "0", "0.0046", "0.355", "0.0481", "0.1354", "0.0"},
+				        {"em-20250930-newsletter", "2025-09-30", "newsletter", "A calmer launch calendar (issue 6)", "mail.scalelab.example", "13856", "13782", "74", "8640", "4617", "4023", "283", "28", "2", "0.0053", "0.2919", "0.0205", "0.0703", "0.0001"},
+				        {"em-20251002-nurture", "2025-10-02", "nurture", "Welcome sequence (weekly batch)", "mail.scalelab.example", "576", "573", "3", "388", "161", "227", "30", "1", "0", "0.0052", "0.3962", "0.0524", "0.1322", "0.0"},
+				        {"em-20251006-webinar_invite", "2025-10-06", "webinar_invite", "Live this Thursday: the Growth OS workshop (October)", "mail.scalelab.example", "13965", "13899", "66", "7615", "4034", "3581", "418", "20", "2", "0.0047", "0.2576", "0.0301", "0.1167", "0.0001"},
+				        {"em-20251007-newsletter", "2025-10-07", "newsletter", "How we would hire your first operator (issue 3)", "mail.scalelab.example", "13966", "13897", "69", "7998", "4624", "3374", "278", "27", "2", "0.0049", "0.2428", "0.02", "0.0824", "0.0001"},
+				        {"em-20251009-nurture", "2025-10-09", "nurture", "Welcome sequence (weekly batch)", "mail.scalelab.example", "645", "642", "3", "414", "178", "236", "35", "1", "0", "0.0047", "0.3676", "0.0545", "0.1483", "0.0"},
+				        {"em-20251014-newsletter", "2025-10-14", "newsletter", "Why busy founders stall at $1M (issue 5)", "mail.scalelab.example", "14136", "14055", "81", "7413", "3773", "3640", "279", "26", "2", "0.0057", "0.259", "0.0199", "0.0766", "0.0001"},
+				        {"em-20251016-nurture", "2025-10-16", "nurture", "Welcome sequence (weekly batch)", "mail.scalelab.example", "696", "693", "3", "414", "174", "240", "35", "1", "0", "0.0043", "0.3463", "0.0505", "0.1458", "0.0"},
+				        {"em-20251021-newsletter", "2025-10-21", "newsletter", "The pricing conversation most founders avoid (issue 1)", "mail.scalelab.example", "14269", "14194", "75", "8410", "4357", "4053", "300", "24", "2", "0.0053", "0.2855", "0.0211", "0.074", "0.0001"},
+				        {"em-20251023-nurture", "2025-10-23", "nurture", "Welcome sequence (weekly batch)", "mail.scalelab.example", "618", "615", "3", "398", "163", "235", "32", "1", "0", "0.0049", "0.3821", "0.052", "0.1362", "0.0"},
+				        {"em-20251028-newsletter", "2025-10-28", "newsletter", "How we would hire your first operator (issue 3)", "mail.scalelab.example", "14408", "14335", "73", "7868", "4176", "3692", "321", "27", "2", "0.0051", "0.2576", "0.0224", "0.0869", "0.0001"},
+				        {"em-20251030-nurture", "2025-10-30", "nurture", "Welcome sequence (weekly batch)", "mail.scalelab.example", "612", "609", "3", "407", "174", "233", "32", "1", "0", "0.0049", "0.3826", "0.0525", "0.1373", "0.0"},
+				        {"em-20251104-newsletter", "2025-11-04", "newsletter", "Why busy founders stall at $1M (issue 5)", "mail.scalelab.example", "14548", "14480", "68", "8196", "4595", "3601", "370", "28", "2", "0.0047", "0.2487", "0.0256", "0.1027", "0.0001"},
+				        {"em-20251106-nurture", "2025-11-06", "nurture", "Welcome sequence (weekly batch)", "mail.scalelab.example", "597", "594", "3", "387", "162", "225", "28", "1", "0", "0.005", "0.3788", "0.0471", "0.1244", "0.0"},
+				        {"em-20251110-webinar_invite", "2025-11-10", "webinar_invite", "Live this Thursday: the Growth OS workshop (November)", "mail.scalelab.example", "14658", "14577", "81", "8050", "4299", "3751", "390", "21", "2", "0.0055", "0.2573", "0.0268", "0.104", "0.0001"},
+				        {"em-20251111-newsletter", "2025-11-11", "newsletter", "Three numbers to review every Monday (issue 2)", "mail.scalelab.example", "14657", "14577", "80", "8350", "4176", "4174", "272", "26", "2", "0.0055", "0.2863", "0.0187", "0.0652", "0.0001"},
+				        {"em-20251113-nurture", "2025-11-13", "nurture", "Welcome sequence (weekly batch)", "mail.scalelab.example", "645", "642", "3", "412", "167", "245", "34", "1", "0", "0.0047", "0.3816", "0.053", "0.1388", "0.0"},
+				        {"em-20251118-newsletter", "2025-11-18", "newsletter", "The discovery call, line by line (issue 4)", "mail.scalelab.example", "14817", "14741", "76", "8669", "4949", "3720", "283", "25", "2", "0.0051", "0.2524", "0.0192", "0.0761", "0.0001"},
+				        {"em-20251120-nurture", "2025-11-20", "nurture", "Welcome sequence (weekly batch)", "mail.scalelab.example", "615", "612", "3", "404", "162", "242", "29", "1", "0", "0.0049", "0.3954", "0.0474", "0.1198", "0.0"},
+				        {"em-20251125-newsletter", "2025-11-25", "newsletter", "A calmer launch calendar (issue 6)", "mail.scalelab.example", "14926", "14849", "77", "8340", "4691", "3649", "314", "28", "2", "0.0052", "0.2457", "0.0211", "0.0861", "0.0001"},
+				        {"em-20251127-nurture", "2025-11-27", "nurture", "Welcome sequence (weekly batch)", "mail.scalelab.example", "513", "510", "3", "323", "138", "185", "28", "1", "0", "0.0058", "0.3627", "0.0549", "0.1514", "0.0"},
+				        {"em-20251202-newsletter", "2025-12-02", "newsletter", "Three numbers to review every Monday (issue 2)", "mail.scalelab.example", "15049", "14979", "70", "8632", "4898", "3734", "307", "29", "2", "0.0047", "0.2493", "0.0205", "0.0822", "0.0001"},
+				        {"em-20251204-nurture", "2025-12-04", "nurture", "Welcome sequence (weekly batch)", "mail.scalelab.example", "636", "633", "3", "387", "159", "228", "33", "1", "0", "0.0047", "0.3602", "0.0521", "0.1447", "0.0"},
+				        {"em-20251208-webinar_invite", "2025-12-08", "webinar_invite", "Live this Thursday: the Growth OS workshop (December)", "mail.scalelab.example", "15159", "15081", "78", "7759", "4220", "3539", "422", "23", "2", "0.0051", "0.2347", "0.028", "0.1192", "0.0001"},
+				        {"em-20251209-newsletter", "2025-12-09", "newsletter", "Why busy founders stall at $1M (issue 5)", "mail.scalelab.example", "15157", "15077", "80", "8493", "4524", "3969", "304", "29", "2", "0.0053", "0.2632", "0.0202", "0.0766", "0.0001"},
+				        {"em-20251211-nurture", "2025-12-11", "nurture", "Welcome sequence (weekly batch)", "mail.scalelab.example", "516", "514", "2", "324", "132", "192", "25", "1", "0", "0.0039", "0.3735", "0.0486", "0.1302", "0.0"},
+				        {"em-20251216-newsletter", "2025-12-16", "newsletter", "The pricing conversation most founders avoid (issue 1)", "mail.scalelab.example", "15282", "15208", "74", "8709", "4814", "3895", "302", "26", "2", "0.0048", "0.2561", "0.0199", "0.0775", "0.0001"},
+				        {"em-20251218-nurture", "2025-12-18", "nurture", "Welcome sequence (weekly batch)", "mail.scalelab.example", "645", "642", "3", "448", "183", "265", "32", "1", "0", "0.0047", "0.4128", "0.0498", "0.1208", "0.0"},
+				        {"em-20251223-newsletter", "2025-12-23", "newsletter", "How we would hire your first operator (issue 3)", "mail.scalelab.example", "15405", "15333", "72", "8162", "4168", "3994", "356", "28", "2", "0.0047", "0.2605", "0.0232", "0.0891", "0.0001"},
+				        {"em-20251225-nurture", "2025-12-25", "nurture", "Welcome sequence (weekly batch)", "mail.scalelab.example", "456", "454", "2", "308", "136", "172", "23", "1", "0", "0.0044", "0.3789", "0.0507", "0.1337", "0.0"},
+				        {"em-20251230-newsletter", "2025-12-30", "newsletter", "Why busy founders stall at $1M (issue 5)", "mail.scalelab.example", "15479", "15400", "79", "9266", "4661", "4605", "322", "28", "2", "0.0051", "0.299", "0.0209", "0.0699", "0.0001"},
+				        {"em-20260101-nurture", "2026-01-01", "nurture", "Welcome sequence (weekly batch)", "mail.scalelab.example", "402", "400", "2", "267", "118", "149", "21", "1", "0", "0.005", "0.3725", "0.0525", "0.1409", "0.0"},
+				        {"em-20260105-webinar_invite", "2026-01-05", "webinar_invite", "Live this Thursday: the Growth OS workshop (January)", "mail.scalelab.example", "15560", "15483", "77", "8535", "4666", "3869", "469", "24", "3", "0.0049", "0.2499", "0.0303", "0.1212", "0.0002"},
+				        {"em-20260106-newsletter", "2026-01-06", "newsletter", "Three numbers to review every Monday (issue 2)", "mail.scalelab.example", "15571", "15496", "75", "9600", "4844", "4756", "331", "30", "2", "0.0048", "0.3069", "0.0214", "0.0696", "0.0001"},
+				        {"em-20260108-nurture", "2026-01-08", "nurture", "Welcome sequence (weekly batch)", "mail.scalelab.example", "621", "618", "3", "398", "185", "213", "32", "2", "0", "0.0048", "0.3447", "0.0518", "0.1502", "0.0"},
+				        {"em-20260113-newsletter", "2026-01-13", "newsletter", "The discovery call, line by line (issue 4)", "mail.scalelab.example", "15745", "15671", "74", "8930", "4602", "4328", "327", "26", "2", "0.0047", "0.2762", "0.0209", "0.0756", "0.0001"},
+				        {"em-20260115-nurture", "2026-01-15", "nurture", "Welcome sequence (weekly batch)", "mail.scalelab.example", "723", "720", "3", "446", "195", "251", "38", "2", "0", "0.0041", "0.3486", "0.0528", "0.1514", "0.0"},
+				        {"em-20260120-newsletter", "2026-01-20", "newsletter", "A calmer launch calendar (issue 6)", "mail.scalelab.example", "15891", "15822", "69", "9400", "5134", "4266", "353", "27", "2", "0.0043", "0.2696", "0.0223", "0.0827", "0.0001"},
+				        {"em-20260122-nurture", "2026-01-22", "nurture", "Welcome sequence (weekly batch)", "mail.scalelab.example", "714", "711", "3", "430", "186", "244", "35", "1", "0", "0.0042", "0.3432", "0.0492", "0.1434", "0.0"},
+				        {"em-20260127-newsletter", "2026-01-27", "newsletter", "Three numbers to review every Monday (issue 2)", "mail.scalelab.example", "16042", "15957", "85", "9436", "4880", "4556", "337", "29", "2", "0.0053", "0.2855", "0.0211", "0.074", "0.0001"},
+				        {"em-20260129-nurture", "2026-01-29", "nurture", "Welcome sequence (weekly batch)", "mail.scalelab.example", "672", "669", "3", "443", "194", "249", "36", "2", "0", "0.0045", "0.3722", "0.0538", "0.1446", "0.0"},
+				        {"em-20260203-newsletter", "2026-02-03", "newsletter", "The discovery call, line by line (issue 4)", "mail.scalelab.example", "16205", "16127", "78", "9525", "5298", "4227", "342", "31", "3", "0.0048", "0.2621", "0.0212", "0.0809", "0.0002"},
+				        {"em-20260205-nurture", "2026-02-05", "nurture", "Welcome sequence (weekly batch)", "mail.scalelab.example", "678", "675", "3", "457", "187", "270", "34", "1", "0", "0.0044", "0.4", "0.0504", "0.1259", "0.0"},
+				        {"em-20260209-webinar_invite", "2026-02-09", "webinar_invite", "Live this Thursday: the Growth OS workshop (February)", "mail.scalelab.example", "16319", "16232", "87", "8855", "5007", "3848", "395", "22", "2", "0.0053", "0.2371", "0.0243", "0.1027", "0.0001"},
+				        {"em-20260210-newsletter", "2026-02-10", "newsletter", "The pricing conversation most founders avoid (issue 1)", "mail.scalelab.example", "16320", "16249", "71", "8784", "4716", "4068", "317", "30", "2", "0.0044", "0.2504", "0.0195", "0.0779", "0.0001"},
+				        {"em-20260212-nurture", "2026-02-12", "nurture", "Welcome sequence (weekly batch)", "mail.scalelab.example", "576", "573", "3", "366", "161", "205", "25", "1", "0", "0.0052", "0.3578", "0.0436", "0.122", "0.0"},
+				        {"em-20260217-newsletter", "2026-02-17", "newsletter", "How we would hire your first operator (issue 3)", "mail.scalelab.example", "16459", "16375", "84", "9888", "5342", "4546", "348", "30", "2", "0.0051", "0.2776", "0.0213", "0.0766", "0.0001"},
+				        {"em-20260219-nurture", "2026-02-19", "nurture", "Welcome sequence (weekly batch)", "mail.scalelab.example", "645", "642", "3", "412", "157", "255", "34", "1", "0", "0.0047", "0.3972", "0.053", "0.1333", "0.0"},
+				        {"em-20260224-newsletter", "2026-02-24", "newsletter", "Why busy founders stall at $1M (issue 5)", "mail.scalelab.example", "16575", "16494", "81", "9373", "5260", "4113", "370", "28", "2", "0.0049", "0.2494", "0.0224", "0.09", "0.0001"},
+				        {"em-20260226-nurture", "2026-02-26", "nurture", "Welcome sequence (weekly batch)", "mail.scalelab.example", "603", "600", "3", "394", "168", "226", "33", "1", "0", "0.005", "0.3767", "0.055", "0.146", "0.0"},
+				        {"em-20260303-newsletter", "2026-03-03", "newsletter", "The pricing conversation most founders avoid (issue 1)", "mail.scalelab.example", "16716", "16630", "86", "9357", "4746", "4611", "339", "28", "2", "0.0051", "0.2773", "0.0204", "0.0735", "0.0001"},
+				        {"em-20260305-nurture", "2026-03-05", "nurture", "Welcome sequence (weekly batch)", "mail.scalelab.example", "576", "573", "3", "375", "160", "215", "27", "1", "0", "0.0052", "0.3752", "0.0471", "0.1256", "0.0"},
+				        {"em-20260309-webinar_invite", "2026-03-09", "webinar_invite", "Live this Thursday: the Growth OS workshop (March)", "mail.scalelab.example", "16819", "16737", "82", "8511", "4574", "3937", "448", "22", "2", "0.0049", "0.2352", "0.0268", "0.1138", "0.0001"},
+				        {"em-20260310-newsletter", "2026-03-10", "newsletter", "The discovery call, line by line (issue 4)", "mail.scalelab.example", "16817", "16734", "83", "9503", "4853", "4650", "351", "30", "3", "0.0049", "0.2779", "0.021", "0.0755", "0.0002"},
+				        {"em-20260312-nurture", "2026-03-12", "nurture", "Welcome sequence (weekly batch)", "mail.scalelab.example", "612", "609", "3", "414", "181", "233", "33", "1", "0", "0.0049", "0.3826", "0.0542", "0.1416", "0.0"},
+				        {"em-20260317-newsletter", "2026-03-17", "newsletter", "A calmer launch calendar (issue 6)", "mail.scalelab.example", "16955", "16869", "86", "9919", "5412", "4507", "355", "30", "2", "0.0051", "0.2672", "0.021", "0.0788", "0.0001"},
+				        {"em-20260319-nurture", "2026-03-19", "nurture", "Welcome sequence (weekly batch)", "mail.scalelab.example", "585", "582", "3", "395", "154", "241", "29", "1", "0", "0.0051", "0.4141", "0.0498", "0.1203", "0.0"},
+				        {"em-20260324-newsletter", "2026-03-24", "newsletter", "Three numbers to review every Monday (issue 2)", "mail.scalelab.example", "17064", "16986", "78", "9665", "4982", "4683", "365", "32", "2", "0.0046", "0.2757", "0.0215", "0.0779", "0.0001"},
+				        {"em-20260326-nurture", "2026-03-26", "nurture", "Welcome sequence (weekly batch)", "mail.scalelab.example", "531", "528", "3", "323", "131", "192", "27", "1", "0", "0.0056", "0.3636", "0.0511", "0.1406", "0.0"},
+				        {"em-20260331-newsletter", "2026-03-31", "newsletter", "The discovery call, line by line (issue 4)", "mail.scalelab.example", "17177", "17086", "91", "9806", "5704", "4102", "324", "30", "3", "0.0053", "0.2401", "0.019", "0.079", "0.0002"},
+				        {"em-20260402-nurture", "2026-04-02", "nurture", "Welcome sequence (weekly batch)", "mail.scalelab.example", "543", "541", "2", "348", "141", "207", "31", "1", "0", "0.0037", "0.3826", "0.0573", "0.1498", "0.0"},
+				        {"em-20260406-webinar_invite", "2026-04-06", "webinar_invite", "Live this Thursday: the Growth OS workshop (April)", "mail.scalelab.example", "17274", "17189", "85", "9093", "4964", "4129", "448", "30", "3", "0.0049", "0.2402", "0.0261", "0.1085", "0.0002"},
+				        {"em-20260407-newsletter", "2026-04-07", "newsletter", "The pricing conversation most founders avoid (issue 1)", "mail.scalelab.example", "17277", "17195", "82", "9250", "4684", "4566", "322", "28", "2", "0.0047", "0.2655", "0.0187", "0.0705", "0.0001"},
+				        {"em-20260409-nurture", "2026-04-09", "nurture", "Welcome sequence (weekly batch)", "mail.scalelab.example", "621", "618", "3", "422", "187", "235", "31", "1", "0", "0.0048", "0.3803", "0.0502", "0.1319", "0.0"},
+				        {"em-20260414-newsletter", "2026-04-14", "newsletter", "How we would hire your first operator (issue 3)", "mail.scalelab.example", "17422", "17328", "94", "9722", "4957", "4765", "373", "32", "3", "0.0054", "0.275", "0.0215", "0.0783", "0.0002"},
+				        {"em-20260416-nurture", "2026-04-16", "nurture", "Welcome sequence (weekly batch)", "mail.scalelab.example", "654", "650", "4", "434", "177", "257", "35", "2", "0", "0.0061", "0.3954", "0.0538", "0.1362", "0.0"},
+				        {"em-20260421-newsletter", "2026-04-21", "newsletter", "Why busy founders stall at $1M (issue 5)", "mail.scalelab.example", "17554", "17468", "86", "10583", "5580", "5003", "364", "29", "3", "0.0049", "0.2864", "0.0208", "0.0728", "0.0002"},
+				        {"em-20260423-nurture", "2026-04-23", "nurture", "Welcome sequence (weekly batch)", "mail.scalelab.example", "648", "645", "3", "421", "177", "244", "33", "1", "0", "0.0046", "0.3783", "0.0512", "0.1352", "0.0"},
+				        {"em-20260428-newsletter", "2026-04-28", "newsletter", "The pricing conversation most founders avoid (issue 1)", "mail.scalelab.example", "17700", "17602", "98", "10488", "5371", "5117", "397", "33", "3", "0.0055", "0.2907", "0.0226", "0.0776", "0.0002"},
+				        {"em-20260430-nurture", "2026-04-30", "nurture", "Welcome sequence (weekly batch)", "mail.scalelab.example", "657", "654", "3", "441", "204", "237", "33", "1", "0", "0.0046", "0.3624", "0.0505", "0.1392", "0.0"},
+				        {"em-20260505-newsletter", "2026-05-05", "newsletter", "How we would hire your first operator (issue 3)", "mail.scalelab.example", "17824", "17738", "86", "10014", "5294", "4720", "349", "34", "2", "0.0048", "0.2661", "0.0197", "0.0739", "0.0001"},
+				        {"em-20260507-nurture", "2026-05-07", "nurture", "Welcome sequence (weekly batch)", "mail.scalelab.example", "621", "618", "3", "405", "173", "232", "33", "1", "0", "0.0048", "0.3754", "0.0534", "0.1422", "0.0"},
+				        {"em-20260511-webinar_invite", "2026-05-11", "webinar_invite", "Live this Thursday: the Growth OS workshop (May)", "mail.scalelab.example", "17956", "17861", "95", "9666", "5272", "4394", "517", "28", "3", "0.0053", "0.246", "0.0289", "0.1177", "0.0002"},
+				        {"em-20260512-newsletter", "2026-05-12", "newsletter", "A calmer launch calendar (issue 6)", "mail.scalelab.example", "17955", "17869", "86", "10189", "5661", "4528", "345", "36", "3", "0.0048", "0.2534", "0.0193", "0.0762", "0.0002"},
+				        {"em-20260514-nurture", "2026-05-14", "nurture", "Welcome sequence (weekly batch)", "mail.scalelab.example", "687", "684", "3", "465", "200", "265", "36", "2", "0", "0.0044", "0.3874", "0.0526", "0.1358", "0.0"},
+				        {"em-20260519-newsletter", "2026-05-19", "newsletter", "Three numbers to review every Monday (issue 2)", "mail.scalelab.example", "18103", "18019", "84", "9633", "5128", "4505", "414", "35", "3", "0.0046", "0.25", "0.023", "0.0919", "0.0002"},
+				        {"em-20260521-nurture", "2026-05-21", "nurture", "Welcome sequence (weekly batch)", "mail.scalelab.example", "693", "689", "4", "430", "163", "267", "39", "2", "0", "0.0058", "0.3875", "0.0566", "0.1461", "0.0"},
+				        {"em-20260526-newsletter", "2026-05-26", "newsletter", "The discovery call, line by line (issue 4)", "mail.scalelab.example", "18259", "18160", "99", "9639", "5143", "4496", "364", "33", "3", "0.0054", "0.2476", "0.02", "0.081", "0.0002"},
+				        {"em-20260528-nurture", "2026-05-28", "nurture", "Welcome sequence (weekly batch)", "mail.scalelab.example", "681", "678", "3", "459", "190", "269", "35", "1", "0", "0.0044", "0.3968", "0.0516", "0.1301", "0.0"},
+				        {"em-20260602-newsletter", "2026-06-02", "newsletter", "A calmer launch calendar (issue 6)", "mail.scalelab.example", "18396", "18299", "97", "10552", "5320", "5232", "393", "33", "3", "0.0053", "0.2859", "0.0215", "0.0751", "0.0002"},
+				        {"em-20260604-nurture", "2026-06-04", "nurture", "Welcome sequence (weekly batch)", "mail.scalelab.example", "657", "654", "3", "404", "175", "229", "37", "1", "0", "0.0046", "0.3502", "0.0566", "0.1616", "0.0"},
+				        {"em-20260608-webinar_invite", "2026-06-08", "webinar_invite", "Live this Thursday: the Growth OS workshop (June)", "mail.scalelab.example", "18524", "18431", "93", "9678", "5443", "4235", "562", "27", "3", "0.005", "0.2298", "0.0305", "0.1327", "0.0002"},
+				        {"em-20260609-newsletter", "2026-06-09", "newsletter", "How we would hire your first operator (issue 3)", "mail.scalelab.example", "18520", "18426", "94", "10360", "5411", "4949", "432", "32", "3", "0.0051", "0.2686", "0.0234", "0.0873", "0.0002"},
+				        {"em-20260611-nurture", "2026-06-11", "nurture", "Welcome sequence (weekly batch)", "mail.scalelab.example", "663", "660", "3", "402", "184", "218", "33", "2", "0", "0.0045", "0.3303", "0.05", "0.1514", "0.0"},
+				        {"em-20260616-newsletter", "2026-06-16", "newsletter", "Why busy founders stall at $1M (issue 5)", "mail.scalelab.example", "18678", "18591", "87", "10807", "5632", "5175", "408", "31", "3", "0.0047", "0.2784", "0.0219", "0.0788", "0.0002"},
+				        {"em-20260618-nurture", "2026-06-18", "nurture", "Welcome sequence (weekly batch)", "mail.scalelab.example", "747", "744", "3", "506", "218", "288", "34", "2", "0", "0.004", "0.3871", "0.0457", "0.1181", "0.0"},
+				        {"em-20260623-newsletter", "2026-06-23", "newsletter", "The pricing conversation most founders avoid (issue 1)", "mail.scalelab.example", "18812", "18726", "86", "10314", "5631", "4683", "358", "35", "3", "0.0046", "0.2501", "0.0191", "0.0764", "0.0002"},
+				        {"em-20260625-nurture", "2026-06-25", "nurture", "Welcome sequence (weekly batch)", "mail.scalelab.example", "621", "618", "3", "436", "174", "262", "30", "1", "0", "0.0048", "0.4239", "0.0485", "0.1145", "0.0"},
+				        {"em-20260630-newsletter", "2026-06-30", "newsletter", "How we would hire your first operator (issue 3)", "mail.scalelab.example", "18963", "18862", "101", "11721", "6466", "5255", "428", "36", "3", "0.0053", "0.2786", "0.0227", "0.0814", "0.0002"},
+				        {"em-20260702-nurture", "2026-07-02", "nurture", "Welcome sequence (weekly batch)", "mail.scalelab.example", "654", "651", "3", "426", "180", "246", "29", "2", "0", "0.0046", "0.3779", "0.0445", "0.1179", "0.0"},
+				        {"em-20260706-webinar_invite", "2026-07-06", "webinar_invite", "Live this Thursday: the Growth OS workshop (July)", "mail.scalelab.example", "19061", "18961", "100", "10464", "5797", "4667", "554", "28", "3", "0.0052", "0.2461", "0.0292", "0.1187", "0.0002"},
+				        {"em-20260707-newsletter", "2026-07-07", "newsletter", "A calmer launch calendar (issue 6)", "mail.scalelab.example", "19060", "18968", "92", "11193", "5566", "5627", "423", "35", "3", "0.0048", "0.2967", "0.0223", "0.0752", "0.0002"},
+				        {"em-20260709-nurture", "2026-07-09", "nurture", "Welcome sequence (weekly batch)", "mail.scalelab.example", "648", "645", "3", "428", "178", "250", "32", "1", "0", "0.0046", "0.3876", "0.0496", "0.128", "0.0"},
+				        {"em-20260714-newsletter", "2026-07-14", "newsletter", "Three numbers to review every Monday (issue 2)", "mail.scalelab.example", "19212", "19114", "98", "10415", "5309", "5106", "377", "34", "3", "0.0051", "0.2671", "0.0197", "0.0738", "0.0002"},
+				        {"em-20260716-nurture", "2026-07-16", "nurture", "Welcome sequence (weekly batch)", "mail.scalelab.example", "696", "692", "4", "459", "196", "263", "36", "2", "0", "0.0057", "0.3801", "0.052", "0.1369", "0.0"},
+				        {"em-20260721-newsletter", "2026-07-21", "newsletter", "The discovery call, line by line (issue 4)", "mail.scalelab.example", "19364", "19270", "94", "11171", "5667", "5504", "367", "36", "3", "0.0049", "0.2856", "0.019", "0.0667", "0.0002"},
+				        {"em-20260723-nurture", "2026-07-23", "nurture", "Welcome sequence (weekly batch)", "mail.scalelab.example", "708", "704", "4", "436", "173", "263", "39", "2", "0", "0.0056", "0.3736", "0.0554", "0.1483", "0.0"},
+				        {"em-20260728-newsletter", "2026-07-28", "newsletter", "A calmer launch calendar (issue 6)", "mail.scalelab.example", "19514", "19421", "93", "11049", "6102", "4947", "433", "37", "3", "0.0048", "0.2547", "0.0223", "0.0875", "0.0002"},
+				        {"em-20260730-nurture", "2026-07-30", "nurture", "Welcome sequence (weekly batch)", "mail.scalelab.example", "609", "606", "3", "430", "192", "238", "31", "1", "0", "0.0049", "0.3927", "0.0512", "0.1303", "0.0"},
+				        {"em-20260804-newsletter", "2026-08-04", "newsletter", "Three numbers to review every Monday (issue 2)", "mail.scalelab.example", "19641", "19550", "91", "11316", "6136", "5180", "406", "36", "3", "0.0046", "0.265", "0.0208", "0.0784", "0.0002"},
+				        {"em-20260806-nurture", "2026-08-06", "nurture", "Welcome sequence (weekly batch)", "mail.scalelab.example", "660", "657", "3", "492", "212", "280", "39", "1", "0", "0.0045", "0.4262", "0.0594", "0.1393", "0.0"},
+				        {"em-20260810-webinar_invite", "2026-08-10", "webinar_invite", "Live this Thursday: the Growth OS workshop (August)", "mail.scalelab.example", "19744", "19646", "98", "11034", "5611", "5423", "566", "30", "3", "0.005", "0.276", "0.0288", "0.1044", "0.0002"},
+				        {"em-20260811-newsletter", "2026-08-11", "newsletter", "Why busy founders stall at $1M (issue 5)", "mail.scalelab.example", "19762", "19666", "96", "11623", "6362", "5261", "377", "36", "3", "0.0049", "0.2675", "0.0192", "0.0717", "0.0002"},
+				        {"em-20260813-nurture", "2026-08-13", "nurture", "Welcome sequence (weekly batch)", "mail.scalelab.example", "882", "877", "5", "582", "230", "352", "50", "2", "0", "0.0057", "0.4014", "0.057", "0.142", "0.0"},
+				        {"em-20260818-newsletter", "2026-08-18", "newsletter", "The pricing conversation most founders avoid (issue 1)", "mail.scalelab.example", "20052", "19949", "103", "11990", "6481", "5509", "419", "38", "3", "0.0051", "0.2762", "0.021", "0.0761", "0.0002"},
+				        {"em-20260820-nurture", "2026-08-20", "nurture", "Welcome sequence (weekly batch)", "mail.scalelab.example", "1248", "1241", "7", "866", "354", "512", "75", "3", "0", "0.0056", "0.4126", "0.0604", "0.1465", "0.0"},
+				        {"em-20260825-newsletter", "2026-08-25", "newsletter", "How we would hire your first operator (issue 3)", "mail.scalelab.example", "20315", "20208", "107", "11317", "5704", "5613", "454", "33", "3", "0.0053", "0.2778", "0.0225", "0.0809", "0.0001"},
+				        {"em-20260827-nurture", "2026-08-27", "nurture", "Welcome sequence (weekly batch)", "mail.scalelab.example", "1035", "1030", "5", "678", "269", "409", "54", "2", "0", "0.0048", "0.3971", "0.0524", "0.132", "0.0"},
+				        {"em-20260901-newsletter", "2026-09-01", "newsletter", "Why busy founders stall at $1M (issue 5)", "news.scalelab.example", "20572", "19816", "756", "7180", "4076", "3104", "242", "40", "32", "0.0367", "0.1566", "0.0122", "0.078", "0.0016"},
+				        {"em-20260903-nurture", "2026-09-03", "nurture", "Welcome sequence (weekly batch)", "mail.scalelab.example", "1152", "1147", "5", "809", "302", "507", "62", "3", "0", "0.0043", "0.442", "0.0541", "0.1223", "0.0"},
+				        {"em-20260907-webinar_invite", "2026-09-07", "webinar_invite", "Live this Thursday: the Growth OS workshop (September)", "mail.scalelab.example", "20784", "20670", "114", "11022", "6078", "4944", "581", "31", "3", "0.0055", "0.2392", "0.0281", "0.1175", "0.0001"},
+				        {"em-20260908-newsletter", "2026-09-08", "newsletter", "Three numbers to review every Monday (issue 2)", "news.scalelab.example", "20791", "19994", "797", "7100", "3982", "3118", "244", "35", "34", "0.0383", "0.1559", "0.0122", "0.0783", "0.0017"},
+				        {"em-20260910-nurture", "2026-09-10", "nurture", "Welcome sequence (weekly batch)", "mail.scalelab.example", "1020", "1015", "5", "660", "294", "366", "50", "2", "0", "0.0049", "0.3606", "0.0493", "0.1366", "0.0"},
+				        {"em-20260911-promo", "2026-09-11", "promo", "Enrollment for the Accelerator closes next Friday", "news.scalelab.example", "20894", "20121", "773", "6754", "4099", "2655", "194", "72", "33", "0.037", "0.132", "0.0096", "0.0731", "0.0016"},
+				        {"em-20260915-newsletter", "2026-09-15", "newsletter", "Why busy founders stall at $1M (issue 5)", "news.scalelab.example", "20941", "20116", "825", "8017", "4584", "3433", "257", "36", "30", "0.0394", "0.1707", "0.0128", "0.0749", "0.0015"},
+				        {"em-20260915-promo", "2026-09-15", "promo", "Three days left to enroll", "news.scalelab.example", "20941", "20101", "840", "6650", "3934", "2716", "203", "66", "33", "0.0401", "0.1351", "0.0101", "0.0747", "0.0016"},
+				        {"em-20260917-nurture", "2026-09-17", "nurture", "Welcome sequence (weekly batch)", "mail.scalelab.example", "969", "964", "5", "722", "306", "416", "51", "2", "0", "0.0052", "0.4315", "0.0529", "0.1226", "0.0"},
+				        {"em-20260917-promo", "2026-09-17", "promo", "Doors close tomorrow", "news.scalelab.example", "20917", "20122", "795", "7382", "4807", "2575", "211", "71", "30", "0.038", "0.128", "0.0105", "0.0819", "0.0015"},
+				        {"em-20260918-promo", "2026-09-18", "promo", "Last call: enrollment closes tonight", "news.scalelab.example", "20881", "20088", "793", "7220", "4291", "2929", "287", "73", "32", "0.038", "0.1458", "0.0143", "0.098", "0.0016"},
+				        {"em-20260922-newsletter", "2026-09-22", "newsletter", "The discovery call, line by line (issue 4)", "news.scalelab.example", "20933", "20128", "805", "7570", "4301", "3269", "234", "35", "30", "0.0385", "0.1624", "0.0116", "0.0716", "0.0015"},
+				        {"em-20260924-nurture", "2026-09-24", "nurture", "Welcome sequence (weekly batch)", "mail.scalelab.example", "984", "979", "5", "669", "288", "381", "53", "2", "0", "0.0051", "0.3892", "0.0541", "0.1391", "0.0"}
+				    }),
+				    Typed = Table.TransformColumnTypes(Source, {{"email_id", type text}, {"sent_date", type date}, {"email_type", type text}, {"subject", type text}, {"sending_domain", type text}, {"sends", Int64.Type}, {"delivered", Int64.Type}, {"bounces", Int64.Type}, {"opens", Int64.Type}, {"machine_opens", Int64.Type}, {"human_opens", Int64.Type}, {"clicks", Int64.Type}, {"unsubscribes", Int64.Type}, {"spam_complaints", Int64.Type}, {"bounce_rate", type number}, {"human_open_rate", type number}, {"click_rate", type number}, {"click_to_open_rate", type number}, {"complaint_rate", type number}})
 				in
-				  #"Changed column type"
+				    Typed

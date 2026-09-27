@@ -1,81 +1,83 @@
 table mart_measurement_health
-	lineageTag: 7a31c4bb-8ce8-4f5a-b341-c913c402e82e
-
-	measure 'UTM Completeness' = DIVIDE(SUM('mart_measurement_health'[touches_with_utm]), SUM('mart_measurement_health'[eligible_touches]))
-		formatString: 0.0%
-		displayFolder: Measurement
-		lineageTag: 47702b36-7264-4828-b70d-835eb153e1ea
-
-	measure 'Campaign Registry Coverage' = DIVIDE(SUM('mart_measurement_health'[registered_touches]), SUM('mart_measurement_health'[eligible_touches]))
-		formatString: 0.0%
-		displayFolder: Measurement
-		lineageTag: d2f772e4-ed8b-4c71-8061-0d2205259e03
+	lineageTag: 6c18905f-32b8-5526-816a-437e2fa32b4f
 
 	column eligible_touches
 		dataType: int64
-		lineageTag: 61ba9adb-2f53-4951-b436-d99969bfc4d2
-		summarizeBy: none
+		formatString: #,0
+		lineageTag: 7715f9e8-14c9-586d-947d-005be2a5419d
+		summarizeBy: sum
 		sourceColumn: eligible_touches
 
 	column touches_with_utm
 		dataType: int64
-		lineageTag: 702af93c-36db-438a-b61e-3e6f2a8cf404
-		summarizeBy: none
+		formatString: #,0
+		lineageTag: 77dd0787-f901-5b12-899d-56f4da35fa07
+		summarizeBy: sum
 		sourceColumn: touches_with_utm
 
 	column registered_touches
 		dataType: int64
-		lineageTag: bf7b2179-5853-4b8c-bbdc-aa6c50459b8a
-		summarizeBy: none
+		formatString: #,0
+		lineageTag: c461e749-d6fe-5710-8ad1-0257092bd7f7
+		summarizeBy: sum
 		sourceColumn: registered_touches
 
 	column owned_contacts
 		dataType: int64
-		lineageTag: 347f94b6-2405-4e80-8b35-dc96aa12cd6b
-		summarizeBy: none
+		formatString: #,0
+		lineageTag: b3d3ba6b-6a70-5e3c-8b89-c3d5be30abc5
+		summarizeBy: sum
 		sourceColumn: owned_contacts
 
 	column contacts
 		dataType: int64
-		lineageTag: 6d02102e-aa5d-4f3d-9548-5721a441ee32
-		summarizeBy: none
+		formatString: #,0
+		lineageTag: da3e8467-389e-5166-859b-b16fec74bb56
+		summarizeBy: sum
 		sourceColumn: contacts
 
 	column duplicate_contact_rows
 		dataType: int64
-		lineageTag: e92ed00a-2899-422d-b614-dad21af4aa25
-		summarizeBy: none
+		formatString: #,0
+		lineageTag: 20852050-38ec-536f-ae28-af7e66a58c40
+		summarizeBy: sum
 		sourceColumn: duplicate_contact_rows
 
 	column unmatched_payments
 		dataType: int64
-		lineageTag: 0278d2e3-e3fc-4e66-9846-8dbf2f36edcb
-		summarizeBy: none
+		formatString: #,0
+		lineageTag: 72981779-53a2-5e0c-b933-d85d13c880ee
+		summarizeBy: sum
 		sourceColumn: unmatched_payments
 
 	column payments
 		dataType: int64
-		lineageTag: 45aaa6d3-4106-43d5-9a0f-8383240055c2
-		summarizeBy: none
+		formatString: #,0
+		lineageTag: 68a62949-847c-58fd-a2f2-0ff9ffe5ea7a
+		summarizeBy: sum
 		sourceColumn: payments
 
 	column paid_contact_count
 		dataType: int64
-		lineageTag: fff6525e-936d-494f-bdb1-f4f6063d6cff
-		summarizeBy: none
+		formatString: #,0
+		lineageTag: 0b50c993-5d97-58cf-b56f-cb3b33320e0a
+		summarizeBy: sum
 		sourceColumn: paid_contact_count
 
 	column valid_paid_journeys
 		dataType: int64
-		lineageTag: acbc3de4-e1af-4b7f-b584-5fc4f7284890
-		summarizeBy: none
+		formatString: #,0
+		lineageTag: 7862b8db-ad32-5d36-961e-ebfde9cc684e
+		summarizeBy: sum
 		sourceColumn: valid_paid_journeys
 
 	partition mart_measurement_health = m
 		mode: import
 		source =
 				let
-				  Source = Table.FromRows(Json.Document(Binary.Decompress(Binary.FromText("i45WMjY2VdJRMjY0BpJGZhYg0ggkYmRiACQNwQRIgQGMMDJXio0FAA==", BinaryEncoding.Base64), Compression.Deflate)), let _t = ((type nullable text) meta [Serialized.Text = true]) in type table [eligible_touches = nullable text, touches_with_utm = nullable text, registered_touches = nullable text, owned_contacts = nullable text, contacts = nullable text, duplicate_contact_rows = nullable text, unmatched_payments = nullable text, payments = nullable text, paid_contact_count = nullable text, valid_paid_journeys = nullable text]),
-				  #"Changed column type" = Table.TransformColumnTypes(Source, {{"eligible_touches", Int64.Type}, {"touches_with_utm", Int64.Type}, {"registered_touches", Int64.Type}, {"owned_contacts", Int64.Type}, {"contacts", Int64.Type}, {"duplicate_contact_rows", Int64.Type}, {"unmatched_payments", Int64.Type}, {"payments", Int64.Type}, {"paid_contact_count", Int64.Type}, {"valid_paid_journeys", Int64.Type}})
+				    Source = #table(type table [#"eligible_touches" = nullable text, #"touches_with_utm" = nullable text, #"registered_touches" = nullable text, #"owned_contacts" = nullable text, #"contacts" = nullable text, #"duplicate_contact_rows" = nullable text, #"unmatched_payments" = nullable text, #"payments" = nullable text, #"paid_contact_count" = nullable text, #"valid_paid_journeys" = nullable text], {
+				        {"19855", "19360", "18343", "14103", "14693", "138", "9", "809", "427", "417"}
+				    }),
+				    Typed = Table.TransformColumnTypes(Source, {{"eligible_touches", Int64.Type}, {"touches_with_utm", Int64.Type}, {"registered_touches", Int64.Type}, {"owned_contacts", Int64.Type}, {"contacts", Int64.Type}, {"duplicate_contact_rows", Int64.Type}, {"unmatched_payments", Int64.Type}, {"payments", Int64.Type}, {"paid_contact_count", Int64.Type}, {"valid_paid_journeys", Int64.Type}})
 				in
-				  #"Changed column type"
+				    Typed

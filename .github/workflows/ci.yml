@@ -66,11 +66,12 @@ jobs:
           dbt build --profiles-dir . --select path:models path:tests --quiet
       - name: DuckDB/dbt parity with the Python reference
         run: python -m growthops.verify_dbt
-      - name: Committed Power BI and Excel artifacts are current
+      - name: Committed BI snapshot, Power BI project and measure reference are current
         run: |
           python -m growthops.export_bi --refresh-pbip
-          python -m growthops.export_excel
-          git diff --exit-code -- dashboards/ ':(exclude)dashboards/GrowthOps_OS_Excel_Dashboard.xlsx' || (echo "::error::Power BI artifacts are stale. Run export_bi --refresh-pbip." && exit 1)
+          python -m growthops.bi.build_pbip --check
+          python -m growthops.export_excel --output "$RUNNER_TEMP/workbook.xlsx"
+          git diff --exit-code -- dashboards/ docs/power-bi-measures.md ':(exclude)dashboards/GrowthOps_OS_Excel_Dashboard.xlsx' || (echo "::error::BI artifacts are stale. Run export_bi --refresh-pbip and export_excel --recalculate." && exit 1)
 
   docker:
     runs-on: ubuntu-latest

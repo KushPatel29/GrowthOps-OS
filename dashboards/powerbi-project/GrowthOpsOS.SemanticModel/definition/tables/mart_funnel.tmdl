@@ -1,40 +1,56 @@
 table mart_funnel
-	lineageTag: 8230744c-7288-4bc2-bf39-01ec1bfe8784
-
-	/// People counted at each funnel stage; use with stage on the visual axis.
-	measure 'Funnel People' = SUM('mart_funnel'[people])
-		formatString: #,##0
-		lineageTag: f2fdd842-f849-4f0f-9bc3-1314213a50e5
+	lineageTag: b64540c5-1f9f-5128-a174-3ce072f4563a
 
 	column stage
 		dataType: string
-		lineageTag: 01b84c17-ab07-41e0-91c0-a57c7a12593f
+		lineageTag: 942b3a2c-c0c4-5c74-a682-1c1fe56fe0e5
 		summarizeBy: none
 		sourceColumn: stage
+		sortByColumn: ordinal
 
 	column ordinal
 		dataType: int64
-		lineageTag: cc0bec01-cca8-4b01-a190-bed1a08fa7ee
+		formatString: 0
+		lineageTag: 4193c183-0919-559d-9c19-0afad3c6aa81
 		summarizeBy: none
 		sourceColumn: ordinal
 
 	column people
 		dataType: int64
-		lineageTag: 86631a89-2653-44d4-905f-f710dbf2bf1e
-		summarizeBy: none
+		formatString: #,0
+		lineageTag: 248bf1c0-2008-59d0-a673-881e21a19ae2
+		summarizeBy: sum
 		sourceColumn: people
 
 	column from_previous_rate
 		dataType: double
-		lineageTag: 7e49017f-cd34-47fc-bcbc-60f86f0d0f01
+		formatString: 0.0%
+		lineageTag: f19246cc-81a5-58cc-a011-a34f2182c104
 		summarizeBy: none
 		sourceColumn: from_previous_rate
+
+	column stage_label
+		dataType: string
+		lineageTag: 2349f94d-cb5f-50d8-94b6-99c388f5b79a
+		summarizeBy: none
+		sourceColumn: stage_label
+		sortByColumn: ordinal
 
 	partition mart_funnel = m
 		mode: import
 		source =
 				let
-				  Source = Table.FromRows(Json.Document(Binary.Decompress(Binary.FromText("XY1BDsIgFETvwrohgBTkLIQ0WFg0ImBFG28vHzAmLobFvOF9rVHw1qEJ0RrGSX2RmTS63QMUAAiUBHMqZEOrDWG5pHT18O9UI/pC/LAtxUfXBhwyBmIoUs5pL8+4lXcFM2hkWyg2d0lID++WI0XQA+8GyVQ3ZLuBXH4RxaT1di3by5Z2+fwPdx/90ZAaWoIZMuYD", BinaryEncoding.Base64), Compression.Deflate)), let _t = ((type nullable text) meta [Serialized.Text = true]) in type table [stage = nullable text, ordinal = nullable text, people = nullable text, from_previous_rate = nullable text]),
-				  #"Changed column type" = Table.TransformColumnTypes(Source, {{"stage", type text}, {"ordinal", Int64.Type}, {"people", Int64.Type}, {"from_previous_rate", type number}})
+				    Source = #table(type table [#"stage" = nullable text, #"ordinal" = nullable text, #"people" = nullable text, #"from_previous_rate" = nullable text, #"stage_label" = nullable text], {
+				        {"lead", "1", "14693", null, "Lead"},
+				        {"mql", "2", "4115", "0.2801", "MQL"},
+				        {"call_booked", "3", "1896", "0.4608", "Call booked"},
+				        {"call_attended", "4", "1420", "0.7489", "Call attended"},
+				        {"opportunity", "5", "1199", "0.8444", "Opportunity"},
+				        {"closed_won", "6", "438", "0.3578", "Closed won"},
+				        {"paid", "7", "427", "0.9749", "Paid"},
+				        {"activated", "8", "418", "0.9789", "Access activated"},
+				        {"renewed", "9", "19", "0.0455", "Renewed"}
+				    }),
+				    Typed = Table.TransformColumnTypes(Source, {{"stage", type text}, {"ordinal", Int64.Type}, {"people", Int64.Type}, {"from_previous_rate", type number}, {"stage_label", type text}})
 				in
-				  #"Changed column type"
+				    Typed

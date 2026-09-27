@@ -1,10 +1,10 @@
-﻿stage,ordinal,people,from_previous_rate
-lead,1,14693,
-mql,2,4115,0.2801
-call_booked,3,1896,0.4608
-call_attended,4,1420,0.7489
-opportunity,5,1199,0.8444
-closed_won,6,438,0.3578
-paid,7,427,0.9749
-activated,8,418,0.9789
-renewed,9,19,0.0455
+﻿stage,ordinal,people,from_previous_rate,stage_label
+lead,1,14693,,Lead
+mql,2,4115,0.2801,MQL
+call_booked,3,1896,0.4608,Call booked
+call_attended,4,1420,0.7489,Call attended
+opportunity,5,1199,0.8444,Opportunity
+closed_won,6,438,0.3578,Closed won
+paid,7,427,0.9749,Paid
+activated,8,418,0.9789,Access activated
+renewed,9,19,0.0455,Renewed

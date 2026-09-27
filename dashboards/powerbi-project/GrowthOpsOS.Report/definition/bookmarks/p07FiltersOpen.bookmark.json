@@ -1,0 +1,38 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/bookmark/2.1.0/schema.json",
+  "displayName": "Tracking, data quality and operations - filters open",
+  "name": "p07FiltersOpen",
+  "options": {
+    "targetVisualNames": [
+      "p07FilterPanel",
+      "p07PanelBg",
+      "p07PanelTitle",
+      "p07PanelClose",
+      "v0709",
+      "p07PanelClear"
+    ],
+    "applyOnlyToTargetVisuals": true,
+    "suppressData": true,
+    "suppressActiveSection": true
+  },
+  "explorationState": {
+    "version": "1.3",
+    "activeSection": "p7_data_quality",
+    "sections": {
+      "p7_data_quality": {
+        "visualContainers": {
+          "p07PanelBg": {},
+          "p07PanelTitle": {},
+          "p07PanelClose": {},
+          "v0709": {},
+          "p07PanelClear": {}
+        },
+        "visualContainerGroups": {
+          "p07FilterPanel": {
+            "isHidden": false
+          }
+        }
+      }
+    }
+  }
+}

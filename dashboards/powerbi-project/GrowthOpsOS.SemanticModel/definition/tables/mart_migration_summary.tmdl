@@ -1,53 +1,62 @@
 table mart_migration_summary
-	lineageTag: 645c18f7-547e-40bb-aaf0-c1a6899cd303
+	lineageTag: ad186387-966f-5341-b3a1-33e8a60b7369
 
 	column legacy_contacts
 		dataType: int64
-		lineageTag: 8c15bf5d-0d12-4e94-8563-748cae3c182d
-		summarizeBy: none
+		formatString: #,0
+		lineageTag: 34c7a2e2-0f1c-53e7-bd7c-9af9fb7382de
+		summarizeBy: sum
 		sourceColumn: legacy_contacts
 
 	column migrated_contacts
 		dataType: int64
-		lineageTag: deaef8e3-885b-4217-923e-84a63c5496ad
-		summarizeBy: none
+		formatString: #,0
+		lineageTag: 1ed07ea3-395e-5e5a-b976-ecd44d053e4b
+		summarizeBy: sum
 		sourceColumn: migrated_contacts
 
 	column missing_contacts
 		dataType: int64
-		lineageTag: e35f903f-a432-457d-a024-340f91efff7e
-		summarizeBy: none
+		formatString: #,0
+		lineageTag: 753f0b6f-3894-537f-be3b-0b3d447145e0
+		summarizeBy: sum
 		sourceColumn: missing_contacts
 
 	column owner_match_rate
 		dataType: double
-		lineageTag: d3c5695d-fd31-4656-8c5f-589c0f63a81d
+		formatString: 0.0%
+		lineageTag: 3c4d2b6e-fb98-553f-85f1-c74d8ec6941e
 		summarizeBy: none
 		sourceColumn: owner_match_rate
 
 	column source_match_rate
 		dataType: double
-		lineageTag: f9696da9-fdb6-487c-bd80-6a011c0401b0
+		formatString: 0.0%
+		lineageTag: ca5f6b84-99e1-553c-a9e4-d793b13608ba
 		summarizeBy: none
 		sourceColumn: source_match_rate
 
 	column stage_match_rate
 		dataType: double
-		lineageTag: b53240e4-db64-4571-be6f-4c2ef3927bd2
+		formatString: 0.0%
+		lineageTag: bc7017cc-cbb1-594d-8dde-fd2e8678beb5
 		summarizeBy: none
 		sourceColumn: stage_match_rate
 
 	column duplicate_crm_rows
 		dataType: int64
-		lineageTag: 139a6be4-0502-4b40-bf7e-4db71b4a9634
-		summarizeBy: none
+		formatString: #,0
+		lineageTag: ea14e698-2ce9-53d4-aee8-22dba7ebd2a6
+		summarizeBy: sum
 		sourceColumn: duplicate_crm_rows
 
 	partition mart_migration_summary = m
 		mode: import
 		source =
 				let
-				  Source = Table.FromRows(Json.Document(Binary.Decompress(Binary.FromText("i45WMjIxVtIBkgZAEsQy0LM0NjeFMAwsQCKGeiA5QwOl2FgA", BinaryEncoding.Base64), Compression.Deflate)), let _t = ((type nullable text) meta [Serialized.Text = true]) in type table [legacy_contacts = nullable text, migrated_contacts = nullable text, missing_contacts = nullable text, owner_match_rate = nullable text, source_match_rate = nullable text, stage_match_rate = nullable text, duplicate_crm_rows = nullable text]),
-				  #"Changed column type" = Table.TransformColumnTypes(Source, {{"legacy_contacts", Int64.Type}, {"migrated_contacts", Int64.Type}, {"missing_contacts", Int64.Type}, {"owner_match_rate", type number}, {"source_match_rate", type number}, {"stage_match_rate", type number}, {"duplicate_crm_rows", Int64.Type}})
+				    Source = #table(type table [#"legacy_contacts" = nullable text, #"migrated_contacts" = nullable text, #"missing_contacts" = nullable text, #"owner_match_rate" = nullable text, #"source_match_rate" = nullable text, #"stage_match_rate" = nullable text, #"duplicate_crm_rows" = nullable text], {
+				        {"7638", "7600", "38", "0.9526", "0.9222", "0.9871", "138"}
+				    }),
+				    Typed = Table.TransformColumnTypes(Source, {{"legacy_contacts", Int64.Type}, {"migrated_contacts", Int64.Type}, {"missing_contacts", Int64.Type}, {"owner_match_rate", type number}, {"source_match_rate", type number}, {"stage_match_rate", type number}, {"duplicate_crm_rows", Int64.Type}})
 				in
-				  #"Changed column type"
+				    Typed

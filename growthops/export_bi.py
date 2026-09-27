@@ -1,23 +1,21 @@
-"""Export verified dbt marts for Power BI and re-embed them in the editable PBIP project.
+"""Export the verified dbt marts as the governed BI snapshot, then regenerate the Power BI project.
 
-``export`` writes one CSV per governed mart. ``refresh_pbip`` rewrites each TMDL
-table's embedded import partition from those CSVs, aligns source columns (with
-deterministic lineage tags) and registers new tables, while leaving every
-hand-authored measure and calculated column untouched. Run both after a dbt build
-so the Power BI model always carries the same numbers as the warehouse.
+``export`` writes one CSV per governed mart plus the three shapes a report needs
+and a mart does not carry: a daily date dimension, a campaign dimension and
+lead-creation cash attribution at payment grain. ``--refresh-pbip`` also rebuilds
+the whole PBIP project from :mod:`growthops.bi` (model, measures, pages, theme),
+embedding those CSVs in the import partitions so the project opens with no data
+path or credentials. Run after a dbt build so Power BI and Excel carry the same
+numbers as the warehouse.
 """
 
 from __future__ import annotations
 
 import argparse
-import base64
 import csv
-import json
 import os
-import re
 import tempfile
-import uuid
-import zlib
+from datetime import date, timedelta
 from pathlib import Path
 
 MARTS = (
@@ -39,60 +37,125 @@ ORDER_BY = {
     "mart_email_performance": "sent_date, email_id",
     "mart_link_hygiene": "link_id",
 }
-# Date-keyed tables joined to the date dimension (many-to-one, single direction).
-DATE_KEYS = {"mart_growth_daily": "day", "mart_paid_efficiency_daily": "day", "mart_email_performance": "sent_date"}
-PAID, EMAIL, LINKS = "'mart_paid_efficiency_daily'", "'mart_email_performance'", "'mart_link_hygiene'"
-# table -> (name, DAX, format string, display folder, description). Added when missing; never overwritten.
-MEASURES = {
-    "mart_paid_efficiency_daily": (
-        ("Paid Activity Spend USD", f"DIVIDE(SUM({PAID}[spend_cents]), 100)", '"$"#,0', "Paid efficiency",
-         "Paid media spend in the filter context, in dollars."),
-        ("Paid Activity Leads", f"SUM({PAID}[leads])", "#,0", "Paid efficiency",
-         "Leads created by paid campaigns (activity basis)."),
-        ("Paid Activity CPL USD", "DIVIDE([Paid Activity Spend USD], [Paid Activity Leads])", '"$"#,0.00', "Paid efficiency",
-         "Cost per lead: paid spend / paid leads in the same window."),
-        ("Cost per MQL USD", f"DIVIDE([Paid Activity Spend USD], SUM({PAID}[mqls]))", '"$"#,0.00', "Paid efficiency",
-         "Paid spend / MQLs reached in the window by paid-created leads."),
-        ("Cost per booked call USD", f"DIVIDE([Paid Activity Spend USD], SUM({PAID}[calls_booked]))", '"$"#,0.00',
-         "Paid efficiency", "Paid spend / discovery calls booked in the window by paid-created leads (CPDM)."),
-        ("CPM USD", f"DIVIDE([Paid Activity Spend USD] * 1000, SUM({PAID}[impressions]))", '"$"#,0.00', "Paid efficiency",
-         "Cost per thousand impressions."),
-        ("CTR", f"DIVIDE(SUM({PAID}[clicks]), SUM({PAID}[impressions]))", "0.00%", "Paid efficiency",
-         "Ad clicks / impressions."),
-        ("CPC USD", f"DIVIDE([Paid Activity Spend USD], SUM({PAID}[clicks]))", '"$"#,0.00', "Paid efficiency",
-         "Paid spend / ad clicks."),
-    ),
-    "mart_email_performance": (
-        ("Emails delivered", f"SUM({EMAIL}[delivered])", "#,0", "Email", "Delivered sends."),
-        ("Human open rate", f"DIVIDE(SUM({EMAIL}[human_opens]), [Emails delivered])", "0.0%", "Email",
-         "Opens excluding privacy-proxy machine opens / delivered."),
-        ("Reported open rate", f"DIVIDE(SUM({EMAIL}[opens]), [Emails delivered])", "0.0%", "Email",
-         "All opens / delivered; inflated by machine opens, shown only for comparison."),
-        ("Email click rate", f"DIVIDE(SUM({EMAIL}[clicks]), [Emails delivered])", "0.00%", "Email",
-         "Clicks / delivered (email CTR)."),
-        ("Click-to-open rate", f"DIVIDE(SUM({EMAIL}[clicks]), SUM({EMAIL}[human_opens]))", "0.0%", "Email",
-         "Clicks / human opens."),
-        ("Bounce rate", f"DIVIDE(SUM({EMAIL}[bounces]), SUM({EMAIL}[sends]))", "0.00%", "Email",
-         "Bounces / sends; above 2% flags the sending domain."),
-        ("Complaint rate", f"DIVIDE(SUM({EMAIL}[spam_complaints]), [Emails delivered])", "0.000%", "Email",
-         "Spam complaints / delivered; limit 0.1%."),
-    ),
-    "mart_link_hygiene": (
-        ("Links with defects", f"COUNTROWS(FILTER({LINKS}, {LINKS}[missing_utm] || {LINKS}[unregistered_campaign] "
-         f"|| {LINKS}[off_taxonomy]))", "#,0", "Tracking", "Short links with missing, unregistered or off-taxonomy UTMs."),
-        ("Recent clicks on defective links share",
-         f"DIVIDE(CALCULATE(SUM({LINKS}[recent_clicks]), FILTER({LINKS}, {LINKS}[missing_utm] || "
-         f"{LINKS}[unregistered_campaign] || {LINKS}[off_taxonomy])), SUM({LINKS}[recent_clicks]))", "0%", "Tracking",
-         "Share of last-30-day short-link clicks that land without a valid campaign."),
-    ),
+# Marts that need a readable label or an ordering key for a report axis. The added
+# columns go last, so every column the Excel workbook addresses by letter stays put.
+FUNNEL_LABELS = {"lead": "Lead", "mql": "MQL", "call_booked": "Call booked", "call_attended": "Call attended",
+                 "opportunity": "Opportunity", "closed_won": "Closed won", "paid": "Paid",
+                 "activated": "Access activated", "renewed": "Renewed"}
+BRIDGE_STEPS = {
+    "crm_booked": ("CRM bookings", "Closed-won deal value in the CRM"),
+    "duplicate_deals": ("Duplicate deals", "Deals the CRM migration created twice"),
+    "not_yet_collected": ("Not yet collected", "Booked, with instalments still to come"),
+    "unlinked_payments": ("Unlinked payments", "Cash whose deal link the migration lost"),
+    "renewals": ("Renewals", "Subscription renewals, which never pass through a deal"),
+    "gross_collected": ("Gross collected", "Payments received"),
+    "refunds": ("Refunds", "Money returned"),
+    "net_collected": ("Net collected", "Cash the business kept"),
 }
-PROJECT = Path("dashboards/powerbi-project/GrowthOpsOS.SemanticModel/definition")
-REPORT = Path("dashboards/powerbi-project/GrowthOpsOS.Report/definition")
-VISUAL_SCHEMA = "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.7.0/schema.json"
-PAGE_SCHEMA = "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/page/2.1.0/schema.json"
-MARKETING_PAGE = "Paid, email and tracking - Synthetic"
-M_TYPES = {"int64": "Int64.Type", "double": "type number", "dateTime": "type date", "string": "type text",
-           "boolean": "type logical"}
+RISK_ORDER = {"high": 1, "medium": 2, "not_due": 3}
+
+
+def _case(column: str, mapping: dict[str, object]) -> str:
+    def quoted(value: object) -> str:
+        return str(value) if isinstance(value, int) else "'" + str(value).replace("'", "''") + "'"
+    return f"CASE {column} " + " ".join(f"WHEN '{k}' THEN {quoted(v)}" for k, v in mapping.items()) + " END"
+
+
+SELECTS = {
+    "mart_funnel": f"SELECT *, {_case('stage', FUNNEL_LABELS)} AS stage_label FROM mart_funnel",
+    "mart_revenue_bridge": (
+        f"SELECT *, {_case('step', {k: v[0] for k, v in BRIDGE_STEPS.items()})} AS step_label, "
+        f"{_case('step', {k: v[1] for k, v in BRIDGE_STEPS.items()})} AS note FROM mart_revenue_bridge"),
+    "mart_renewal_risk": f"SELECT *, {_case('risk_level', RISK_ORDER)} AS risk_order FROM mart_renewal_risk",
+}
+UNATTRIBUTED = "(unattributed)"
+CHANNEL_GROUPS = {"paid_social": "Paid social", "paid_search": "Paid search", "owned_email": "Owned email",
+                  "referral": "Partner", "organic_video": "Organic video", "event": "Webinar",
+                  "none": "Direct"}
+# BI-only shapes over dbt models. Payment dates are taken in UTC so a build on a
+# machine in another time zone produces the same file (the CI drift gate runs in UTC).
+EXTRAS = {
+    "dim_campaign": f"""
+        SELECT campaign_id, campaign_name, platform, source, medium,
+               CASE medium {' '.join(f"WHEN '{k}' THEN '{v}'" for k, v in CHANNEL_GROUPS.items())}
+                    ELSE medium END AS channel_group,
+               coalesce(landing_page, '') AS landing_page, is_paid, registry_valid = 1 AS registry_valid,
+               row_number() OVER (ORDER BY is_paid DESC, spend_cents DESC, campaign_id) AS campaign_order
+        FROM stg_campaigns
+        UNION ALL
+        SELECT '{UNATTRIBUTED}', '{UNATTRIBUTED}', 'none', 'none', 'none', 'Unattributed', '', false, false, 99
+        ORDER BY campaign_order""",
+    "fact_cash_attribution": f"""
+        SELECT payment_id, CAST(timezone('UTC', paid_at) AS DATE) AS paid_date,
+               coalesce(campaign_id, '{UNATTRIBUTED}') AS campaign_id,
+               CAST(gross_cents AS BIGINT) AS gross_cents, CAST(refund_cents AS BIGINT) AS refund_cents,
+               CAST(net_cash_cents AS BIGINT) AS net_cash_cents
+        FROM mart_attribution_lead_creation ORDER BY paid_date, payment_id""",
+    # The single-row health and migration marts, pivoted to one row per check so a
+    # report can rank them against a target instead of printing seven lone numbers.
+    "quality_scorecard": """
+        WITH h AS (SELECT * FROM mart_measurement_health), m AS (SELECT * FROM mart_migration_summary)
+        SELECT * FROM (
+            SELECT 1 AS check_order, 'Tracking' AS area, 'UTMs present' AS check_name,
+                   round(touches_with_utm / eligible_touches, 4) AS rate, 0.95 AS target FROM h
+            UNION ALL SELECT 2, 'Tracking', 'Registered campaign',
+                   round(registered_touches / eligible_touches, 4), 0.95 FROM h
+            UNION ALL SELECT 3, 'CRM', 'Owner assigned', round(owned_contacts / contacts, 4), 0.98 FROM h
+            UNION ALL SELECT 4, 'Attribution', 'Buyer has a touch',
+                   round(valid_paid_journeys / paid_contact_count, 4), 0.98 FROM h
+            UNION ALL SELECT 5, 'Payments', 'Payment matched',
+                   round(1 - unmatched_payments / payments, 4), 0.99 FROM h
+            UNION ALL SELECT 6, 'Migration', 'Contact migrated',
+                   round(migrated_contacts / legacy_contacts, 4), 0.99 FROM m
+            UNION ALL SELECT 7, 'Migration', 'Owner kept', round(owner_match_rate, 4), 0.98 FROM m
+            UNION ALL SELECT 8, 'Migration', 'Source kept', round(source_match_rate, 4), 0.98 FROM m
+            UNION ALL SELECT 9, 'Migration', 'Stage kept', round(stage_match_rate, 4), 0.98 FROM m
+        ) ORDER BY check_order""",
+    "incident_register": """
+        SELECT incident_id, kind, CAST(substr(starts_at, 1, 10) AS DATE) AS started_on,
+               CASE WHEN ends_at IS NULL OR ends_at = '' THEN NULL
+                    ELSE CAST(substr(ends_at, 1, 10) AS DATE) END AS ended_on,
+               entity, expected_signal AS signal, description
+        FROM raw_incidents ORDER BY started_on, incident_id""",
+}
+# Tables with a date column the report filters by, and that column.
+DATE_KEYS = {"mart_growth_daily": "day", "mart_paid_efficiency_daily": "day",
+             "mart_email_performance": "sent_date", "fact_cash_attribution": "paid_date"}
+TABLES = (*MARTS, *EXTRAS, "dim_date")
+
+
+def _write(path: Path, header: list[str], rows: list) -> None:
+    with path.open("w", encoding="utf-8-sig", newline="") as file:
+        writer = csv.writer(file, lineterminator="\n")
+        writer.writerow(header)
+        writer.writerows(rows)
+
+
+def date_dimension(first: date, as_of: date) -> tuple[list[str], list[list]]:
+    """One row per day from the first data day to the as-of day (the last complete data day).
+
+    ``days_before_as_of`` lets every "last 28 days" measure read a column instead of
+    re-deriving the as-of date, and ``month_index`` / ``week_index`` are contiguous so a
+    prior period is a subtraction rather than calendar arithmetic.
+    """
+    header = ["date", "year", "quarter_label", "month_start", "month_label", "month_index", "week_start",
+              "week_index", "day_name", "day_of_week", "days_before_as_of", "is_last_28_days",
+              "is_prior_28_days"]
+    first_month = first.replace(day=1)
+    first_week = first - timedelta(days=first.weekday())
+    rows = []
+    day = first
+    while day <= as_of:
+        back = (as_of - day).days
+        week = day - timedelta(days=day.weekday())
+        rows.append([
+            day.isoformat(), day.year, f"Q{(day.month - 1) // 3 + 1} {day.year}", day.replace(day=1).isoformat(),
+            day.strftime("%b %Y"), (day.year - first_month.year) * 12 + day.month - first_month.month,
+            week.isoformat(), (week - first_week).days // 7, day.strftime("%a"), day.weekday() + 1, back,
+            back < 28, 28 <= back < 56,
+        ])
+        day += timedelta(days=1)
+    return header, rows
 
 
 def export(warehouse_database: str, output: str = "data/powerbi") -> dict[str, int]:
@@ -101,230 +164,57 @@ def export(warehouse_database: str, output: str = "data/powerbi") -> dict[str, i
     destination = Path(output)
     destination.parent.mkdir(parents=True, exist_ok=True)
     connection = duckdb.connect(warehouse_database, read_only=True)
+    connection.execute("SET TimeZone = 'UTC'")  # same day boundaries on every machine
     try:
         counts = {}
         # Stage the entire snapshot before replacing versioned CSVs. A missing
         # dbt mart must never leave a half-refreshed dashboard data directory.
         with tempfile.TemporaryDirectory(prefix=".growthops-bi-", dir=destination.parent) as temporary:
             staging = Path(temporary)
-            for mart in MARTS:
-                ordering = f" ORDER BY {ORDER_BY[mart]}" if mart in ORDER_BY else ""
-                result = connection.execute(f"SELECT * FROM {mart}{ordering}")
+            queries = {mart: f"SELECT * FROM ({SELECTS.get(mart, 'SELECT * FROM ' + mart)})"
+                             + (f" ORDER BY {ORDER_BY[mart]}" if mart in ORDER_BY else "")
+                       for mart in MARTS}
+            queries.update(EXTRAS)
+            for name, query in queries.items():
+                result = connection.execute(query)
                 columns = [item[0] for item in result.description]
                 rows = result.fetchall()
-                with (staging / f"{mart}.csv").open("w", encoding="utf-8-sig", newline="") as file:
-                    writer = csv.writer(file)
-                    writer.writerow(columns)
-                    writer.writerows(rows)
-                counts[mart] = len(rows)
+                _write(staging / f"{name}.csv", columns, rows)
+                counts[name] = len(rows)
+            # The calendar starts at the earliest date in ANY date-keyed table: a fact
+            # row dated before it joins to nothing and shows up as a "(Blank)" month.
+            # It ends at the last complete day of cash, which every window ends on.
+            starts = " UNION ALL ".join(f"SELECT min(CAST({column} AS DATE)) AS d FROM staged_{table}"
+                                        for table, column in DATE_KEYS.items())
+            for table in DATE_KEYS:
+                connection.execute(f"CREATE OR REPLACE TEMP VIEW staged_{table} AS "
+                                   f"SELECT * FROM read_csv_auto('{(staging / f'{table}.csv').as_posix()}')")
+            first = connection.execute(f"SELECT min(d) FROM ({starts})").fetchone()[0]
+            as_of = connection.execute("SELECT max(day) FROM mart_growth_daily").fetchone()[0]
+            header, rows = date_dimension(first, as_of)
+            _write(staging / "dim_date.csv", header, rows)
+            counts["dim_date"] = len(rows)
             destination.mkdir(parents=True, exist_ok=True)
-            for mart in MARTS:
-                os.replace(staging / f"{mart}.csv", destination / f"{mart}.csv")
+            for name in counts:
+                os.replace(staging / f"{name}.csv", destination / f"{name}.csv")
         return counts
     finally:
         connection.close()
 
 
-def _read_csv(path: Path) -> tuple[list[str], list[list[str]]]:
-    with path.open(encoding="utf-8-sig", newline="") as file:
-        rows = list(csv.reader(file))
-    return rows[0], rows[1:]
-
-
-def _infer_type(name: str, values: list[str]) -> str:
-    present = [value for value in values if value != ""]
-    if name in ("day", "due_date") or name.endswith("_date"):
-        return "dateTime"
-    if present and all(re.fullmatch(r"-?\d+", value) for value in present):
-        return "int64"
-    if present and all(re.fullmatch(r"-?\d+(\.\d+)?", value) for value in present):
-        return "double"
-    if present and all(value in ("True", "False", "true", "false") for value in present):
-        return "boolean"
-    return "string"
-
-
-def _lineage(*parts: str) -> str:
-    return str(uuid.uuid5(uuid.NAMESPACE_URL, "growthops-pbip:" + ":".join(parts)))
-
-
-def _column_block(table: str, column: str, data_type: str) -> str:
-    return (f"\tcolumn {column}\n\t\tdataType: {data_type}\n\t\tlineageTag: {_lineage(table, column)}\n"
-            f"\t\tsummarizeBy: none\n\t\tsourceColumn: {column}\n\n")
-
-
-def _partition(table: str, columns: list[str], rows: list[list[str]], types: dict[str, str]) -> str:
-    payload = json.dumps(rows, separators=(",", ":")).encode()
-    compressor = zlib.compressobj(9, zlib.DEFLATED, -15)
-    encoded = base64.b64encode(compressor.compress(payload) + compressor.flush()).decode()
-    schema = ", ".join(f"{column} = nullable text" for column in columns)
-    conversions = ", ".join(f'{{"{column}", {M_TYPES[types[column]]}}}' for column in columns)
-    return (
-        f"\tpartition {table} = m\n\t\tmode: import\n\t\tsource =\n\t\t\t\tlet\n"
-        f'\t\t\t\t  Source = Table.FromRows(Json.Document(Binary.Decompress(Binary.FromText("{encoded}", '
-        f"BinaryEncoding.Base64), Compression.Deflate)), let _t = ((type nullable text) meta "
-        f"[Serialized.Text = true]) in type table [{schema}]),\n"
-        f'\t\t\t\t  #"Changed column type" = Table.TransformColumnTypes(Source, {{{conversions}}})\n'
-        f'\t\t\t\tin\n\t\t\t\t  #"Changed column type"\n'
-    )
-
-
-def _measure_block(table: str, name: str, expression: str, fmt: str, folder: str, description: str) -> str:
-    return (f"\t/// {description}\n\tmeasure '{name}' = {expression}\n\t\tformatString: {fmt}\n"
-            f"\t\tdisplayFolder: {folder}\n\t\tlineageTag: {_lineage(table, 'measure', name)}\n\n")
-
-
-def _date_table(first: str, last: str) -> str:
-    start, end = first[:7] + "-01", last[:4] + "-12-31"
-    y1, m1, _ = (int(part) for part in start.split("-"))
-    y2 = int(end[:4])
-    return (
-        f"table dim_date\n\tlineageTag: {_lineage('dim_date')}\n\tdataCategory: Time\n\n"
-        f"\tcolumn Date\n\t\tdataType: dateTime\n\t\tisKey\n\t\tformatString: yyyy-mm-dd\n"
-        f"\t\tlineageTag: {_lineage('dim_date', 'Date')}\n\t\tsummarizeBy: none\n\t\tisNameInferred\n"
-        f"\t\tsourceColumn: [Date]\n\n"
-        f"\tcolumn Month = FORMAT('dim_date'[Date], \"yyyy-mm\")\n\t\tdataType: string\n"
-        f"\t\tlineageTag: {_lineage('dim_date', 'Month')}\n\t\tsummarizeBy: none\n\n"
-        f"\tcolumn 'Week start' = 'dim_date'[Date] - WEEKDAY('dim_date'[Date], 3)\n\t\tdataType: dateTime\n"
-        f"\t\tformatString: yyyy-mm-dd\n\t\tlineageTag: {_lineage('dim_date', 'Week start')}\n"
-        f"\t\tsummarizeBy: none\n\n"
-        f"\tpartition dim_date = calculated\n\t\tmode: import\n"
-        f"\t\tsource = CALENDAR(DATE({y1}, {m1}, 1), DATE({y2}, 12, 31))\n"
-    )
-
-
-def _relationships() -> str:
-    return "".join(f"relationship {_lineage('relationship', table)}\n\tfromColumn: {table}.{column}\n"
-                   f"\ttoColumn: dim_date.Date\n\n" for table, column in DATE_KEYS.items())
-
-
-def _id(*parts: str) -> str:
-    return uuid.uuid5(uuid.NAMESPACE_URL, "growthops-pbir:" + ":".join(parts)).hex[:20]
-
-
-def _field(kind: str, table: str, name: str) -> dict:
-    return {"field": {kind: {"Expression": {"SourceRef": {"Entity": table}}, "Property": name}},
-            "queryRef": f"{table}.{name}", "nativeQueryRef": name}
-
-
-def _visual(page: str, key: str, visual_type: str, position: tuple[int, int, int, int, int], title: str,
-            roles: dict[str, list[dict]]) -> dict:
-    x, y, width, height, z = position
-    literal = lambda value: {"expr": {"Literal": {"Value": value}}}  # noqa: E731
-    return {
-        "$schema": VISUAL_SCHEMA,
-        "name": _id(page, key),
-        "position": {"x": x, "y": y, "z": z, "width": width, "height": height, "tabOrder": z},
-        "visual": {
-            "visualType": visual_type,
-            "query": {"queryState": {role: {"projections": fields} for role, fields in roles.items()}},
-            "visualContainerObjects": {"title": [{"properties": {"text": literal(f"'{title}'"),
-                                                                 "show": literal("true")}}]},
-        },
-    }
-
-
-def write_marketing_page(report: Path = REPORT) -> str:
-    """A report page over the paid, email and link tables, generated in the same PBIR shape as the other pages."""
-    page = _id("page", "marketing")
-    paid, email, links = "mart_paid_efficiency_daily", "mart_email_performance", "mart_link_hygiene"
-    cards = [(paid, "CPL USD", "Cost per lead"), (paid, "Cost per MQL USD", "Cost per MQL"),
-             (paid, "Cost per booked call USD", "Cost per booked call"), (paid, "CTR", "Ad CTR"),
-             (email, "Human open rate", "Email human open rate"), (email, "Bounce rate", "Email bounce rate")]
-    visuals = [_visual(page, f"card-{index}", "cardVisual", (20 + index * 207, 20, 195, 120, 5000 + index), title,
-                       {"Data": [_field("Measure", table, measure)]})
-               for index, (table, measure, title) in enumerate(cards)]
-    visuals.append(_visual(page, "cost-per-call", "clusteredBarChart", (20, 160, 610, 270, 1000),
-                           "Cost per booked call by paid campaign (USD)",
-                           {"Category": [_field("Column", paid, "campaign_id")],
-                            "Y": [_field("Measure", paid, "Cost per booked call USD")]}))
-    visuals.append(_visual(page, "email-trend", "lineChart", (650, 160, 610, 270, 2000),
-                           "Email human open rate and bounce rate by week",
-                           {"Category": [_field("Column", "dim_date", "Week start")],
-                            "Y": [_field("Measure", email, "Human open rate"), _field("Measure", email, "Bounce rate")]}))
-    visuals.append(_visual(page, "links", "tableEx", (20, 450, 1240, 250, 3000), "Short links against the registry",
-                           {"Values": [_field("Column", links, name) for name in (
-                               "link_id", "channel", "utm_source", "utm_medium", "utm_campaign", "missing_utm",
-                               "unregistered_campaign", "off_taxonomy", "recent_clicks")]}))
-    folder = report / "pages" / page
-    if folder.exists():
-        for old in (folder / "visuals").glob("*/visual.json"):
-            old.unlink()
-    for visual in visuals:
-        target = folder / "visuals" / visual["name"] / "visual.json"
-        target.parent.mkdir(parents=True, exist_ok=True)
-        target.write_text(json.dumps(visual, indent=2) + "\n", encoding="utf-8")
-    (folder / "page.json").write_text(json.dumps({"$schema": PAGE_SCHEMA, "name": page, "displayName": MARKETING_PAGE,
-                                                  "displayOption": "FitToPage", "width": 1280, "height": 720},
-                                                 indent=2) + "\n", encoding="utf-8")
-    pages_file = report / "pages" / "pages.json"
-    pages = json.loads(pages_file.read_text(encoding="utf-8"))
-    if page not in pages["pageOrder"]:
-        pages["pageOrder"].append(page)
-        pages_file.write_text(json.dumps(pages, indent=2) + "\n", encoding="utf-8")
-    return page
-
-
-def refresh_pbip(csv_dir: str = "dashboards/powerbi-data", project: Path = PROJECT) -> dict[str, int]:
-    tables_dir = project / "tables"
-    refreshed = {}
-    for mart in MARTS:
-        columns, rows = _read_csv(Path(csv_dir) / f"{mart}.csv")
-        path = tables_dir / f"{mart}.tmdl"
-        text = path.read_text(encoding="utf-8") if path.exists() else \
-            f"table {mart}\n\tlineageTag: {_lineage(mart)}\n\n"
-        existing = dict(re.findall(r"\n\tcolumn (\w+)\n\t\tdataType: (\w+)", text))
-        types = {column: existing.get(column) or _infer_type(column, [row[i] for row in rows])
-                 for i, column in enumerate(columns)}
-        text = text.split("\tpartition ", 1)[0].rstrip("\n") + "\n\n"
-        # A removed mart field must not linger as a sourceColumn in TMDL: Desktop
-        # cannot bind it after the import partition's table schema changes.
-        for obsolete in sorted(set(existing) - set(columns)):
-            pattern = rf"(?ms)^\tcolumn {re.escape(obsolete)}\n.*?(?=^\t(?:column |measure |partition |///)|\Z)"
-            text, removed = re.subn(pattern, "", text)
-            if removed != 1:
-                raise ValueError(f"Cannot remove obsolete column {mart}.{obsolete}: found {removed} blocks")
-        missing = [column for column in columns if column not in existing]
-        if missing:
-            blocks = "".join(_column_block(mart, column, types[column]) for column in missing)
-            anchor = text.find("\n\tmeasure ")
-            text = text + blocks if anchor == -1 else text[:anchor + 1] + blocks + text[anchor + 1:]
-        present = set(re.findall(r"\n\tmeasure '([^']+)'", text))
-        additions = "".join(_measure_block(mart, *spec) for spec in MEASURES.get(mart, ()) if spec[0] not in present)
-        text = text.rstrip("\n") + "\n\n" + additions + _partition(mart, columns, rows, types)
-        path.write_text(text, encoding="utf-8")
-        refreshed[mart] = len(rows)
-    dates = []
-    for table, date_column in DATE_KEYS.items():
-        columns, rows = _read_csv(Path(csv_dir) / f"{table}.csv")
-        date_index = columns.index(date_column)
-        dates.extend(row[date_index] for row in rows if row[date_index])
-    if not dates:
-        raise ValueError("Cannot build dim_date: the date-keyed marts have no dates")
-    (tables_dir / "dim_date.tmdl").write_text(_date_table(min(dates), max(dates)), encoding="utf-8")
-    (project / "relationships.tmdl").write_text(_relationships(), encoding="utf-8")
-    model = project / "model.tmdl"
-    text = model.read_text(encoding="utf-8")
-    names = sorted(set(re.findall(r"^ref table (\w+)$", text, re.MULTILINE)) | set(MARTS) | {"dim_date"})
-    text = re.sub(r"annotation PBI_QueryOrder = \[.*?\]", "annotation PBI_QueryOrder = " + json.dumps(names), text)
-    text = re.sub(r"(ref table \w+\n?)+", "".join(f"ref table {name}\n" for name in names), text)
-    model.write_text(text, encoding="utf-8")
-    if project == PROJECT:
-        write_marketing_page()
-    return refreshed
-
-
 def main() -> None:
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--warehouse", default="data/growthops-warehouse.duckdb")
     parser.add_argument("--output", default="data/powerbi")
     parser.add_argument("--refresh-pbip", action="store_true",
-                        help="write the versioned CSVs and re-embed them in the PBIP project")
+                        help="write the versioned CSVs and regenerate the PBIP project from them")
     args = parser.parse_args()
     output = "dashboards/powerbi-data" if args.refresh_pbip else args.output
     print(export(args.warehouse, output))
     if args.refresh_pbip:
-        print(refresh_pbip(output))
+        from growthops.bi.build_pbip import main as build_pbip
+
+        build_pbip([])
 
 
 if __name__ == "__main__":

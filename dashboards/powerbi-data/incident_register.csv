@@ -1,0 +1,7 @@
+﻿incident_id,kind,started_on,ended_on,entity,signal,description
+inc_crm_migration,migration,2026-03-15,,system:crm,migration_defects,"Legacy CRM cut-over created duplicates, blank owners, overwritten sources and lost deal links."
+inc_untagged_links,tracking,2026-06-01,,short_links,link_utm_defects,"Four short links (Instagram bio, a podcast episode, a YouTube guide and a LinkedIn launch post) carry missing, unregistered or off-taxonomy UTM parameters."
+inc_meta_broad_quality,lead_quality,2026-08-10,,campaign:meta_broad_v17,mql_rate_down,Broad-audience Meta campaign launched; lead volume rose while qualification fell.
+inc_email_domain_switch,deliverability,2026-09-01,,sending_domain:news.scalelab.example,email_bounce_rate_up,Bulk email moved to a new sending subdomain without warm-up or DKIM alignment; bounces and complaints rose and inbox placement fell before the enrollment deadline.
+inc_webinar_utm_break,tracking,2026-09-03,2026-09-14,landing_page:/webinar,utm_completeness_down,A landing-page release stripped UTM parameters from the webinar registration form.
+inc_access_outage,automation,2026-09-18,2026-09-18,provider:community_access,workflow_failures_up,Community-access provider returned HTTP 503 for six hours.

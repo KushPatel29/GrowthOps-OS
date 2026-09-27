@@ -2,21 +2,33 @@ model Model
 	culture: en-US
 	defaultPowerBIDataSourceVersion: powerBI_V3
 	sourceQueryCulture: en-US
+	dataAccessOptions
+		legacyRedirects
+		returnErrorValuesAsNull
 
-annotation PBI_QueryOrder = ["dim_date", "mart_campaign_performance", "mart_content_performance", "mart_email_performance", "mart_experiment_variants", "mart_funnel", "mart_growth_daily", "mart_link_hygiene", "mart_measurement_health", "mart_migration_summary", "mart_paid_efficiency_daily", "mart_platform_comparison", "mart_renewal_risk", "mart_revenue", "mart_revenue_bridge"]
+annotation PBI_QueryOrder = ["dim_date", "dim_campaign", "mart_growth_daily", "mart_paid_efficiency_daily", "fact_cash_attribution", "mart_email_performance", "mart_campaign_performance", "mart_revenue", "mart_revenue_bridge", "mart_platform_comparison", "mart_funnel", "mart_experiment_variants", "mart_content_performance", "mart_measurement_health", "mart_migration_summary", "mart_link_hygiene", "mart_renewal_risk", "quality_scorecard", "incident_register", "_Measures"]
+
+annotation __PBI_TimeIntelligenceEnabled = 0
+
+annotation PBI_ProTooling = ["DevMode"]
 
 ref table dim_date
-ref table mart_campaign_performance
-ref table mart_content_performance
-ref table mart_email_performance
-ref table mart_experiment_variants
-ref table mart_funnel
+ref table dim_campaign
 ref table mart_growth_daily
-ref table mart_link_hygiene
-ref table mart_measurement_health
-ref table mart_migration_summary
 ref table mart_paid_efficiency_daily
-ref table mart_platform_comparison
-ref table mart_renewal_risk
+ref table fact_cash_attribution
+ref table mart_email_performance
+ref table mart_campaign_performance
 ref table mart_revenue
 ref table mart_revenue_bridge
+ref table mart_platform_comparison
+ref table mart_funnel
+ref table mart_experiment_variants
+ref table mart_content_performance
+ref table mart_measurement_health
+ref table mart_migration_summary
+ref table mart_link_hygiene
+ref table mart_renewal_risk
+ref table quality_scorecard
+ref table incident_register
+ref table _Measures

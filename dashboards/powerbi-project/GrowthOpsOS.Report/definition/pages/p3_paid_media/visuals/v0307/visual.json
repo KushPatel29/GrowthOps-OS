@@ -1,0 +1,219 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.0.0/schema.json",
+  "name": "v0307",
+  "position": {
+    "x": 20,
+    "y": 470,
+    "z": 1218,
+    "height": 234,
+    "width": 1240,
+    "tabOrder": 1218
+  },
+  "visual": {
+    "visualType": "tableEx",
+    "query": {
+      "queryState": {
+        "Values": {
+          "projections": [
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "dim_campaign"
+                    }
+                  },
+                  "Property": "campaign_id"
+                }
+              },
+              "queryRef": "dim_campaign.campaign_id",
+              "nativeQueryRef": "campaign_id",
+              "displayName": "Campaign"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "dim_campaign"
+                    }
+                  },
+                  "Property": "platform"
+                }
+              },
+              "queryRef": "dim_campaign.platform",
+              "nativeQueryRef": "platform",
+              "displayName": "Platform"
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "_Measures"
+                    }
+                  },
+                  "Property": "Paid spend"
+                }
+              },
+              "queryRef": "_Measures.Paid spend",
+              "nativeQueryRef": "Paid spend"
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "_Measures"
+                    }
+                  },
+                  "Property": "Paid leads"
+                }
+              },
+              "queryRef": "_Measures.Paid leads",
+              "nativeQueryRef": "Paid leads"
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "_Measures"
+                    }
+                  },
+                  "Property": "Cost per lead"
+                }
+              },
+              "queryRef": "_Measures.Cost per lead",
+              "nativeQueryRef": "Cost per lead"
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "_Measures"
+                    }
+                  },
+                  "Property": "Paid MQL rate"
+                }
+              },
+              "queryRef": "_Measures.Paid MQL rate",
+              "nativeQueryRef": "Paid MQL rate"
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "_Measures"
+                    }
+                  },
+                  "Property": "Paid calls booked"
+                }
+              },
+              "queryRef": "_Measures.Paid calls booked",
+              "nativeQueryRef": "Paid calls booked"
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "_Measures"
+                    }
+                  },
+                  "Property": "Cost per booked call"
+                }
+              },
+              "queryRef": "_Measures.Cost per booked call",
+              "nativeQueryRef": "Cost per booked call"
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "_Measures"
+                    }
+                  },
+                  "Property": "Paid attributed net cash"
+                }
+              },
+              "queryRef": "_Measures.Paid attributed net cash",
+              "nativeQueryRef": "Paid attributed net cash"
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "_Measures"
+                    }
+                  },
+                  "Property": "Cash ROAS"
+                }
+              },
+              "queryRef": "_Measures.Cash ROAS",
+              "nativeQueryRef": "Cash ROAS"
+            }
+          ]
+        }
+      },
+      "sortDefinition": {
+        "sort": [
+          {
+            "field": {
+              "Measure": {
+                "Expression": {
+                  "SourceRef": {
+                    "Entity": "_Measures"
+                  }
+                },
+                "Property": "Paid spend"
+              }
+            },
+            "direction": "Descending"
+          }
+        ],
+        "isDefaultSort": false
+      }
+    },
+    "drillFilterOtherVisuals": true,
+    "visualContainerObjects": {
+      "title": [
+        {
+          "properties": {
+            "text": {
+              "expr": {
+                "Literal": {
+                  "Value": "'Campaign scorecard for the dates in view'"
+                }
+              }
+            },
+            "show": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
+                }
+              }
+            }
+          }
+        }
+      ],
+      "general": [
+        {
+          "properties": {
+            "altText": {
+              "expr": {
+                "Literal": {
+                  "Value": "'Table titled Campaign scorecard. Lists campaign ID, platform, Paid spend, Paid leads, Cost per lead, Paid MQL rate, Paid calls booked, Cost per booked call, Paid attributed net cash and Cash ROAS.'"
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

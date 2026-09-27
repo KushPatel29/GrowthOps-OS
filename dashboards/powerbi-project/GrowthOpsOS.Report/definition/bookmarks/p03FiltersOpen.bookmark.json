@@ -1,0 +1,42 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/bookmark/2.1.0/schema.json",
+  "displayName": "Paid media efficiency - filters open",
+  "name": "p03FiltersOpen",
+  "options": {
+    "targetVisualNames": [
+      "p03FilterPanel",
+      "p03PanelBg",
+      "p03PanelTitle",
+      "p03PanelClose",
+      "v0308",
+      "v0309",
+      "v0310",
+      "p03PanelClear"
+    ],
+    "applyOnlyToTargetVisuals": true,
+    "suppressData": true,
+    "suppressActiveSection": true
+  },
+  "explorationState": {
+    "version": "1.3",
+    "activeSection": "p3_paid_media",
+    "sections": {
+      "p3_paid_media": {
+        "visualContainers": {
+          "p03PanelBg": {},
+          "p03PanelTitle": {},
+          "p03PanelClose": {},
+          "v0308": {},
+          "v0309": {},
+          "v0310": {},
+          "p03PanelClear": {}
+        },
+        "visualContainerGroups": {
+          "p03FilterPanel": {
+            "isHidden": false
+          }
+        }
+      }
+    }
+  }
+}

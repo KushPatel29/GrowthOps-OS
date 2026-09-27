@@ -6,3 +6,8 @@ growthops_os:
       path: ../../data/growthops-warehouse.duckdb
       schema: main
       threads: 1
+      # Dates are cut in UTC on every machine. DuckDB's AT TIME ZONE and CAST(... AS DATE)
+      # follow the session time zone, so without this a build in IST and one in CI (UTC)
+      # put late-evening events on different days.
+      settings:
+        TimeZone: UTC

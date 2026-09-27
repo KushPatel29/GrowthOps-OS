@@ -1,0 +1,130 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.0.0/schema.json",
+  "name": "v0208",
+  "position": {
+    "x": 654,
+    "y": 470,
+    "z": 1117,
+    "height": 234,
+    "width": 606,
+    "tabOrder": 1117
+  },
+  "visual": {
+    "visualType": "tableEx",
+    "query": {
+      "queryState": {
+        "Values": {
+          "projections": [
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "mart_platform_comparison"
+                    }
+                  },
+                  "Property": "platform"
+                }
+              },
+              "queryRef": "mart_platform_comparison.platform",
+              "nativeQueryRef": "platform",
+              "displayName": "Platform"
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "_Measures"
+                    }
+                  },
+                  "Property": "Platform spend"
+                }
+              },
+              "queryRef": "_Measures.Platform spend",
+              "nativeQueryRef": "Platform spend"
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "_Measures"
+                    }
+                  },
+                  "Property": "Reported ROAS"
+                }
+              },
+              "queryRef": "_Measures.Reported ROAS",
+              "nativeQueryRef": "Reported ROAS"
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "_Measures"
+                    }
+                  },
+                  "Property": "Warehouse ROAS"
+                }
+              },
+              "queryRef": "_Measures.Warehouse ROAS",
+              "nativeQueryRef": "Warehouse ROAS"
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "_Measures"
+                    }
+                  },
+                  "Property": "Claim multiple"
+                }
+              },
+              "queryRef": "_Measures.Claim multiple",
+              "nativeQueryRef": "Claim multiple"
+            }
+          ]
+        }
+      }
+    },
+    "drillFilterOtherVisuals": true,
+    "visualContainerObjects": {
+      "title": [
+        {
+          "properties": {
+            "text": {
+              "expr": {
+                "Literal": {
+                  "Value": "'ROAS as reported against ROAS on net cash'"
+                }
+              }
+            },
+            "show": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
+                }
+              }
+            }
+          }
+        }
+      ],
+      "general": [
+        {
+          "properties": {
+            "altText": {
+              "expr": {
+                "Literal": {
+                  "Value": "'Table titled ROAS as reported against ROAS on net cash. Lists platform, Platform spend, Reported ROAS, Warehouse ROAS and Claim multiple.'"
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

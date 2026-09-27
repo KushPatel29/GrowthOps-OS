@@ -1,0 +1,55 @@
+table quality_scorecard
+	lineageTag: 0bc5614e-1f8f-5e97-a653-dfed4ec988e8
+
+	column check_order
+		dataType: int64
+		formatString: 0
+		lineageTag: ef225b03-2d70-5ace-a7f8-b509c554cb3b
+		summarizeBy: none
+		sourceColumn: check_order
+
+	column area
+		dataType: string
+		lineageTag: aaa71a37-dac0-5709-9658-fb81b35efabe
+		summarizeBy: none
+		sourceColumn: area
+
+	column check_name
+		dataType: string
+		lineageTag: 6c9f7569-e7af-5638-8dfa-45f650823b2d
+		summarizeBy: none
+		sourceColumn: check_name
+		sortByColumn: check_order
+
+	column rate
+		dataType: double
+		formatString: 0.0%
+		lineageTag: 61458ff8-9202-58ee-8fe1-3ea190838b05
+		summarizeBy: sum
+		sourceColumn: rate
+
+	column target
+		dataType: double
+		formatString: 0.0%
+		lineageTag: ad6500d0-bccb-5aa0-bbbb-38a02dbecdfa
+		summarizeBy: sum
+		sourceColumn: target
+
+	partition quality_scorecard = m
+		mode: import
+		source =
+				let
+				    Source = #table(type table [#"check_order" = nullable text, #"area" = nullable text, #"check_name" = nullable text, #"rate" = nullable text, #"target" = nullable text], {
+				        {"1", "Tracking", "UTMs present", "0.9751", "0.95"},
+				        {"2", "Tracking", "Registered campaign", "0.9238", "0.95"},
+				        {"3", "CRM", "Owner assigned", "0.9598", "0.98"},
+				        {"4", "Attribution", "Buyer has a touch", "0.9766", "0.98"},
+				        {"5", "Payments", "Payment matched", "0.9889", "0.99"},
+				        {"6", "Migration", "Contact migrated", "0.995", "0.99"},
+				        {"7", "Migration", "Owner kept", "0.9526", "0.98"},
+				        {"8", "Migration", "Source kept", "0.9222", "0.98"},
+				        {"9", "Migration", "Stage kept", "0.9871", "0.98"}
+				    }),
+				    Typed = Table.TransformColumnTypes(Source, {{"check_order", Int64.Type}, {"area", type text}, {"check_name", type text}, {"rate", type number}, {"target", type number}})
+				in
+				    Typed

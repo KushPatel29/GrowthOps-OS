@@ -1,4 +1,4 @@
-# Project status — 2026-09-26
+# Project status — 2026-09-27
 
 Live synthetic dashboard: https://growthops-os.streamlit.app/ · GitHub: https://github.com/KushPatel29/GrowthOps-OS
 
@@ -47,11 +47,17 @@ Live synthetic dashboard: https://growthops-os.streamlit.app/ · GitHub: https:/
   pipeline, renewal-risk queue, migration audit with logged safe repairs, allowlisted ask-your-data.
 - **Warehouse**: SQLite reference marts and a DuckDB dbt project (staging → intermediate → marts, schema and
   singular tests, including bridge tie-out, email and link-hygiene marts) verified against the Python reference.
-- **BI**: ten-view Streamlit app (password gate and configured database in a deployment) (light and dark), FastAPI Executive Pulse page, Power BI PBIP/TMDL with 11
-  embedded marts plus a date dimension, relationships and 17 documented measures for paid, email and link data,
-  and a formula-driven Excel workbook: a Marketing KPIs sheet on named, validated date inputs, 10 zero-difference
-  audit checks, protected sheets and a definitions sheet. Both are rebuilt by script and checked for drift in CI;
-  the Excel formulas were evaluated independently and match Python.
+- **BI**: ten-view Streamlit app (password gate and configured database in a deployment) (light and dark),
+  FastAPI Executive Pulse page, and a governed BI snapshot (`export_bi`: 14 marts plus `dim_date`,
+  `dim_campaign`, payment-grain cash attribution and a quality scorecard) read by two generated deliverables.
+  **Power BI** (`growthops/bi`): 20 tables, 7 relationships, 211 described measures, 7 pages and 121 visuals
+  with SVG KPI tiles, dynamic headers, page navigation, a bookmark filter panel, conditional colours and a
+  DAX-written executive summary; parsed by Desktop's TMDL serializer, validated with zero errors by
+  Microsoft's report validator, opened, refreshed and queried in Power BI Desktop 2.157 (every row count and
+  measure checked, every page screenshotted). **Excel**: one window control drives a dashboard with KPI tiles
+  and formula-written findings, a campaign scorecard, email health, revenue truth, funnel and test, data
+  quality, 14 zero-difference audit checks and named-range formulas; calculated in Excel and held to Python
+  figures in the tests. The two agree to the cent. Both are regenerated and drift-checked in CI.
 - **Quality gates**: Ruff, pytest (unit, invariant, ground-truth, API, BI and case-study drift tests), the
   guardrail eval, a Streamlit render test, dbt build and parity, and a Docker build in GitHub Actions.
 
@@ -61,14 +67,11 @@ Live synthetic dashboard: https://growthops-os.streamlit.app/ · GitHub: https:/
   portal or bridge. There are no GA4, ad-platform, email-platform or link-shortener ingestion jobs (the data is
   generated).
 - Hosting, TLS, a secret manager and off-host backups belong to the deployment owner (see the runbook).
-- The regenerated Power BI model and its new fifth page (paid, email and tracking) have not been reopened in
-  Power BI Desktop; they are checked structurally against the existing, schema-validated visuals.
 - PostgreSQL, for several API hosts or point-in-time recovery (SQLite with WAL is the single-host choice).
 - Incrementality measurement (geo holdouts, conversion-lift studies); attribution here is descriptive.
-- A published Power BI Service report; the PBIP project was previously opened and queried in Power BI Desktop,
-  and its visual layout after the data refresh has not been re-inspected in Desktop.
+- A published Power BI Service report (the PBIP is verified in Desktop only), and row-level security.
 
 ## Next increment
 
 Connect a HubSpot developer test account and a Stripe test-mode bridge through the existing adapters, add
-ingestion jobs for ad platforms and the email tool, and reopen the Power BI project in Desktop to check the new page's layout.
+ingestion jobs for ad platforms and the email tool, and publish the Power BI report to a workspace.

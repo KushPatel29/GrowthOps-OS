@@ -1,8 +1,0 @@
-{
-  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/page/2.1.0/schema.json",
-  "name": "e41db4d1c8a95d39b518",
-  "displayName": "Attribution and bridge - Synthetic",
-  "displayOption": "FitToPage",
-  "width": 1280,
-  "height": 720
-}

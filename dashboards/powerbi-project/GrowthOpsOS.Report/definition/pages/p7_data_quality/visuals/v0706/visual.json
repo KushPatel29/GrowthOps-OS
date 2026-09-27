@@ -1,0 +1,181 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.0.0/schema.json",
+  "name": "v0706",
+  "position": {
+    "x": 534,
+    "y": 208,
+    "z": 1614,
+    "height": 246,
+    "width": 726,
+    "tabOrder": 1614
+  },
+  "visual": {
+    "visualType": "tableEx",
+    "query": {
+      "queryState": {
+        "Values": {
+          "projections": [
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "mart_link_hygiene"
+                    }
+                  },
+                  "Property": "link_id"
+                }
+              },
+              "queryRef": "mart_link_hygiene.link_id",
+              "nativeQueryRef": "link_id",
+              "displayName": "Link"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "mart_link_hygiene"
+                    }
+                  },
+                  "Property": "channel"
+                }
+              },
+              "queryRef": "mart_link_hygiene.channel",
+              "nativeQueryRef": "channel",
+              "displayName": "Channel"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "mart_link_hygiene"
+                    }
+                  },
+                  "Property": "utm_campaign"
+                }
+              },
+              "queryRef": "mart_link_hygiene.utm_campaign",
+              "nativeQueryRef": "utm_campaign",
+              "displayName": "UTM campaign"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "mart_link_hygiene"
+                    }
+                  },
+                  "Property": "missing_utm"
+                }
+              },
+              "queryRef": "mart_link_hygiene.missing_utm",
+              "nativeQueryRef": "missing_utm",
+              "displayName": "Missing UTM"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "mart_link_hygiene"
+                    }
+                  },
+                  "Property": "unregistered_campaign"
+                }
+              },
+              "queryRef": "mart_link_hygiene.unregistered_campaign",
+              "nativeQueryRef": "unregistered_campaign",
+              "displayName": "Unregistered"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "mart_link_hygiene"
+                    }
+                  },
+                  "Property": "off_taxonomy"
+                }
+              },
+              "queryRef": "mart_link_hygiene.off_taxonomy",
+              "nativeQueryRef": "off_taxonomy",
+              "displayName": "Off taxonomy"
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "_Measures"
+                    }
+                  },
+                  "Property": "Link recent clicks"
+                }
+              },
+              "queryRef": "_Measures.Link recent clicks",
+              "nativeQueryRef": "Link recent clicks"
+            }
+          ]
+        }
+      },
+      "sortDefinition": {
+        "sort": [
+          {
+            "field": {
+              "Measure": {
+                "Expression": {
+                  "SourceRef": {
+                    "Entity": "_Measures"
+                  }
+                },
+                "Property": "Link recent clicks"
+              }
+            },
+            "direction": "Descending"
+          }
+        ],
+        "isDefaultSort": false
+      }
+    },
+    "drillFilterOtherVisuals": true,
+    "visualContainerObjects": {
+      "title": [
+        {
+          "properties": {
+            "text": {
+              "expr": {
+                "Literal": {
+                  "Value": "'Short links against the campaign registry (clicks, last 30 days)'"
+                }
+              }
+            },
+            "show": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
+                }
+              }
+            }
+          }
+        }
+      ],
+      "general": [
+        {
+          "properties": {
+            "altText": {
+              "expr": {
+                "Literal": {
+                  "Value": "'Table titled Short links against the campaign registry. Lists link ID, channel, UTM campaign, missing UTM, unregistered campaign, off taxonomy and Link recent clicks.'"
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

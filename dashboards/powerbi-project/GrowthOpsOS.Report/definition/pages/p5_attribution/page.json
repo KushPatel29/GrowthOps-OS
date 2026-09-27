@@ -1,0 +1,8 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/page/1.4.0/schema.json",
+  "name": "p5_attribution",
+  "displayName": "Attribution and content",
+  "displayOption": "FitToPage",
+  "height": 720,
+  "width": 1280
+}

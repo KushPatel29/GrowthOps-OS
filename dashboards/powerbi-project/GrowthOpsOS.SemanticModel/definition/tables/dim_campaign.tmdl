@@ -1,0 +1,88 @@
+table dim_campaign
+	lineageTag: 8d39e2f0-f6ba-5b9d-9621-6c275f77f1c4
+
+	column campaign_id
+		dataType: string
+		lineageTag: 180e6996-c879-5977-8167-e367a96670b8
+		summarizeBy: none
+		sourceColumn: campaign_id
+		sortByColumn: campaign_order
+
+	column campaign_name
+		dataType: string
+		lineageTag: 6d22e832-a2fc-5b87-aac2-5d05614c2b73
+		summarizeBy: none
+		sourceColumn: campaign_name
+		sortByColumn: campaign_order
+
+	column platform
+		dataType: string
+		lineageTag: 32e4e813-c0a8-5c4a-b471-220b7d2b9d48
+		summarizeBy: none
+		sourceColumn: platform
+
+	column source
+		dataType: string
+		lineageTag: b3ce53fb-e7c8-5109-a2be-5486311762f5
+		summarizeBy: none
+		sourceColumn: source
+
+	column medium
+		dataType: string
+		lineageTag: c7f2a003-6204-516d-9675-12c09ff3bd4c
+		summarizeBy: none
+		sourceColumn: medium
+
+	column channel_group
+		dataType: string
+		lineageTag: 547de833-7a03-5103-bf36-bafa2713468a
+		summarizeBy: none
+		sourceColumn: channel_group
+
+	column landing_page
+		dataType: string
+		lineageTag: 6eac693b-7038-5b39-8087-713f6b9433ba
+		summarizeBy: none
+		sourceColumn: landing_page
+
+	column is_paid
+		dataType: boolean
+		lineageTag: f1526b09-12bd-50f8-a6e5-f7265202a76c
+		summarizeBy: none
+		sourceColumn: is_paid
+
+	column registry_valid
+		dataType: boolean
+		lineageTag: af744302-999e-58d6-a58d-73301ad2ecdb
+		summarizeBy: none
+		sourceColumn: registry_valid
+
+	column campaign_order
+		dataType: int64
+		formatString: 0
+		lineageTag: 758bcf3e-7169-5360-8663-18526b986ebb
+		summarizeBy: none
+		sourceColumn: campaign_order
+
+	partition dim_campaign = m
+		mode: import
+		source =
+				let
+				    Source = #table(type table [#"campaign_id" = nullable text, #"campaign_name" = nullable text, #"platform" = nullable text, #"source" = nullable text, #"medium" = nullable text, #"channel_group" = nullable text, #"landing_page" = nullable text, #"is_paid" = nullable text, #"registry_valid" = nullable text, #"campaign_order" = nullable text], {
+				        {"meta_prospecting_founder", "meta_prospecting_founder", "meta", "meta", "paid_social", "Paid social", "/growth-guide", "True", "True", "1"},
+				        {"google_nonbrand_growth", "google_nonbrand_growth", "google", "google", "paid_search", "Paid search", "/growth-guide", "True", "True", "2"},
+				        {"linkedin_ceo_abm", "linkedin_ceo_abm", "linkedin", "linkedin", "paid_social", "Paid social", "/executive", "True", "True", "3"},
+				        {"FB-Broad", "fb_broad", "meta", "FB", "paid_social", "Paid social", "/growth-guide", "True", "False", "4"},
+				        {"meta_retargeting_webinar", "meta_retargeting_webinar", "meta", "meta", "paid_social", "Paid social", "/webinar", "True", "True", "5"},
+				        {"google_brand_search", "google_brand_search", "google", "google", "paid_search", "Paid search", "/apply", "True", "True", "6"},
+				        {"meta_broad_v17", "meta_broad_v17", "meta", "meta", "paid_social", "Paid social", "/growth-guide", "True", "True", "7"},
+				        {"direct", "direct", "direct", "direct", "none", "Direct", "/", "False", "True", "8"},
+				        {"newsletter_weekly", "newsletter_weekly", "email", "newsletter", "owned_email", "Owned email", "/growth-guide", "False", "True", "9"},
+				        {"partner_podcast", "partner_podcast", "partner", "partner", "referral", "Partner", "/apply", "False", "True", "10"},
+				        {"webinar_growth_os", "webinar_growth_os", "zoom", "webinar", "event", "Webinar", "/webinar", "False", "True", "11"},
+				        {"youtube_founder_guide", "youtube_founder_guide", "youtube", "youtube", "organic_video", "Organic video", "/growth-guide", "False", "True", "12"},
+				        {"(unattributed)", "(unattributed)", "none", "none", "none", "Unattributed", null, "False", "False", "99"}
+				    }),
+				    Typed = Table.TransformColumnTypes(Source, {{"campaign_id", type text}, {"campaign_name", type text}, {"platform", type text}, {"source", type text}, {"medium", type text}, {"channel_group", type text}, {"landing_page", type text}, {"is_paid", type logical}, {"registry_valid", type logical}, {"campaign_order", Int64.Type}})
+				in
+				    Typed

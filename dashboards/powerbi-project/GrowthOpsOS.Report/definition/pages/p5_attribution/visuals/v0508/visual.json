@@ -1,0 +1,111 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.0.0/schema.json",
+  "name": "v0508",
+  "position": {
+    "x": 794,
+    "y": 470,
+    "z": 1418,
+    "height": 234,
+    "width": 466,
+    "tabOrder": 1418
+  },
+  "visual": {
+    "visualType": "scatterChart",
+    "query": {
+      "queryState": {
+        "Category": {
+          "projections": [
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "mart_content_performance"
+                    }
+                  },
+                  "Property": "title"
+                }
+              },
+              "queryRef": "mart_content_performance.title",
+              "nativeQueryRef": "title",
+              "displayName": "Title",
+              "active": true
+            }
+          ]
+        },
+        "X": {
+          "projections": [
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "_Measures"
+                    }
+                  },
+                  "Property": "Content views"
+                }
+              },
+              "queryRef": "_Measures.Content views",
+              "nativeQueryRef": "Content views"
+            }
+          ]
+        },
+        "Y": {
+          "projections": [
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "_Measures"
+                    }
+                  },
+                  "Property": "Content-influenced cash"
+                }
+              },
+              "queryRef": "_Measures.Content-influenced cash",
+              "nativeQueryRef": "Content-influenced cash"
+            }
+          ]
+        }
+      }
+    },
+    "drillFilterOtherVisuals": true,
+    "visualContainerObjects": {
+      "title": [
+        {
+          "properties": {
+            "text": {
+              "expr": {
+                "Literal": {
+                  "Value": "'Views against cash, one dot per content item'"
+                }
+              }
+            },
+            "show": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
+                }
+              }
+            }
+          }
+        }
+      ],
+      "general": [
+        {
+          "properties": {
+            "altText": {
+              "expr": {
+                "Literal": {
+                  "Value": "'Scatter chart titled Views against cash. Plots Content-influenced cash against Content views for each title.'"
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}
