@@ -61,8 +61,8 @@ Live synthetic dashboard: https://growthops-os.streamlit.app/ · GitHub: https:/
   portal or bridge. There are no GA4, ad-platform, email-platform or link-shortener ingestion jobs (the data is
   generated).
 - Hosting, TLS, a secret manager and off-host backups belong to the deployment owner (see the runbook).
-- The Power BI report pages do not yet use the new paid, email and link tables, and the regenerated model has
-  not been reopened in Power BI Desktop.
+- The regenerated Power BI model and its new fifth page (paid, email and tracking) have not been reopened in
+  Power BI Desktop; they are checked structurally against the existing, schema-validated visuals.
 - PostgreSQL, for several API hosts or point-in-time recovery (SQLite with WAL is the single-host choice).
 - Incrementality measurement (geo holdouts, conversion-lift studies); attribution here is descriptive.
 - A published Power BI Service report; the PBIP project was previously opened and queried in Power BI Desktop,
@@ -71,4 +71,4 @@ Live synthetic dashboard: https://growthops-os.streamlit.app/ · GitHub: https:/
 ## Next increment
 
 Connect a HubSpot developer test account and a Stripe test-mode bridge through the existing adapters, add
-ingestion jobs for ad platforms and the email tool, and build Power BI pages on the new tables.
+ingestion jobs for ad platforms and the email tool, and reopen the Power BI project in Desktop to check the new page's layout.
