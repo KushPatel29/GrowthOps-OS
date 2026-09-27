@@ -28,7 +28,12 @@ from openpyxl.chart import BarChart, LineChart, Reference
 from openpyxl.chart.label import DataLabelList
 from openpyxl.chart.shapes import GraphicalProperties
 from openpyxl.drawing.line import LineProperties
-from openpyxl.formatting.rule import CellIsRule, ColorScaleRule, DataBarRule, FormulaRule
+from openpyxl.formatting.rule import (
+    CellIsRule,
+    ColorScaleRule,
+    DataBarRule,
+    FormulaRule,
+)
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Protection, Side
 from openpyxl.utils import get_column_letter
 from openpyxl.workbook.defined_name import DefinedName
@@ -258,15 +263,15 @@ def _calc_sheet(book: Book, months: list[date], domains: list[str], bridge: list
         ("Window chosen on the Dashboard", "=Dashboard!$E$5", None, None),
         ("Window end", '=IF($C$8="Custom",Dashboard!$L$5,AsOf)', DATE, "WinEnd"),
         ("Window start",
-         '=IF($C$8="Custom",Dashboard!$I$5,CHOOSE(MATCH($C$8,WindowList,0),AsOf-6,AsOf-27,AsOf-89,'
-         'DATE(YEAR(AsOf),MONTH(AsOf),1),DATE(YEAR(AsOf),FLOOR(MONTH(AsOf)-1,3)+1,1),AsOf))', DATE, "WinStart"),
+         ('=IF($C$8="Custom",Dashboard!$I$5,CHOOSE(MATCH($C$8,WindowList,0),AsOf-6,AsOf-27,AsOf-89,'
+         'DATE(YEAR(AsOf),MONTH(AsOf),1),DATE(YEAR(AsOf),FLOOR(MONTH(AsOf)-1,3)+1,1),AsOf))'), DATE, "WinStart"),
         ("Days in window", "=WinEnd-WinStart+1", COUNT, "WinDays"),
         ("Prior window end", "=WinStart-1", DATE, "PriorEnd"),
         ("Prior window start", "=WinStart-WinDays", DATE, "PriorStart"),
         ("Window check",
-         '=IF(OR(NOT(ISNUMBER(WinStart)),NOT(ISNUMBER(WinEnd))),"Enter both custom dates",'
+         ('=IF(OR(NOT(ISNUMBER(WinStart)),NOT(ISNUMBER(WinEnd))),"Enter both custom dates",'
          'IF(WinEnd<WinStart,"End is before start",IF(OR(WinStart<FirstDay,WinEnd>AsOf),"Outside the data",'
-         'IF(PriorStart<FirstDay,"Ready (no full prior window)","Ready"))))', None, "WindowCheck"),
+         'IF(PriorStart<FirstDay,"Ready (no full prior window)","Ready"))))'), None, "WindowCheck"),
     ]
     for offset, (label, formula, fmt, name) in enumerate(rows, start=6):
         sheet.cell(offset, 2, label).font = _font(10, color=MUTED)
@@ -354,7 +359,7 @@ PLATFORM_TOP = 18  # where the platform table starts on Revenue truth; the Dashb
 def _tile(sheet, col: str, label: str, current: str, prior: str, value_fmt: str, delta: str, delta_fmt: str) -> None:
     left = sheet[f"{col}8"].column
     right = get_column_letter(left + 1)
-    span = lambda r: f"{col}{r}:{right}{r}"  # noqa: E731
+    span = lambda r: f"{col}{r}:{right}{r}"
     for r in range(8, 13):
         sheet.merge_cells(span(r))
         for c in (left, left + 1):
@@ -482,13 +487,13 @@ def _dashboard(book: Book, calc: dict) -> None:
     worst = (f'IFERROR(INDEX({names},MATCH(MIN({rates}),{rates},0))&" at "&TEXT(MIN({rates}),"0.0%"),'
              '"none with 50+ leads")')
     sentences = [
-        '="Net cash was "&TEXT(B9,"$#,##0")&" ("&TEXT(B11,"+0%;-0%")&" on the prior window) on "'
-        '&TEXT(E9,"$#,##0")&" of paid spend."',
+        ('="Net cash was "&TEXT(B9,"$#,##0")&" ("&TEXT(B11,"+0%;-0%")&" on the prior window) on "'
+        '&TEXT(E9,"$#,##0")&" of paid spend."'),
         '="Paid media bought leads at "&TEXT(H9,"$#,##0.00")&" each, and "&TEXT(K9,"0.0%")&" of them '
         'qualified ("&TEXT(Calc!$K$9,"0.0%")&" in the prior window). Lowest MQL rate at scale '
         '(50+ leads): "&' + worst + '&"."',
-        '="Email bounced at "&TEXT(Q9,"0.00%")&IF(Q9>0.02,", above the 2% limit: check the sending domain on '
-        'Email health.",", inside the 2% limit.")',
+        ('="Email bounced at "&TEXT(Q9,"0.00%")&IF(Q9>0.02,", above the 2% limit: check the sending domain on '
+        'Email health.",", inside the 2% limit.")'),
     ]
     for offset, formula in enumerate(sentences, start=15):
         sheet.merge_cells(f"B{offset}:S{offset}")
@@ -602,8 +607,8 @@ def _scorecard(book: Book, paid_campaigns: list[tuple[str, str]]) -> None:
             (13, f"=IFERROR(D{row}/L{row},\"–\")", MONEY),
             (14, f"={_window('att_net_cash_cents', 'att_paid_date', extra=f',att_campaign_id,$B{row}')}/100", MONEY),
             (15, f"=IFERROR(N{row}/D{row},\"–\")", ROAS),
-            (16, f'=IF(D{row}=0,"No spend",IF(IFERROR(K{row}<0.75*$K${last + 1},FALSE),"Low lead quality",'
-                 f'IF(IFERROR(O{row}<1,FALSE),"Returned less than it cost","")))', None),
+            (16, (f'=IF(D{row}=0,"No spend",IF(IFERROR(K{row}<0.75*$K${last + 1},FALSE),"Low lead quality",'
+                 f'IF(IFERROR(O{row}<1,FALSE),"Returned less than it cost","")))'), None),
         ]
         # Hidden helper: the MQL rate of campaigns with 50+ leads, so "lowest quality" means at scale.
         cells.append((17, f'=IF(AND(ISNUMBER(K{row}),H{row}>=50),K{row},"")', PCT))
@@ -694,7 +699,7 @@ def _email(book: Book, calc: dict, types: list[str]) -> None:
         for offset, member in enumerate(members):
             row = top + 2 + offset
             by = f',em_{field},$B{row}'
-            s = lambda column: _window(f"em_{column}", "em_sent_date", extra=by)  # noqa: E731
+            s = lambda column, by=by: _window(f"em_{column}", "em_sent_date", extra=by)
             sheet.cell(row, 2, member)
             cells = [
                 (3, f"={s('sends')}", COUNT), (4, f"={s('delivered')}", COUNT),
@@ -705,8 +710,8 @@ def _email(book: Book, calc: dict, types: list[str]) -> None:
                 (9, f"=IFERROR({s('clicks')}/{s('human_opens')},NA())", PCT),
                 (10, f"=IFERROR({s('spam_complaints')}/D{row},NA())", "0.000%"),
                 (11, f"=IFERROR({s('unsubscribes')}/D{row},NA())", PCT_2),
-                (12, f'=IF(C{row}=0,"No sends",IF(OR(IFERROR(E{row}>0.02,FALSE),IFERROR(J{row}>0.001,FALSE)),'
-                     f'"Over limit","OK"))', None),
+                (12, (f'=IF(C{row}=0,"No sends",IF(OR(IFERROR(E{row}>0.02,FALSE),IFERROR(J{row}>0.001,FALSE)),'
+                     f'"Over limit","OK"))'), None),
             ]
             for col, formula, fmt in cells:
                 sheet.cell(row, col, formula)
@@ -1003,16 +1008,16 @@ def _audit(book: Book, paid_campaigns: int) -> int:
         ("Daily net cash − revenue net", "=SUM(dly_net_cash_cents)-Revenue!D2"),
         ("Attributed net cash (every payment, lead-creation) − revenue net", "=SUM(att_net_cash_cents)-Revenue!D2"),
         ("Attributed paid cash − platform warehouse cash",
-         "=SUMPRODUCT(SUMIFS(att_net_cash_cents,att_campaign_id,dc_campaign_id)*dc_is_paid)"
-         "-SUM(pl_warehouse_net_cash_cents)"),
+         ("=SUMPRODUCT(SUMIFS(att_net_cash_cents,att_campaign_id,dc_campaign_id)*dc_is_paid)"
+         "-SUM(pl_warehouse_net_cash_cents)")),
         ("Daily spend − campaign spend", "=SUM(dly_spend_cents)-SUM(cp_spend_cents)"),
         ("Paid daily spend − campaign paid spend", "=SUM(pd_spend_cents)-(" + paid.format(c="spend_cents") + ")"),
         ("Paid daily spend − platform spend", "=SUM(pd_spend_cents)-SUM(pl_spend_cents)"),
         ("Paid daily leads − campaign paid leads", "=SUM(pd_leads)-(" + paid.format(c="leads") + ")"),
         ("Email delivered + bounces − sent", "=SUM(em_delivered)+SUM(em_bounces)-SUM(em_sends)"),
         ("Scorecard spend (all paid campaigns, all time) − paid daily spend",
-         "=SUMPRODUCT(SUMIFS(pd_spend_cents,pd_campaign_id,'Campaign scorecard'!$B$7:$B$"
-         f"{6 + paid_campaigns}))-SUM(pd_spend_cents)"),
+         ("=SUMPRODUCT(SUMIFS(pd_spend_cents,pd_campaign_id,'Campaign scorecard'!$B$7:$B$"
+         f"{6 + paid_campaigns}))-SUM(pd_spend_cents)")),
         ("Paid daily rows whose campaign is missing from the campaign dimension",
          "=SUMPRODUCT(--ISNA(MATCH(pd_campaign_id,dc_campaign_id,0)))"),
     ]
@@ -1066,23 +1071,23 @@ def _cover(book: Book, checks: int) -> None:
     facts = [
         ("Data through", '=TEXT(AsOf,"d mmmm yyyy")'),
         ("Reporting window", '=Dashboard!E5&": "&TEXT(WinStart,"d mmm yyyy")&" – "&TEXT(WinEnd,"d mmm yyyy")'),
-        ("Audit", f'=IF(AllChecksPass="Yes","All {checks} reconciliation checks are zero",'
-                  '"A reconciliation check failed: see Audit")'),
+        ("Audit", (f'=IF(AllChecksPass="Yes","All {checks} reconciliation checks are zero",'
+                  '"A reconciliation check failed: see Audit")')),
     ]
     for offset, (label, formula) in enumerate(facts, start=5):
         sheet.cell(offset, 2, label).font = _font(10, color=MUTED)
         sheet.cell(offset, 3, formula).font = _font(11, bold=True, color=NAVY)
     _section(sheet, "B9", "Sheets")
     guide = [
-        ("Dashboard", "Six KPIs for the window against the window before it, a written summary, monthly trend "
-                      "and ROAS by platform. Change the window here."),
-        ("Campaign scorecard", "Every paid campaign for the window: spend, CTR, CPL, MQL rate, cost per call, "
-                               "cash and ROAS, with flags."),
+        ("Dashboard", ("Six KPIs for the window against the window before it, a written summary, monthly trend "
+                      "and ROAS by platform. Change the window here.")),
+        ("Campaign scorecard", ("Every paid campaign for the window: spend, CTR, CPL, MQL rate, cost per call, "
+                               "cash and ROAS, with flags.")),
         ("Email health", "Deliverability and engagement by sending domain and email type, with limit checks."),
         ("Revenue truth", "CRM bookings to net cash, step by step, and platform claims against warehouse cash."),
         ("Funnel and test", "Lead to renewal, and the CTA test decided on cash per visitor."),
-        ("Data quality", "Tracking and migration checks against target, the short-link registry, incidents, "
-                         "renewals."),
+        ("Data quality", ("Tracking and migration checks against target, the short-link registry, incidents, "
+                         "renewals.")),
         ("Audit", "Reconciliation checks that must all be zero."),
         ("Definitions", "The governed metric catalog."),
         ("Calc", "How the window dates and chart series are derived."),
@@ -1097,12 +1102,12 @@ def _cover(book: Book, checks: int) -> None:
     after = 10 + len(guide) + 1
     _section(sheet, f"B{after}", "How to use it")
     notes = [
-        "Yellow cells are the only inputs: the reporting window on the Dashboard, and the custom dates when the "
-        "window is Custom. Every other cell is locked (no password) against accidental edits.",
-        "Every report figure is a formula over the grey data sheets, which are the governed CSVs the Power BI "
-        "model embeds. Formulas use named ranges: pd_spend_cents is the spend column of 'Paid daily'.",
-        "The data sheets are Excel tables: filter and sort them freely. Rebuild the workbook with "
-        "python -m growthops.export_excel.",
+        ("Yellow cells are the only inputs: the reporting window on the Dashboard, and the custom dates when the "
+        "window is Custom. Every other cell is locked (no password) against accidental edits."),
+        ("Every report figure is a formula over the grey data sheets, which are the governed CSVs the Power BI "
+        "model embeds. Formulas use named ranges: pd_spend_cents is the spend column of 'Paid daily'."),
+        ("The data sheets are Excel tables: filter and sort them freely. Rebuild the workbook with "
+        "python -m growthops.export_excel."),
     ]
     for offset, text in enumerate(notes, start=after + 1):
         sheet.merge_cells(start_row=offset, start_column=2, end_row=offset, end_column=3)
@@ -1162,7 +1167,8 @@ def build(output: Path = OUTPUT) -> Path:
     output.parent.mkdir(parents=True, exist_ok=True)
     book.wb.properties.creator = "GrowthOps OS"
     book.wb.properties.title = "ScaleLab GrowthOps workbook (synthetic)"
-    book.wb.properties.created = book.wb.properties.modified = datetime(2026, 1, 1)
+    # A fixed, naive stamp: the file must rebuild byte for byte, and OOXML core properties are UTC by definition.
+    book.wb.properties.created = book.wb.properties.modified = datetime(2026, 1, 1)  # noqa: DTZ001
     book.wb.calculation.fullCalcOnLoad = True
     book.wb.save(output)
     _normalize_zip(output)

@@ -179,8 +179,8 @@ MEASURES: list[tuple[str, str, str, str, str]] = [
     ("Paid attributed net cash", "CALCULATE([Attributed net cash], dim_campaign[is_paid] = TRUE())", MONEY,
      "03 Attribution", "Net cash credited to paid campaigns."),
     ("Cash ROAS", "DIVIDE([Paid attributed net cash], [Paid spend])", ROAS, "03 Attribution",
-     "Net cash credited to paid campaigns / paid spend. Descriptive, not incremental: it credits the creating "
-     "touch."),
+     ("Net cash credited to paid campaigns / paid spend. Descriptive, not incremental: it credits the creating "
+     "touch.")),
     ("Unattributed net cash",
      'CALCULATE([Attributed net cash], dim_campaign[campaign_id] = "(unattributed)")', MONEY, "03 Attribution",
      "Net cash from buyers with no lead-creation touch before paying."),
@@ -225,14 +225,14 @@ MEASURES: list[tuple[str, str, str, str, str]] = [
     # --- Funnel and experiment -----------------------------------------------
     ("Funnel people", "SUM(mart_funnel[people])", COUNT, "05 Funnel",
      "People who reached the stage, all time."),
-    ("Lead to paid", "DIVIDE(CALCULATE([Funnel people], mart_funnel[stage] = \"paid\"),\n"
-                     "    CALCULATE([Funnel people], mart_funnel[stage] = \"lead\"))", PCT_2, "05 Funnel",
+    ("Lead to paid", ("DIVIDE(CALCULATE([Funnel people], mart_funnel[stage] = \"paid\"),\n"
+                     "    CALCULATE([Funnel people], mart_funnel[stage] = \"lead\"))"), PCT_2, "05 Funnel",
      "Paying customers / leads, all time."),
     ("Stage conversion",
-     "VAR vStage = SELECTEDVALUE(mart_funnel[ordinal])\n"
+     ("VAR vStage = SELECTEDVALUE(mart_funnel[ordinal])\n"
      "VAR vHere = [Funnel people]\n"
      "VAR vBefore = CALCULATE([Funnel people], REMOVEFILTERS(mart_funnel), mart_funnel[ordinal] = vStage - 1)\n"
-     "RETURN IF(NOT ISBLANK(vStage) && vStage > 1, DIVIDE(vHere, vBefore))", PCT, "05 Funnel",
+     "RETURN IF(NOT ISBLANK(vStage) && vStage > 1, DIVIDE(vHere, vBefore))"), PCT, "05 Funnel",
      "People at this stage / people at the stage before."),
     ("Test visitors", "SUM(mart_experiment_variants[visitors])", COUNT, "05 Funnel",
      "Visitors randomized into the CTA test."),
@@ -246,14 +246,14 @@ MEASURES: list[tuple[str, str, str, str, str]] = [
      "DIVIDE(SUM(mart_experiment_variants[net_cash_cents]), [Test visitors]) / 100", MONEY_2, "05 Funnel",
      "Net cash / visitors: the metric the test should be decided on."),
     ("Variant lead-rate lift",
-     "VAR vControl = CALCULATE([Test lead rate], mart_experiment_variants[variant_id] = \"cta_a\")\n"
+     ("VAR vControl = CALCULATE([Test lead rate], mart_experiment_variants[variant_id] = \"cta_a\")\n"
      "VAR vVariant = CALCULATE([Test lead rate], mart_experiment_variants[variant_id] = \"cta_b\")\n"
-     "RETURN DIVIDE(vVariant, vControl) - 1", CHANGE, "05 Funnel",
+     "RETURN DIVIDE(vVariant, vControl) - 1"), CHANGE, "05 Funnel",
      "Variant lead rate against control."),
     ("Variant cash-per-visitor lift",
-     "VAR vControl = CALCULATE([Test cash per visitor], mart_experiment_variants[variant_id] = \"cta_a\")\n"
+     ("VAR vControl = CALCULATE([Test cash per visitor], mart_experiment_variants[variant_id] = \"cta_a\")\n"
      "VAR vVariant = CALCULATE([Test cash per visitor], mart_experiment_variants[variant_id] = \"cta_b\")\n"
-     "RETURN DIVIDE(vVariant, vControl) - 1", CHANGE, "05 Funnel",
+     "RETURN DIVIDE(vVariant, vControl) - 1"), CHANGE, "05 Funnel",
      "Variant cash per visitor against control."),
 
     # --- Content --------------------------------------------------------------
@@ -307,13 +307,13 @@ MEASURES: list[tuple[str, str, str, str, str]] = [
      "08 Data quality", "Contact rows sharing an email address."),
     ("Short links", "COUNTROWS(mart_link_hygiene)", COUNT, "08 Data quality", "Short links in use."),
     ("Links with defects",
-     "COUNTROWS(FILTER(mart_link_hygiene, mart_link_hygiene[missing_utm] || "
-     "mart_link_hygiene[unregistered_campaign] || mart_link_hygiene[off_taxonomy]))", COUNT, "08 Data quality",
+     ("COUNTROWS(FILTER(mart_link_hygiene, mart_link_hygiene[missing_utm] || "
+     "mart_link_hygiene[unregistered_campaign] || mart_link_hygiene[off_taxonomy]))"), COUNT, "08 Data quality",
      "Short links with missing, unregistered or off-taxonomy UTMs."),
     ("Defective link click share",
-     "DIVIDE(\n    CALCULATE(SUM(mart_link_hygiene[recent_clicks]),\n"
+     ("DIVIDE(\n    CALCULATE(SUM(mart_link_hygiene[recent_clicks]),\n"
      "        FILTER(mart_link_hygiene, mart_link_hygiene[missing_utm] || mart_link_hygiene[unregistered_campaign]"
-     " || mart_link_hygiene[off_taxonomy])),\n    SUM(mart_link_hygiene[recent_clicks]))", PCT, "08 Data quality",
+     " || mart_link_hygiene[off_taxonomy])),\n    SUM(mart_link_hygiene[recent_clicks]))"), PCT, "08 Data quality",
      "Share of the last 30 days' short-link clicks that land without a valid campaign."),
     ("Link recent clicks", "SUM(mart_link_hygiene[recent_clicks])", COUNT, "08 Data quality",
      "Short-link clicks in the last 30 days."),
@@ -355,8 +355,8 @@ MEASURES += [
     ("ROAS colour", f'IF([Cash ROAS] < 1, "{ALERT}", "{CALM}")', "", "13 Colours",
      "Red where a campaign returned less cash than it cost."),
     ("MQL rate colour",
-     "VAR vAll = CALCULATE([Paid MQL rate], REMOVEFILTERS(dim_campaign))\n"
-     f'RETURN IF([Paid MQL rate] < 0.75 * vAll, "{ALERT}", "{CALM}")', "", "13 Colours",
+     ("VAR vAll = CALCULATE([Paid MQL rate], REMOVEFILTERS(dim_campaign))\n"
+     f'RETURN IF([Paid MQL rate] < 0.75 * vAll, "{ALERT}", "{CALM}")'), "", "13 Colours",
      "Red where a campaign qualifies leads at under three-quarters of the paid average."),
 ]
 
@@ -458,15 +458,15 @@ MEASURES += [
      'FORMAT([Defective link click share], "0%") & " of recent short-link clicks"', "", "10 Captions",
      "Tile caption: clicks on defective links."),
     ("Renewals caption",
-     'FORMAT([Failed renewal attempts], "#,0") & IF([Failed renewal attempts] = 1, " failed card attempt · ", '
+     ('FORMAT([Failed renewal attempts], "#,0") & IF([Failed renewal attempts] = 1, " failed card attempt · ", '
      '" failed card attempts · ") & FORMAT([Renewals due], "#,0") '
-     '& " due in total"', "", "10 Captions", "Tile caption: renewal queue."),
+     '& " due in total"'), "", "10 Captions", "Tile caption: renewal queue."),
     ("UTM caption",
      'FORMAT([Registry coverage], "0.0%") & " of touches carry a registered campaign"', "", "10 Captions",
      "Tile caption: registry coverage."),
     ("Migration caption",
-     'FORMAT([Missing after migration], "#,0") & " legacy contacts missing · " '
-     '& FORMAT([Duplicate contact rows], "#,0") & " duplicates"', "", "10 Captions",
+     ('FORMAT([Missing after migration], "#,0") & " legacy contacts missing · " '
+     '& FORMAT([Duplicate contact rows], "#,0") & " duplicates"'), "", "10 Captions",
      "Tile caption: migration defects."),
     ("Funnel caption",
      'FORMAT([Lead to paid], "0.00%") & " of all leads became customers"', "", "10 Captions",
@@ -475,8 +475,8 @@ MEASURES += [
      '"platforms report " & FORMAT([Reported ROAS], "0.0") & "x on the same spend"', "", "10 Captions",
      "Tile caption: the ROAS the platforms claim."),
     ("Quality caption",
-     'FORMAT([Checks below target], "0") & " of " & FORMAT(COUNTROWS(quality_scorecard), "0") '
-     '& " checks under target"', "", "10 Captions", "Tile caption: data-quality checks failing."),
+     ('FORMAT([Checks below target], "0") & " of " & FORMAT(COUNTROWS(quality_scorecard), "0") '
+     '& " checks under target"'), "", "10 Captions", "Tile caption: data-quality checks failing."),
     ("Complaint caption",
      'IF([Complaint rate] > 0.001, "above", "within") & " the 0.1% limit · " & [Complaint rate caption]', "",
      "10 Captions", "Tile caption: complaint rate against the mailbox-provider limit."),
@@ -486,7 +486,7 @@ MEASURES += [
 # number in it is a measure above; nothing is typed.
 MEASURES.append((
     "Executive summary",
-    "VAR vDate = FORMAT([As-of date], \"d mmm yyyy\")\n"
+    ("VAR vDate = FORMAT([As-of date], \"d mmm yyyy\")\n"
     "VAR vCash = [Net cash, last 28 days]\n"
     "VAR vCashMove = [Net cash, 28-day change]\n"
     "VAR vRateNow = [Paid MQL rate, last 28 days]\n"
@@ -508,7 +508,7 @@ MEASURES.append((
     "        & FORMAT(vRateNow, \"0.0%\") & \" qualified (\" & FORMAT(vRateBefore, \"0.0%\")\n"
     "        & \" before); the weakest at scale is \" & vWorstNames & \" at \" & FORMAT(vWorst, \"0.0%\")\n"
     "        & \". Email bounced at \" & FORMAT(vBounce, \"0.0%\")\n"
-    "        & IF(vBounce > 0.02, \", above the 2% limit.\", \", inside the 2% limit.\")",
+    "        & IF(vBounce > 0.02, \", above the 2% limit.\", \", inside the 2% limit.\")"),
     "", "12 Narrative", "One-paragraph summary of the last 28 days, computed from the measures on the page.",
 ))
 

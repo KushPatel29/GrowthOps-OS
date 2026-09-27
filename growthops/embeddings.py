@@ -18,8 +18,8 @@ import tarfile
 import tempfile
 import threading
 import urllib.request
+from collections.abc import Sequence
 from pathlib import Path
-from typing import Sequence
 
 MODEL_NAME = "all-MiniLM-L6-v2"
 MODEL_URL = "https://chroma-onnx-models.s3.amazonaws.com/all-MiniLM-L6-v2/onnx.tar.gz"
@@ -90,7 +90,7 @@ def ensure_model() -> Path:
             archive = work / "model.tar.gz"
             request = urllib.request.Request(MODEL_URL, headers={"User-Agent": "growthops-os"})
             size = 0
-            with urllib.request.urlopen(request, timeout=60) as response, archive.open("wb") as out:  # noqa: S310
+            with urllib.request.urlopen(request, timeout=60) as response, archive.open("wb") as out:
                 while chunk := response.read(1024 * 1024):
                     size += len(chunk)
                     if size > MAX_DOWNLOAD_BYTES:

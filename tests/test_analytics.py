@@ -1,7 +1,13 @@
+from fractions import Fraction
+
 from growthops.attribution import MODELS, _split_cents, allocations, summary
 from growthops.funnel import funnel, funnel_by_campaign
-from growthops.report import campaign_performance, executive_brief, measurement_health, metrics
-from fractions import Fraction
+from growthops.report import (
+    campaign_performance,
+    executive_brief,
+    measurement_health,
+    metrics,
+)
 
 
 def test_split_cents_is_exact_and_stable():

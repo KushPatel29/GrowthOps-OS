@@ -23,9 +23,7 @@ import re
 from collections import Counter
 from dataclasses import dataclass, field
 
-STOPWORDS = frozenset("""a an and are as at be by did do does for from how i in is it its me my of on or our show
-tell that the their them there these this to us was we were what when where which who why will with you your
-can could should would please give get per""".split())
+STOPWORDS = frozenset(["a", "an", "and", "are", "as", "at", "be", "by", "did", "do", "does", "for", "from", "how", "i", "in", "is", "it", "its", "me", "my", "of", "on", "or", "our", "show", "tell", "that", "the", "their", "them", "there", "these", "this", "to", "us", "was", "we", "were", "what", "when", "where", "which", "who", "why", "will", "with", "you", "your", "can", "could", "should", "would", "please", "give", "get", "per"])
 SYNONYMS = {"bitly": "short", "revenue": "cash", "sales": "cash", "hubspot": "crm", "ctr": "click",
             "ab": "experiment", "test": "experiment", "mqls": "mql", "leads": "lead", "emails": "email",
             "links": "link", "renewals": "renewal", "campaigns": "campaign", "buyers": "customer",

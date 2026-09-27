@@ -5,7 +5,13 @@ from datetime import datetime, timedelta, timezone
 
 import pytest
 
-from growthops.adapters import Adapters, HubSpotCRM, ProviderError, SignedWebhook, build_adapters
+from growthops.adapters import (
+    Adapters,
+    HubSpotCRM,
+    ProviderError,
+    SignedWebhook,
+    build_adapters,
+)
 from growthops.alerts import deliver
 from growthops.config import ConfigError, get_settings
 from growthops.worker import run_once

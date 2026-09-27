@@ -16,7 +16,14 @@ from pathlib import Path
 import pytest
 
 from growthops.bi import build_pbip
-from growthops.bi.model_spec import MEASURES, RELATIONSHIPS, SORT_BY, TABLES, UNRELATED, measure_names
+from growthops.bi.model_spec import (
+    MEASURES,
+    RELATIONSHIPS,
+    SORT_BY,
+    TABLES,
+    UNRELATED,
+    measure_names,
+)
 from growthops.bi.report_chrome import CHROME_KINDS, ui_measures
 from growthops.bi.report_spec import PAGES
 
@@ -205,7 +212,7 @@ def test_query_refs_agree_with_their_fields():
         state = visual.get("visual", {}).get("query", {}).get("queryState", {})
         for role in state.values():
             for projection in role["projections"]:
-                (kind, spec), = projection["field"].items()
+                (_kind, spec), = projection["field"].items()
                 entity, prop = spec["Expression"]["SourceRef"]["Entity"], spec["Property"]
                 assert projection["queryRef"] == f"{entity}.{prop}" and projection["nativeQueryRef"] == prop
 

@@ -6,7 +6,8 @@ import argparse
 import json
 import sqlite3
 
-from growthops.attribution import MODELS, summary as attribution_summary
+from growthops.attribution import MODELS
+from growthops.attribution import summary as attribution_summary
 from growthops.db import connect, initialize
 from growthops.funnel import funnel, lifecycle_integrity
 

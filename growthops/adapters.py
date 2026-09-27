@@ -21,8 +21,9 @@ import hashlib
 import hmac
 import json
 import time
+from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Callable, Protocol
+from typing import TYPE_CHECKING, Protocol
 from urllib import error, request
 
 from growthops.config import ConfigError, Settings
@@ -42,7 +43,7 @@ class ProviderError(Exception):
 def urllib_transport(method: str, url: str, headers: dict, body: bytes | None, timeout: float) -> tuple[int, bytes]:
     http_request = request.Request(url, data=body, headers=headers, method=method)
     try:
-        with request.urlopen(http_request, timeout=timeout) as response:  # noqa: S310 (https enforced by config)
+        with request.urlopen(http_request, timeout=timeout) as response:
             return response.status, response.read()
     except error.HTTPError as exc:
         return exc.code, exc.read()

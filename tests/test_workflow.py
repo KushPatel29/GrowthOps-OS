@@ -2,15 +2,25 @@ from datetime import datetime, timedelta, timezone
 
 import pytest
 
-from growthops.workflow import (MAX_ATTEMPTS, EventConflict, PaymentEvent, _payload_digest, health,
-                                process_payment, replay_dead_letter, run_due, trace, utcnow)
+from growthops.workflow import (
+    MAX_ATTEMPTS,
+    EventConflict,
+    PaymentEvent,
+    _payload_digest,
+    health,
+    process_payment,
+    replay_dead_letter,
+    run_due,
+    trace,
+    utcnow,
+)
 
 T0 = datetime(2026, 9, 26, 9, 0, tzinfo=timezone.utc)
 
 
 def _event(**overrides) -> PaymentEvent:
-    values = dict(event_id="evt-new-1", event_type="payment.succeeded", payment_id="pay-new-1",
-                  customer_id="c-000001", amount_cents=50000, paid_at=T0)
+    values = {"event_id": "evt-new-1", "event_type": "payment.succeeded", "payment_id": "pay-new-1",
+              "customer_id": "c-000001", "amount_cents": 50000, "paid_at": T0}
     return PaymentEvent(**{**values, **overrides})
 
 
@@ -59,7 +69,7 @@ def test_active_claim_blocks_redelivery_and_expired_claim_resumes(connection):
 
 
 def test_backoff_worker_then_dead_letter_then_operator_replay(connection):
-    outage = lambda step, event, attempt, now: "HTTP 503" if step == "grant_access" else None  # noqa: E731
+    outage = lambda step, event, attempt, now: "HTTP 503" if step == "grant_access" else None
     result = process_payment(connection, _event(), now=T0, faults=outage)
     now = T0
     delays = []

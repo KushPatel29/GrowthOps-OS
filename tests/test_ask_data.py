@@ -52,7 +52,7 @@ def test_definitions_are_quoted_with_citations_and_refusals_are_audited(connecti
         refused = answer(connection, question)
         assert refused["route"] == "refused" and reason in refused["answer"] and refused["metric_id"] is None
     logged = connection.execute("SELECT route, COUNT(*) FROM ask_log GROUP BY route").fetchall()
-    assert dict((row[0], row[1]) for row in logged) == {"definition": 1, "refused": 3}
+    assert {row[0]: row[1] for row in logged} == {"definition": 1, "refused": 3}
 
 
 def test_every_governed_answer_runs_and_carries_numbers(connection):

@@ -7,10 +7,17 @@ import time
 import pytest
 from fastapi.testclient import TestClient
 
-from growthops.api import app
 from growthops.adapters import Adapters
+from growthops.api import app
 from growthops.config import ConfigError, get_settings
-from growthops.db import LEGACY_COLUMNS, SCHEMA_VERSION, connect, connect_readonly, initialize, schema_version
+from growthops.db import (
+    LEGACY_COLUMNS,
+    SCHEMA_VERSION,
+    connect,
+    connect_readonly,
+    initialize,
+    schema_version,
+)
 from growthops.freshness import check as freshness_check
 from growthops.observability import METRICS
 from growthops.ops import backup, restore, verify
@@ -38,17 +45,15 @@ def test_production_refuses_unsafe_defaults(monkeypatch, db_path):
     problems = get_settings().problems()
     assert any("WEBHOOK_SECRET" in p for p in problems) and any("API_KEYS" in p for p in problems)
     assert any("DATA_MODE=synthetic" in p for p in problems)
-    with pytest.raises(ConfigError):
-        with TestClient(app):
-            pass
+    with pytest.raises(ConfigError), TestClient(app):
+        pass
     _production(monkeypatch, db_path, HUBSPOT_ACCESS_TOKEN="")
     assert get_settings().problems() == ["HUBSPOT_ACCESS_TOKEN is required when GROWTHOPS_CRM_ADAPTER=hubspot"]
     _production(monkeypatch, db_path, GROWTHOPS_CRM_ADAPTER="simulated",
                 GROWTHOPS_ACCESS_ADAPTER="simulated", GROWTHOPS_MESSAGING_ADAPTER="simulated")
     assert len([issue for issue in get_settings().problems() if "required in production" in issue]) == 3
-    with pytest.raises(ConfigError):
-        with TestClient(app):
-            pass
+    with pytest.raises(ConfigError), TestClient(app):
+        pass
     client_without_lifespan = TestClient(app)
     try:
         assert client_without_lifespan.get("/health").status_code == 503
@@ -65,9 +70,8 @@ def test_production_requires_separate_bridge_secrets(monkeypatch, db_path):
     problems = get_settings().problems()
     assert any("ACCESS_WEBHOOK_SECRET" in issue for issue in problems)
     assert any("MESSAGING_WEBHOOK_SECRET" in issue for issue in problems)
-    with pytest.raises(ConfigError):
-        with TestClient(app):
-            pass
+    with pytest.raises(ConfigError), TestClient(app):
+        pass
     _production(monkeypatch, db_path, GROWTHOPS_ACCESS_WEBHOOK_URL="https://user:password@access.example.test/key")
     assert any("ACCESS_WEBHOOK_URL" in issue for issue in get_settings().problems())
     assert "password" not in json.dumps(get_settings().redacted())
@@ -115,7 +119,7 @@ def test_production_webhook_requires_fresh_timestamped_signature(monkeypatch, db
     secret = SAFE["GROWTHOPS_WEBHOOK_SECRET"]
     before = dict(METRICS.counters)
     with TestClient(app) as client:
-        post = lambda headers: client.post("/webhooks/payments", content=body, headers=headers)  # noqa: E731
+        post = lambda headers: client.post("/webhooks/payments", content=body, headers=headers)
         assert post(_sign(body, secret, None)).status_code == 401  # legacy body-only: dev only
         assert post(_sign(body, secret, int(time.time()) - 3600)).status_code == 401  # replayed
         assert post(_sign(body, "x" * 40, int(time.time()))).status_code == 401

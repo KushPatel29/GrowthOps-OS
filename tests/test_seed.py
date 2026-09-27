@@ -21,7 +21,7 @@ def test_generator_is_deterministic(tmp_path):
 
 
 def test_scenario_is_realistic_and_internally_consistent(connection):
-    one = lambda sql: connection.execute(sql).fetchone()[0]  # noqa: E731
+    one = lambda sql: connection.execute(sql).fetchone()[0]
     assert one("SELECT COUNT(*) FROM contacts") > 10_000
     assert one("SELECT COUNT(DISTINCT customer_id) FROM payments WHERE status='succeeded'") > 300
     # No campaign looks like a copy of another: lead volumes differ.

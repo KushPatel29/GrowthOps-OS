@@ -16,8 +16,9 @@ import sqlite3
 import time
 import uuid
 from collections import Counter
+from collections.abc import Callable
 from datetime import datetime, timedelta, timezone
-from typing import Callable, Literal
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
@@ -183,8 +184,8 @@ def process_payment(
         if existing and existing["status"] in ("completed", "dead_letter"):
             connection.commit()
             return {"event_id": event.event_id, "status": existing["status"], "duplicate": True}
-        if existing and existing["status"] == "processing" and existing["claimed_at"]:
-            if clock - datetime.fromisoformat(existing["claimed_at"]) < CLAIM_TTL:
+        if (existing and existing["status"] == "processing" and existing["claimed_at"]
+                and clock - datetime.fromisoformat(existing["claimed_at"]) < CLAIM_TTL):
                 connection.commit()
                 return {"event_id": event.event_id, "status": "processing", "duplicate": True}
         if not existing:
@@ -262,7 +263,7 @@ def process_payment(
             (str(exc), event.event_id),
         )
         raise
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001 -- any provider fault is retried, then dead-lettered
         attempts = connection.execute(
             "SELECT attempts FROM processed_events WHERE event_id=?", (event.event_id,)
         ).fetchone()[0]

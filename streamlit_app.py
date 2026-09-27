@@ -14,26 +14,40 @@ import pandas as pd
 import streamlit as st
 
 from growthops.ask_data import answer as ask_data
-from growthops.attribution import MODELS, summary as attribution_summary
+from growthops.attribution import MODELS
+from growthops.attribution import summary as attribution_summary
 from growthops.brief import period_brief
 from growthops.campaign_links import audit_short_links
-from growthops.email_analytics import deliverability, email_performance, list_source_mix, newsletter_pipeline, type_summary
-from growthops.embeddings import model_ready, runtime_available
-from growthops.hubspot import audit as hubspot_audit
-from growthops.performance import daily_update, paid_efficiency
 from growthops.db import connect_readonly
-from growthops.diagnostics import detect, incident_recall, series as metric_series
+from growthops.diagnostics import detect, incident_recall
+from growthops.diagnostics import series as metric_series
+from growthops.email_analytics import (
+    deliverability,
+    email_performance,
+    list_source_mix,
+    newsletter_pipeline,
+    type_summary,
+)
+from growthops.embeddings import model_ready, runtime_available
 from growthops.experiments import analyze as experiment_analysis
 from growthops.funnel import funnel, funnel_by_campaign
+from growthops.hubspot import audit as hubspot_audit
 from growthops.migration import audit as migration_audit
 from growthops.narrator import narrate
-from growthops.reconciliation import crm_bridge, four_numbers, platform_bridge, platform_comparison
+from growthops.performance import daily_update, paid_efficiency
+from growthops.reconciliation import (
+    crm_bridge,
+    four_numbers,
+    platform_bridge,
+    platform_comparison,
+)
 from growthops.renewals import monitor as renewal_monitor
 from growthops.report import TARGETS, campaign_performance, executive_brief
 from growthops.scenario import AS_OF
 from growthops.seed import seed
 from growthops.warehouse import build
-from growthops.workflow import health as workflow_health, trace as workflow_trace
+from growthops.workflow import health as workflow_health
+from growthops.workflow import trace as workflow_trace
 
 # Reference palette (validated light and dark): slot 1 blue, slot 2 orange; blue/red diverging; gray totals.
 BLUE, ORANGE, RED, GRAY = "#2a78d6", "#eb6834", "#e34948", "#898781"
@@ -583,8 +597,8 @@ with tabs[9]:
                f"definitions by {'hybrid BM25 + MiniLM' if retrieval_mode == 'hybrid' else 'BM25 keyword'} retrieval. "
                "Every number comes from a tested function, every definition from the metric catalog, and anything "
                "else is refused. Nothing typed is executed as SQL and no text leaves the machine.")
-    st.caption("Try: " + " · ".join(("Did anyone pay and not get into the community?", "What does a lead cost on Google?",
-                                     "Is our email going to junk?", "How is cost per MQL calculated?")))
+    st.caption("Try: Did anyone pay and not get into the community? · What does a lead cost on Google? · "
+               "Is our email going to junk? · How is cost per MQL calculated?")
     question = st.text_input("Question", placeholder="Which revenue number is right?")
     if question:
         connection = connect_readonly(database)

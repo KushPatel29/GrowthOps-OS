@@ -137,11 +137,11 @@ INCIDENTS = (
      "Legacy CRM cut-over created duplicates, blank owners, overwritten sources and lost deal links."),
     ("inc_email_domain_switch", "deliverability", EMAIL_DOMAIN_SWITCH.isoformat(), None,
      f"sending_domain:{NEW_EMAIL_DOMAIN}", "email_bounce_rate_up",
-     "Bulk email moved to a new sending subdomain without warm-up or DKIM alignment; "
-     "bounces and complaints rose and inbox placement fell before the enrollment deadline."),
+     ("Bulk email moved to a new sending subdomain without warm-up or DKIM alignment; "
+     "bounces and complaints rose and inbox placement fell before the enrollment deadline.")),
     ("inc_untagged_links", "tracking", "2026-06-01", None, "short_links", "link_utm_defects",
-     "Four short links (Instagram bio, a podcast episode, a YouTube guide and a LinkedIn launch post) "
-     "carry missing, unregistered or off-taxonomy UTM parameters."),
+     ("Four short links (Instagram bio, a podcast episode, a YouTube guide and a LinkedIn launch post) "
+     "carry missing, unregistered or off-taxonomy UTM parameters.")),
 )
 
 

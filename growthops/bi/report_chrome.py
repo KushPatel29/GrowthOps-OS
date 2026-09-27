@@ -21,7 +21,6 @@ actually draws rather than on the positions before the header moved them.
 
 from __future__ import annotations
 
-
 CANVAS_W, CANVAS_H = 1280, 720
 HEADER_X, HEADER_Y, HEADER_H = 24, 16, 56
 BODY_TOP, BODY_BOTTOM = 88, 704
@@ -76,7 +75,7 @@ def tile_view_width(pos: tuple[int, int, int, int]) -> int:
     """The SVG's own width for a tile, so its aspect matches the tile's and
     `Fit` fills it instead of centring a small card in blank space."""
     _x, _y, width, height = pos
-    return int(round(TILE_VIEW_H * width / max(1, height)))
+    return round(TILE_VIEW_H * width / max(1, height))
 
 
 def tile_measure(spec: dict) -> str:
@@ -143,7 +142,7 @@ def _reflow(specs: list[dict], freed: list[list[int]]) -> list[list[int]]:
     k = (BODY_BOTTOM - BODY_TOP) / max(1, bottom - top)
 
     def y_map(y: float) -> int:
-        return int(round(BODY_TOP + (y - top) * k))
+        return round(BODY_TOP + (y - top) * k)
 
     for spec in specs:
         x, y, w, h = spec["pos"]
@@ -338,8 +337,8 @@ def _tile_dax(measure: str, subtitle: str | None, fmt: str | None, width: int,
         f'VAR vShown = IF(ISBLANK(vValue), "—", {shown})',
         "VAR vCaptionRaw = "
         + (_runtime_safe(f'COALESCE([{subtitle}], "")') if subtitle else '""'),
-        f"VAR vCaption = IF(LEN(vCaptionRaw) > {caption_chars}, "
-        f'LEFT(vCaptionRaw, {caption_chars - 2}) & "…", vCaptionRaw)',
+        (f"VAR vCaption = IF(LEN(vCaptionRaw) > {caption_chars}, "
+        f'LEFT(vCaptionRaw, {caption_chars - 2}) & "…", vCaptionRaw)'),
     ]
     if trend:
         # The caption says which way the figure moved; its colour says whether
@@ -347,8 +346,8 @@ def _tile_dax(measure: str, subtitle: str | None, fmt: str | None, width: int,
         better = ">" if good == "up" else "<"
         lines += [
             f"VAR vTrend = [{trend}]",
-            f'VAR vTone = IF(ISBLANK(vTrend) || ROUND(vTrend, 4) = 0, "{INK_3}", '
-            f'IF(vTrend {better} 0, "{UP_GOOD}", "{DOWN_BAD}"))',
+            (f'VAR vTone = IF(ISBLANK(vTrend) || ROUND(vTrend, 4) = 0, "{INK_3}", '
+            f'IF(vTrend {better} 0, "{UP_GOOD}", "{DOWN_BAD}"))'),
             'VAR vArrow = IF(ISBLANK(vTrend) || ROUND(vTrend, 4) = 0, "", IF(vTrend > 0, "▲ ", "▼ "))',
         ]
     else:
@@ -362,16 +361,16 @@ def _tile_dax(measure: str, subtitle: str | None, fmt: str | None, width: int,
                 f" & \"' height='6' rx='3' fill='{ACCENT}'/>\"")
     lines += [
         "VAR vSvg =",
-        f"    \"<svg xmlns='http://www.w3.org/2000/svg' width='{width}' height='{TILE_VIEW_H}' "
-        f"viewBox='0 0 {width} {TILE_VIEW_H}'>\"",
+        (f"    \"<svg xmlns='http://www.w3.org/2000/svg' width='{width}' height='{TILE_VIEW_H}' "
+        f"viewBox='0 0 {width} {TILE_VIEW_H}'>\""),
         f"        & \"<rect x='0' y='18' width='3' height='76' rx='1.5' fill='{ACCENT}'/>\"",
-        f"        & \"<text x='16' y='28' font-family='Segoe UI' font-size='11' "
-        f"fill='{INK_2}'>{_xml(label or measure)}</text>\"",
-        "        & \"<text x='16' y='64' font-family='Segoe UI Light' font-size='30' "
-        f"fill='{INK}'>\" & vShown & \"</text>\"",
+        (f"        & \"<text x='16' y='28' font-family='Segoe UI' font-size='11' "
+        f"fill='{INK_2}'>{_xml(label or measure)}</text>\""),
+        ("        & \"<text x='16' y='64' font-family='Segoe UI Light' font-size='30' "
+        f"fill='{INK}'>\" & vShown & \"</text>\""),
         f"        & {rail}",
-        f"        & \"<text x='16' y='{100 if percent else 90}' font-family='Segoe UI' "
-        "font-size='10' fill='\" & vTone & \"'>\" & vArrow & vCaption & \"</text>\"",
+        (f"        & \"<text x='16' y='{100 if percent else 90}' font-family='Segoe UI' "
+        "font-size='10' fill='\" & vTone & \"'>\" & vArrow & vCaption & \"</text>\""),
         '        & "</svg>"',
         "RETURN",
         "    " + ENCODE,
@@ -416,12 +415,12 @@ def _header_dax(display: str, index: int, total: int, context: str | None, width
     return "\n".join([
         f"VAR vContext = {where}",
         "VAR vSvg =",
-        f"    \"<svg xmlns='http://www.w3.org/2000/svg' width='{width}' height='{HEADER_H}' "
-        f"viewBox='0 0 {width} {HEADER_H}'>\"",
-        f"        & \"<text x='0' y='24' font-family='Segoe UI Semibold' font-size='18' "
-        f"fill='{INK}'>{_xml(display)}</text>\"",
-        f"        & \"<text x='0' y='46' font-family='Segoe UI' font-size='11' "
-        f"fill='{INK_3}'>\" & vContext & \"</text>\"",
+        (f"    \"<svg xmlns='http://www.w3.org/2000/svg' width='{width}' height='{HEADER_H}' "
+        f"viewBox='0 0 {width} {HEADER_H}'>\""),
+        (f"        & \"<text x='0' y='24' font-family='Segoe UI Semibold' font-size='18' "
+        f"fill='{INK}'>{_xml(display)}</text>\""),
+        (f"        & \"<text x='0' y='46' font-family='Segoe UI' font-size='11' "
+        f"fill='{INK_3}'>\" & vContext & \"</text>\""),
         '        & "</svg>"',
         "RETURN",
         "    " + ENCODE,

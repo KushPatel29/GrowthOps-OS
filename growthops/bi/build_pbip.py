@@ -907,8 +907,8 @@ def measure_reference() -> str:
         "# Power BI measures",
         "",
         "Generated from `growthops/bi/model_spec.py` by `python -m growthops.bi.build_pbip`; do not edit by hand.",
-        f"{len(MEASURES)} business measures in {len({m[3] for m in MEASURES})} display folders. The report's own "
-        "SVG tile, header and button measures live in the *Report UI* folder and are not listed.",
+        (f"{len(MEASURES)} business measures in {len({m[3] for m in MEASURES})} display folders. The report's own "
+        "SVG tile, header and button measures live in the *Report UI* folder and are not listed."),
         "",
     ]
     folder = None

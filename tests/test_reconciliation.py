@@ -1,4 +1,10 @@
-from growthops.reconciliation import crm_bridge, duplicate_contacts, four_numbers, platform_bridge, platform_comparison
+from growthops.reconciliation import (
+    crm_bridge,
+    duplicate_contacts,
+    four_numbers,
+    platform_bridge,
+    platform_comparison,
+)
 from growthops.report import metrics
 
 

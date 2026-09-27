@@ -16,37 +16,65 @@ from typing import Literal
 
 from fastapi import FastAPI, Header, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse, RedirectResponse
+from fastapi.responses import (
+    HTMLResponse,
+    JSONResponse,
+    PlainTextResponse,
+    RedirectResponse,
+)
 from pydantic import ValidationError
 
 from growthops.adapters import build_adapters
-from growthops.ask_data import answer as ask_data, usage as ask_usage_summary
+from growthops.ai_brief import generate as ai_brief
+from growthops.ask_data import answer as ask_data
+from growthops.ask_data import usage as ask_usage_summary
+from growthops.attribution import MODELS
+from growthops.attribution import summary as attribution_summary
+from growthops.brief import daily_series, period_brief
+from growthops.brief import findings as brief_findings
+from growthops.campaign_links import LinkRequest, audit_short_links, build_link
 from growthops.config import get_settings
 from growthops.db import SCHEMA_VERSION, connect, initialize, schema_version
-from growthops.freshness import check as freshness_check
-from growthops.observability import METRICS, business_gauges, configure_logging, log, request_id
-from growthops.campaign_links import LinkRequest, build_link
-from growthops.attribution import summary as attribution_summary
-from growthops.funnel import funnel
-from growthops.report import executive_brief
-from growthops.brief import daily_series, period_brief
-from growthops.warehouse import build as build_warehouse
-from growthops.migration import audit as migration_audit
-from growthops.experiments import analyze as experiment_analysis
-from growthops.renewals import monitor as renewal_monitor
-from growthops.ai_brief import generate as ai_brief
-from growthops.workflow import (EventConflict, PaymentEvent, health as workflow_health, process_payment,
-                                replay_dead_letter, trace as workflow_trace)
-from growthops.attribution import MODELS
 from growthops.diagnostics import detect, incident_recall
+from growthops.email_analytics import (
+    deliverability,
+    email_performance,
+    list_source_mix,
+    newsletter_pipeline,
+    type_summary,
+)
+from growthops.experiments import analyze as experiment_analysis
+from growthops.freshness import check as freshness_check
+from growthops.funnel import funnel
+from growthops.hubspot import audit as hubspot_audit
+from growthops.hubspot import property_definitions
+from growthops.migration import audit as migration_audit
 from growthops.narrator import narrate
-from growthops.brief import findings as brief_findings
-from growthops.reconciliation import crm_bridge, four_numbers, platform_bridge, platform_comparison
-from growthops.campaign_links import audit_short_links
-from growthops.email_analytics import deliverability, email_performance, list_source_mix, newsletter_pipeline, type_summary
-from growthops.hubspot import audit as hubspot_audit, property_definitions
+from growthops.observability import (
+    METRICS,
+    business_gauges,
+    configure_logging,
+    log,
+    request_id,
+)
 from growthops.performance import daily_update, paid_efficiency
-
+from growthops.reconciliation import (
+    crm_bridge,
+    four_numbers,
+    platform_bridge,
+    platform_comparison,
+)
+from growthops.renewals import monitor as renewal_monitor
+from growthops.report import executive_brief
+from growthops.warehouse import build as build_warehouse
+from growthops.workflow import (
+    EventConflict,
+    PaymentEvent,
+    process_payment,
+    replay_dead_letter,
+)
+from growthops.workflow import health as workflow_health
+from growthops.workflow import trace as workflow_trace
 
 logger = logging.getLogger("growthops.api")
 PROTECTED_PREFIXES = ("/metrics", "/ops", "/crm", "/campaign-links", "/ask", "/docs", "/redoc", "/openapi.json")

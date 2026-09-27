@@ -144,11 +144,11 @@ def daily_update(connection: sqlite3.Connection, day: date | None = None, findin
         f"Daily performance update: {day:%a %d %b %Y} (synthetic ScaleLab data)",
         "",
         "Yesterday",
-        f"- Paid spend {_usd(today['spend_cents'])} ({_vs(today['spend_cents'], average['spend_cents'])}); "
-        f"{total_day['leads']} paid leads at {_usd(total_day['cost_per_lead_cents'])} CPL.",
-        f"- All channels: {today['leads']} leads ({_vs(today['leads'], average['leads'])}), {today['mqls']} MQLs, "
+        (f"- Paid spend {_usd(today['spend_cents'])} ({_vs(today['spend_cents'], average['spend_cents'])}); "
+        f"{total_day['leads']} paid leads at {_usd(total_day['cost_per_lead_cents'])} CPL."),
+        (f"- All channels: {today['leads']} leads ({_vs(today['leads'], average['leads'])}), {today['mqls']} MQLs, "
         f"{today['calls_booked']} calls booked, {today['closed_won_deals']} deals won, "
-        f"{_usd(today['net_cash_cents'])} net cash.",
+        f"{_usd(today['net_cash_cents'])} net cash."),
     ]
     lines.append("")
     lines.append("Paid media, last 7 days (activity basis; cash lags leads by weeks, so 7-day ROAS understates)")
@@ -161,10 +161,10 @@ def daily_update(connection: sqlite3.Connection, day: date | None = None, findin
                  f"cost/MQL {_usd(total_week['cost_per_mql_cents'])}, ROAS {total_week['net_cash_roas']}x.")
     if last_bulk:
         lines += ["", "Email",
-                  f"- Last bulk send {last_bulk['sent_date']} ({last_bulk['email_type'].replace('_', ' ')}, "
+                  (f"- Last bulk send {last_bulk['sent_date']} ({last_bulk['email_type'].replace('_', ' ')}, "
                   f"{last_bulk['sending_domain']}): {last_bulk['delivered']:,} delivered, human open rate "
                   f"{last_bulk['human_open_rate']:.1%}, click rate {last_bulk['click_rate']:.2%}, bounce rate "
-                  f"{last_bulk['bounce_rate']:.1%}."]
+                  f"{last_bulk['bounce_rate']:.1%}.")]
     lines += ["", "Needs attention"]
     for item in items:
         lines.append(f"- {item['finding']} Next: {item['investigation']}")

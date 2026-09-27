@@ -402,6 +402,8 @@ VISUAL_TYPES: dict[str, str] = {
     "panel_title": "textbox",
 }
 
-from growthops.bi.report_chrome import add_chrome  # noqa: E402 -- applied to the pages above
+from growthops.bi.report_chrome import (
+    add_chrome,
+)
 
 PAGES = add_chrome(PAGES)

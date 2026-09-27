@@ -16,7 +16,8 @@ from growthops.email_analytics import deliverability_finding
 from growthops.renewals import monitor as renewal_monitor
 from growthops.report import campaign_performance, executive_brief
 from growthops.scenario import AS_OF
-from growthops.workflow import MAX_ATTEMPTS, health as workflow_health
+from growthops.workflow import MAX_ATTEMPTS
+from growthops.workflow import health as workflow_health
 
 METRICS = (
     "spend_cents", "leads", "mqls", "calls_booked", "closed_won_deals", "booked_cents",

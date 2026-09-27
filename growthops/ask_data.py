@@ -30,10 +30,10 @@ import sqlite3
 import threading
 import time
 import uuid
+from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import Callable
 
 from growthops.retrieval import Entry, HybridIndex, resolve_mode, tokens
 
@@ -66,11 +66,11 @@ def _revenue_truth(connection):
 
     numbers = four_numbers(connection)
     meta = next(row for row in platform_comparison(connection) if row["platform"] == "meta")
-    return (f"Ad platforms claim {_usd(numbers['platform_reported_total_cents'])}, the CRM books "
+    return ((f"Ad platforms claim {_usd(numbers['platform_reported_total_cents'])}, the CRM books "
             f"{_usd(numbers['crm_booked_cents'])}, and {_usd(numbers['net_collected_cents'])} of net cash was actually "
             f"collected. The warehouse credits {_usd(numbers['paid_media_net_cash_cents'])} of that to paid media. Meta "
             f"reports {meta['platform_roas']}x ROAS; on net cash it is {meta['warehouse_roas']}x. Net collected cash is "
-            "the number to run the business on.", "reconciliation bridges")
+            "the number to run the business on."), "reconciliation bridges")
 
 
 def _what_changed(connection):
@@ -86,9 +86,9 @@ def _automation(connection):
     from growthops.workflow import health
 
     ops = health(connection)
-    return (f"Of {ops['events']} recent payment events, {ops['completed']} completed and {ops['dead_letter']} are in the "
+    return ((f"Of {ops['events']} recent payment events, {ops['completed']} completed and {ops['dead_letter']} are in the "
             f"dead-letter queue; {ops['duplicate_deliveries_absorbed']} duplicate deliveries were absorbed with no double "
-            f"side effects. {ops['within_5_minutes']:.0%} of events reached access within five minutes.",
+            f"side effects. {ops['within_5_minutes']:.0%} of events reached access within five minutes."),
             "processed_events, workflow_step_attempts")
 
 
@@ -97,10 +97,10 @@ def _experiment(connection):
 
     comparison = analyze(connection, "cta_growth_plan")["comparison"]
     lo, hi = comparison["cash_per_visitor_bootstrap_95_ci_cents"]
-    return (f"CTA B changed lead rate by {comparison['variant_b_minus_a_lead_rate'] * 100:+.1f} points (p = "
+    return ((f"CTA B changed lead rate by {comparison['variant_b_minus_a_lead_rate'] * 100:+.1f} points (p = "
             f"{comparison['lead_rate_p_value']}) and MQLs per lead by {comparison['variant_b_minus_a_mql_per_lead'] * 100:+.1f} "
             f"points. Cash per visitor moved ${comparison['variant_b_minus_a_cash_per_visitor_cents'] / 100:+.2f} (95% "
-            f"interval ${lo / 100:.2f} to ${hi / 100:.2f}). Decision: {comparison['decision']}",
+            f"interval ${lo / 100:.2f} to ${hi / 100:.2f}). Decision: {comparison['decision']}"),
             "experiment exposures, lifecycle, payments, refunds")
 
 
@@ -108,9 +108,9 @@ def _renewals(connection):
     from growthops.renewals import monitor
 
     risk = monitor(connection)
-    return (f"As of {risk['as_of']}, {risk['high_risk']} of {risk['active_subscriptions']} active subscriptions are overdue "
+    return ((f"As of {risk['as_of']}, {risk['high_risk']} of {risk['active_subscriptions']} active subscriptions are overdue "
             f"or failed, {risk['due_soon']} more renew within {risk['due_soon_days']} days, and {risk['canceled']} have "
-            "canceled.", "subscriptions, renewal attempts")
+            "canceled."), "subscriptions, renewal attempts")
 
 
 def _funnel(connection):
@@ -120,9 +120,9 @@ def _funnel(connection):
     rates = [row for row in stages[:7] if row["from_previous_rate"] is not None]
     weakest = min(rates, key=lambda row: row["from_previous_rate"])
     steps = ", ".join(f"{row['stage'].replace('_', ' ')} {row['from_previous_rate']:.0%}" for row in rates)
-    return (f"Stage-to-stage conversion: {steps}. The weakest step before payment is into "
+    return ((f"Stage-to-stage conversion: {steps}. The weakest step before payment is into "
             f"{weakest['stage'].replace('_', ' ')} ({weakest['from_previous_rate']:.1%}, median "
-            f"{weakest['median_days_from_previous']} days).", "lifecycle events")
+            f"{weakest['median_days_from_previous']} days)."), "lifecycle events")
 
 
 def _paid_campaigns(connection):
@@ -131,10 +131,10 @@ def _paid_campaigns(connection):
     rows = [row for row in campaign_performance(connection) if row["medium"].startswith("paid_") and row["spend_cents"]]
     best = max(rows, key=lambda row: row["net_cash_cents"] / row["spend_cents"])
     worst = min(rows, key=lambda row: row["net_cash_cents"] / row["spend_cents"])
-    return (f"Best paid campaign by net cash per dollar: {best['campaign_id']} "
+    return ((f"Best paid campaign by net cash per dollar: {best['campaign_id']} "
             f"({best['net_cash_cents'] / best['spend_cents']:.1f}x on {_usd(best['spend_cents'])}). Weakest: "
             f"{worst['campaign_id']} ({worst['net_cash_cents'] / worst['spend_cents']:.1f}x). Lead-creation attribution "
-            "is descriptive, not incremental.", "campaign performance mart")
+            "is descriptive, not incremental."), "campaign performance mart")
 
 
 def _paid_efficiency(connection):
@@ -157,19 +157,19 @@ def _tracking(connection):
     from growthops.report import measurement_health
 
     health = measurement_health(connection)
-    return (f"UTM completeness is {health['utm_completeness']:.1%}, campaign registry match "
+    return ((f"UTM completeness is {health['utm_completeness']:.1%}, campaign registry match "
             f"{health['campaign_registry_match']:.1%}, owner coverage {health['crm_owner_completeness']:.1%}, with "
             f"{health['duplicate_contact_rows']} duplicate contact rows and {_usd(health['unassigned_net_cash_cents'])} "
-            "of net cash that cannot be credited to a campaign.", "measurement health")
+            "of net cash that cannot be credited to a campaign."), "measurement health")
 
 
 def _cash(connection):
     from growthops.report import metrics
 
     values = metrics(connection)
-    return (f"Gross collected was {_usd(values['gross_collected_cents'])}; refunds were {_usd(values['refunds_cents'])}; "
+    return ((f"Gross collected was {_usd(values['gross_collected_cents'])}; refunds were {_usd(values['refunds_cents'])}; "
             f"net collected cash was {_usd(values['net_collected_cents'])}. Closed-won deal value is a separate "
-            f"{_usd(values['booked_revenue_cents'])} booking measure.", "payments, refunds, closed-won deals")
+            f"{_usd(values['booked_revenue_cents'])} booking measure."), "payments, refunds, closed-won deals")
 
 
 def _email(connection):
@@ -197,20 +197,20 @@ def _links(connection):
 
     audit = audit_short_links(connection)
     broken = "; ".join(f"{link['link_id']} ({link['issues'][0]})" for link in audit["links"] if link["issues"])
-    return (f"{audit['links_with_issues']} of {len(audit['links'])} short links fail the registry check: {broken}. They "
+    return ((f"{audit['links_with_issues']} of {len(audit['links'])} short links fail the registry check: {broken}. They "
             f"carried {audit['share_of_recent_clicks_broken']:.0%} of short-link clicks in the last "
-            f"{audit['recent_days']} days.", "short_links, short_link_clicks, campaigns")
+            f"{audit['recent_days']} days."), "short_links, short_link_clicks, campaigns")
 
 
 def _crm(connection):
     from growthops.hubspot import audit
 
     crm = audit(connection)
-    return (f"A HubSpot import would merge {crm['rows_merged_on_email']} rows on email; "
+    return ((f"A HubSpot import would merge {crm['rows_merged_on_email']} rows on email; "
             f"{crm['paying_contacts_not_customer']} paying contacts and {crm['closed_won_contacts_not_customer']} "
             f"closed-won contacts are not at the Customer stage; owner fill rate is "
             f"{crm['property_fill_rate']['hubspot_owner_id']:.1%}; {crm['stale_leads_non_marketing_candidates']:,} "
-            "untouched leads could be set to non-marketing.", "contacts, deals, payments (HubSpot mapping)")
+            "untouched leads could be set to non-marketing."), "contacts, deals, payments (HubSpot mapping)")
 
 
 def _daily(connection):
@@ -224,9 +224,9 @@ def _content(connection):
         """SELECT topic, SUM(views) views, SUM(customers) customers, SUM(influenced_net_cash_cents) cash
            FROM mart_content_performance GROUP BY topic ORDER BY cash DESC""").fetchall()
     top, bottom = rows[0], rows[-1]
-    return (f"By topic, {top['topic']} content influenced the most cash ({_usd(top['cash'])} from {top['customers']} "
+    return ((f"By topic, {top['topic']} content influenced the most cash ({_usd(top['cash'])} from {top['customers']} "
             f"customers on {top['views']:,} views); {bottom['topic']} influenced the least ({_usd(bottom['cash'])} on "
-            f"{bottom['views']:,} views). First identified content touch: descriptive, not incremental.",
+            f"{bottom['views']:,} views). First identified content touch: descriptive, not incremental."),
             "mart_content_performance")
 
 

@@ -147,5 +147,5 @@ def test_scorecard_rows_equal_python(cached):
     sheet = cached["Campaign scorecard"]
     for row in range(7, 14):
         campaign = sheet.cell(row, 2).value
-        spend = _window(paid, "spend_cents", start, end, where=lambda r: r["campaign_id"] == campaign) / 100
+        spend = _window(paid, "spend_cents", start, end, where=lambda r, c=campaign: r["campaign_id"] == c) / 100
         assert sheet.cell(row, 4).value == pytest.approx(spend), campaign

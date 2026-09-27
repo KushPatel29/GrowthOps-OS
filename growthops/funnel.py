@@ -5,6 +5,7 @@ from __future__ import annotations
 import math
 import sqlite3
 from datetime import datetime
+from itertools import pairwise
 from statistics import median
 
 STAGES = (
@@ -56,7 +57,7 @@ def lifecycle_integrity(connection: sqlite3.Connection) -> dict:
     valid = 0
     for events in paid:
         if all(stage in events for stage in required) and all(
-            events[left] <= events[right] for left, right in zip(required, required[1:])
+            events[left] <= events[right] for left, right in pairwise(required)
         ):
             valid += 1
     return {"paid_contact_count": len(paid), "valid_paid_journeys": valid,

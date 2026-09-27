@@ -13,13 +13,18 @@ from pathlib import Path
 
 from growthops.brief import findings
 from growthops.campaign_links import audit_short_links
-from growthops.email_analytics import deliverability, email_performance
-from growthops.hubspot import audit as hubspot_audit
-from growthops.performance import paid_efficiency
 from growthops.diagnostics import detect, incident_recall
+from growthops.email_analytics import deliverability, email_performance
 from growthops.experiments import analyze as experiment_analysis
+from growthops.hubspot import audit as hubspot_audit
 from growthops.migration import audit as migration_audit
-from growthops.reconciliation import crm_bridge, four_numbers, platform_bridge, platform_comparison
+from growthops.performance import paid_efficiency
+from growthops.reconciliation import (
+    crm_bridge,
+    four_numbers,
+    platform_bridge,
+    platform_comparison,
+)
 from growthops.report import TARGETS, executive_brief
 from growthops.scenario import AS_OF, ENROLLMENT_DEADLINE, PROMO_DATES, START
 from growthops.workflow import health as workflow_health

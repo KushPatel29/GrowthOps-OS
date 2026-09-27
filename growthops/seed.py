@@ -516,7 +516,7 @@ class Generator:
         whether or not these channels are simulated.
         """
         rng = random.Random(seed_value * 7919 + 1)
-        noise = lambda: math.exp(rng.gauss(0, 0.06))  # noqa: E731
+        noise = lambda: math.exp(rng.gauss(0, 0.06))
         lead_days = sorted(contact["lead_at"].date() for contact in self.contacts.values())
         topics = [f"{title} (issue {index})" for index, title in enumerate((
             "The pricing conversation most founders avoid", "Three numbers to review every Monday",

@@ -210,7 +210,7 @@ def audit(connection: sqlite3.Connection, as_of: date = AS_OF) -> dict:
     """CRM hygiene as a HubSpot admin would check it before an import or a reporting rebuild."""
     records = contact_records(connection)
     total_rows = connection.execute("SELECT COUNT(*) FROM contacts").fetchone()[0]
-    one = lambda sql, *args: connection.execute(sql, args).fetchone()[0]  # noqa: E731
+    one = lambda sql, *args: connection.execute(sql, args).fetchone()[0]
     customers_without_won = one(
         """SELECT COUNT(*) FROM contacts c WHERE c.current_stage='customer' AND NOT EXISTS
            (SELECT 1 FROM deals d WHERE d.contact_id=c.contact_id AND d.stage='closed_won')""")
