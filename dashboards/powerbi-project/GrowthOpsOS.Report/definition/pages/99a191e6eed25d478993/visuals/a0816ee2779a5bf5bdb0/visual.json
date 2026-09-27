@@ -1,0 +1,59 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.7.0/schema.json",
+  "name": "a0816ee2779a5bf5bdb0",
+  "position": {
+    "x": 1055,
+    "y": 20,
+    "z": 5005,
+    "width": 195,
+    "height": 120,
+    "tabOrder": 5005
+  },
+  "visual": {
+    "visualType": "cardVisual",
+    "query": {
+      "queryState": {
+        "Data": {
+          "projections": [
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "mart_email_performance"
+                    }
+                  },
+                  "Property": "Bounce rate"
+                }
+              },
+              "queryRef": "mart_email_performance.Bounce rate",
+              "nativeQueryRef": "Bounce rate"
+            }
+          ]
+        }
+      }
+    },
+    "visualContainerObjects": {
+      "title": [
+        {
+          "properties": {
+            "text": {
+              "expr": {
+                "Literal": {
+                  "Value": "'Email bounce rate'"
+                }
+              }
+            },
+            "show": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

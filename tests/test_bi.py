@@ -74,3 +74,37 @@ def test_excel_workbook_has_controls_and_marketing_kpis(tmp_path):
     assert workbook["Dashboard"]["H1"].value.startswith("=MAX(Daily!")
     definitions = [row[0] for row in workbook["Definitions"].iter_rows(min_row=4, values_only=True)]
     assert "Human open rate" in definitions and "Cost per booked call (CPDM)" in definitions
+
+
+def _shape(node):
+    """Key structure of a JSON document (lists collapse to their first element), for comparing visuals."""
+    if isinstance(node, dict):
+        return {key: _shape(value) for key, value in node.items() if key not in ("projections",)}
+    if isinstance(node, list):
+        return [_shape(node[0])] if node else []
+    return type(node).__name__
+
+
+def test_marketing_report_page_matches_existing_visual_shapes_and_model_fields():
+    from growthops.export_bi import MARKETING_PAGE, REPORT
+
+    pages = ROOT / REPORT / "pages"
+    order = json.loads((pages / "pages.json").read_text())["pageOrder"]
+    page = next(p for p in order if json.loads((pages / p / "page.json").read_text())["displayName"] == MARKETING_PAGE)
+    existing = {}
+    for path in pages.glob("*/visuals/*/visual.json"):
+        if path.parts[-4] != page:
+            visual = json.loads(path.read_text())
+            existing.setdefault(visual["visual"]["visualType"], _shape(visual))
+    tables = {path.stem: path.read_text(encoding="utf-8") for path in (ROOT / PROJECT / "tables").glob("*.tmdl")}
+    new = [json.loads(path.read_text()) for path in (pages / page / "visuals").glob("*/visual.json")]
+    assert {v["visual"]["visualType"] for v in new} == {"cardVisual", "clusteredBarChart", "lineChart", "tableEx"}
+    for visual in new:
+        assert _shape(visual) == existing[visual["visual"]["visualType"]], visual["name"]
+        for role in visual["visual"]["query"]["queryState"].values():
+            for projection in role["projections"]:
+                kind, spec = next(iter(projection["field"].items()))
+                table, name = spec["Expression"]["SourceRef"]["Entity"], spec["Property"]
+                pattern = f"measure '{name}' = " if kind == "Measure" else (
+                    f"\tcolumn '{name}'" if " " in name else f"\tcolumn {name}")
+                assert pattern in tables[table], f"{table}.{name}"

@@ -1,0 +1,91 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.7.0/schema.json",
+  "name": "f13be3f55cc955bd8c87",
+  "position": {
+    "x": 650,
+    "y": 160,
+    "z": 2000,
+    "width": 610,
+    "height": 270,
+    "tabOrder": 2000
+  },
+  "visual": {
+    "visualType": "lineChart",
+    "query": {
+      "queryState": {
+        "Category": {
+          "projections": [
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "dim_date"
+                    }
+                  },
+                  "Property": "Week start"
+                }
+              },
+              "queryRef": "dim_date.Week start",
+              "nativeQueryRef": "Week start"
+            }
+          ]
+        },
+        "Y": {
+          "projections": [
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "mart_email_performance"
+                    }
+                  },
+                  "Property": "Human open rate"
+                }
+              },
+              "queryRef": "mart_email_performance.Human open rate",
+              "nativeQueryRef": "Human open rate"
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "mart_email_performance"
+                    }
+                  },
+                  "Property": "Bounce rate"
+                }
+              },
+              "queryRef": "mart_email_performance.Bounce rate",
+              "nativeQueryRef": "Bounce rate"
+            }
+          ]
+        }
+      }
+    },
+    "visualContainerObjects": {
+      "title": [
+        {
+          "properties": {
+            "text": {
+              "expr": {
+                "Literal": {
+                  "Value": "'Email human open rate and bounce rate by week'"
+                }
+              }
+            },
+            "show": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

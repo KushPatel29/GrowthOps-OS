@@ -2,7 +2,7 @@
 
 **Marketing measurement, revenue reconciliation and lifecycle automation for a creator-led B2B business.**
 
-[![tests](https://img.shields.io/badge/tests-78%20passing-brightgreen)](.github/workflows/ci.yml)
+[![tests](https://img.shields.io/badge/tests-79%20passing-brightgreen)](.github/workflows/ci.yml)
 [![guardrail eval](https://img.shields.io/badge/guardrail%20eval-30%2F30-brightgreen)](evals/narrative_guardrail_cases.json)
 
 [**Live dashboard**](https://growthops-os.streamlit.app/) · [Case study](docs/case-study.md) · [Metric catalog](docs/metric-catalog.md) · [API](docs/api-contracts.md)
@@ -98,7 +98,7 @@ service levels, alerts, backups and incidents, and names when to move to Postgre
 ```bash
 python -m pip install -e ".[dev,warehouse]" -r requirements.txt
 python -m streamlit run streamlit_app.py            # the dashboard (generates data on start)
-python -m pytest                                    # 78 tests, about 50 seconds
+python -m pytest                                    # 79 tests, about 50 seconds
 ```
 
 Full pipeline, as CI runs it:
