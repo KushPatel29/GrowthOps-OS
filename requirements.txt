@@ -1,3 +1,6 @@
+# Streamlit Community Cloud installs from this file: deploy on Python 3.12, the version CI tests.
+# A change here makes Cloud rebuild and restart the app; a code-only push can leave
+# the running process holding the previous growthops modules (ImportError on a new name).
 -e .
 streamlit>=1.49,<2
 pandas>=2.2,<3
