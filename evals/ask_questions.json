@@ -1,5 +1,5 @@
 {
- "description": "Question contract for growthops.ask_data. 'dev' questions were used while tuning the corpus and thresholds; 'holdout' questions were written afterwards and scored once. None appears in the corpus phrasings. 'expect' is an intent ID, a documented passage ID (definition questions) or 'refuse'. A wrong route fails the eval; a refusal is acceptable but counted.",
+ "description": "Question contract for growthops.ask_data. 'dev' questions were used while tuning the corpus and thresholds; 'holdout' questions were written afterwards and scored once. None appears in the corpus phrasings. 'expect' is an intent ID, a documented passage ID (definition questions) or 'refuse'. A wrong route fails the eval; a refusal is acceptable but counted. 'answer_expect' is what the reader must get when that differs from the route: a period outside the data routes to its answer and is refused only once the data is read, so those cases are graded on the answer by tests/test_ask_contract_answers.py.",
  "cases": [
   {
    "question": "Meta claims way more sales than we banked, who is right?",
@@ -980,6 +980,67 @@
    "expect_slots": {
     "window": "month"
    }
+  },
+  {
+   "question": "how many leads did we get in 2019",
+   "expect": "kpi_totals",
+   "answer_expect": "refuse",
+   "split": "dev"
+  },
+  {
+   "question": "ad spend in February 2019",
+   "expect": "kpi_totals",
+   "answer_expect": "refuse",
+   "split": "dev"
+  },
+  {
+   "question": "net cash on 30 September 2026",
+   "expect": "kpi_totals",
+   "answer_expect": "refuse",
+   "split": "dev"
+  },
+  {
+   "question": "what does a lead cost on Google in 2031",
+   "expect": "paid_efficiency",
+   "answer_expect": "refuse",
+   "split": "dev"
+  },
+  {
+   "question": "compare revenue in July and August",
+   "expect": "kpi_totals",
+   "split": "dev",
+   "expect_slots": {
+    "measure": "net_cash",
+    "window": "compare"
+   }
+  },
+  {
+   "question": "leads December vs January",
+   "expect": "kpi_totals",
+   "split": "dev",
+   "expect_slots": {
+    "measure": "leads",
+    "window": "compare"
+   }
+  },
+  {
+   "question": "Meta cost per lead July vs August",
+   "expect": "paid_efficiency",
+   "split": "dev",
+   "expect_slots": {
+    "platform": "meta",
+    "measure": "cpl",
+    "window": "compare"
+   }
+  },
+  {
+   "question": "how many leads last calendar week",
+   "expect": "kpi_totals",
+   "split": "dev",
+   "expect_slots": {
+    "measure": "leads",
+    "window": "previous_week"
+   }
   }
  ],
  "first_holdout_scoring": {
@@ -1012,6 +1073,14 @@
   {
    "date": "2026-09-27",
    "change": "Periods the parser used to drop or misread (a question about 'since August' got August alone, 'between July and August' got July, '3 September' got the whole month, and 'Q2', '2025', 'the first half of 2026' and 'the week before last' got all-time figures) are now read: explicit dates, ranges, 'since', quarters, halves, years and fortnights. 'ROAS last month' and 'Meta vs Google CPL' now reach paid efficiency. Eleven dev questions added for these; no existing expectation was changed. An impossible date is refused, and an answer that cannot be cut by period now says so rather than passing a period silently."
+  },
+  {
+   "date": "2026-09-28",
+   "change": "Every case is now also graded on its answer (tests/test_ask_contract_answers.py): refusals must refuse, period answers must state the period asked for, and the headline figure of each windowed total and platform efficiency answer must equal the mart recomputed independently. Four dev cases added whose period lies outside the data; they route to their answer and must be refused there."
+  },
+  {
+   "date": "2026-09-28",
+   "change": "Two named periods compared ('compare July and August', 'August vs July') now answer the later period against the earlier one instead of the first period alone; 'last calendar week' reads Monday to Sunday while 'last week' stays the rolling seven days of the morning brief. Four dev cases added; no existing expectation was changed."
   }
  ],
  "second_holdout_scoring": {

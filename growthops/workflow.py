@@ -224,6 +224,7 @@ def process_payment(
             if live:
                 began = time.perf_counter()
                 if error is None:
+                    assert adapters is not None  # live implies adapters
                     try:
                         call_step(adapters, step, event)
                     except ProviderError as exc:

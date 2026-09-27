@@ -391,21 +391,28 @@ def _prior(name: str) -> str:
 
 
 def _change(current: str, prior: str, kind: str) -> tuple[str, str]:
+    # Each change is rounded to the precision its format shows. A sign-section format reads the raw value, so
+    # an unrounded -0.00004 would display as "-0.0%".
     if kind == "rate":
-        return f"IF(NOT ISBLANK([{prior}]), [{current}] - [{prior}])", "+0.00%;-0.00%;0.00%"
+        return f"IF(NOT ISBLANK([{prior}]), ROUND([{current}] - [{prior}], 4))", "+0.00%;-0.00%;0.00%"
     if kind == "ratio":
-        return f"IF(NOT ISBLANK([{prior}]), [{current}] - [{prior}])", '+0.00"x";-0.00"x";0.00"x"'
-    return f"DIVIDE([{current}] - [{prior}], ABS([{prior}]))", CHANGE
+        return f"IF(NOT ISBLANK([{prior}]), ROUND([{current}] - [{prior}], 2))", '+0.00"x";-0.00"x";0.00"x"'
+    # DIVIDE is blank with no prior period, and the caption tests for that blank, so it must survive rounding.
+    return (f"VAR vChange = DIVIDE([{current}] - [{prior}], ABS([{prior}]))\n"
+            "RETURN IF(NOT ISBLANK(vChange), ROUND(vChange, 3))"), CHANGE
 
 
 def _caption(change: str, kind: str, prior_label: str) -> str:
+    # Rounded again to the caption's coarser precision, for the same reason.
     if kind == "rate":
-        shown = f'FORMAT([{change}] * 100, "+0.0;-0.0;0.0") & " pts"'
+        shown = f'FORMAT(ROUND([{change}] * 100, 1), "+0.0;-0.0;+0.0") & " pts"'
     elif kind == "ratio":
-        shown = f'FORMAT([{change}], "+0.00;-0.00;0.00") & "x"'
+        shown = f'FORMAT([{change}], "+0.00;-0.00;+0.00") & "x"'
     else:
-        shown = f'FORMAT([{change}], "+0%;-0%;0%")'
-    return (f'IF(ISBLANK([{change}]), "all dates in view · pick months to compare", '
+        shown = f'FORMAT(ROUND([{change}], 2), "+0%;-0%;+0%")'
+    # No change has two causes: every date is in view, or the dates picked start with the data.
+    return (f'IF(ISBLANK([{change}]), IF(ISFILTERED(dim_date), "no earlier data to compare with", '
+            '"all dates in view · pick months to compare"), '
             f'{shown} & " vs {prior_label}")')
 
 

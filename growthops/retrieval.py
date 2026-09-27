@@ -92,7 +92,7 @@ def resolve_mode(requested: str | None = None) -> str:
     """'hybrid' when the local embedding runtime is installed, else 'keyword'."""
     from growthops.embeddings import runtime_available
 
-    requested = (requested or os.getenv("GROWTHOPS_RETRIEVAL_MODE", "auto")).lower()
+    requested = (requested or os.environ.get("GROWTHOPS_RETRIEVAL_MODE", "auto")).lower()
     if requested == "keyword":
         return "keyword"
     if runtime_available():
@@ -131,7 +131,7 @@ class HybridIndex:
     def search(self, query: str, k: int = 5, kind: str | None = None) -> list[Hit]:
         query_terms = set(tokens(query))
         keyword = self.bm25.scores(list(query_terms))
-        vector = [None] * len(self.entries)
+        vector: list[float | None] = [None] * len(self.entries)
         if self.vectors is not None:
             from growthops.embeddings import embed
 

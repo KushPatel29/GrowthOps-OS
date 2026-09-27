@@ -18,6 +18,14 @@ from growthops.report import campaign_performance, measurement_health, metrics
 from growthops.scenario import AS_OF, START
 
 
+def _one(cursor) -> tuple:
+    """The one row a mart query must return; an empty mart fails here, by name, rather than as a None."""
+    row = cursor.fetchone()
+    if row is None:
+        raise AssertionError("the mart returned no row")
+    return row
+
+
 def verify(sqlite_database: str, duckdb_database: str) -> None:
     import duckdb  # Installed with the optional warehouse dependency.
 
@@ -29,7 +37,7 @@ def verify(sqlite_database: str, duckdb_database: str) -> None:
     try:
         reference = metrics(source)
         revenue_query = warehouse.execute("select * from mart_revenue")
-        revenue = dict(zip([item[0] for item in revenue_query.description], revenue_query.fetchone()))
+        revenue = dict(zip([item[0] for item in revenue_query.description], _one(revenue_query)))
         for column in ("gross_collected_cents", "refunds_cents", "net_collected_cents"):
             assert int(revenue[column]) == reference[column], column
 
@@ -77,9 +85,7 @@ def verify(sqlite_database: str, duckdb_database: str) -> None:
         quality_columns = [item[0] for item in warehouse.execute(
             "select * from mart_measurement_health limit 0"
         ).description]
-        quality = dict(zip(quality_columns, warehouse.execute(
-            "select * from mart_measurement_health"
-        ).fetchone()))
+        quality = dict(zip(quality_columns, _one(warehouse.execute("select * from mart_measurement_health"))))
         expected_quality = measurement_health(source)
         assert quality["duplicate_contact_rows"] == expected_quality["duplicate_contact_rows"]
         assert quality["unmatched_payments"] == expected_quality["unmatched_payment_count"]
@@ -88,7 +94,7 @@ def verify(sqlite_database: str, duckdb_database: str) -> None:
         assert round(quality["registered_touches"] / quality["eligible_touches"], 4) == expected_quality["campaign_registry_match"]
 
         migration_query = warehouse.execute("select * from mart_migration_summary")
-        migration = dict(zip([item[0] for item in migration_query.description], migration_query.fetchone()))
+        migration = dict(zip([item[0] for item in migration_query.description], _one(migration_query)))
         expected_migration = migration_audit(source)
         for field in ("legacy_contacts", "migrated_contacts", "missing_contacts",
                       "owner_match_rate", "source_match_rate", "stage_match_rate", "duplicate_crm_rows"):
@@ -152,8 +158,8 @@ def verify(sqlite_database: str, duckdb_database: str) -> None:
             f"select campaign_id, {', '.join(f'sum({f})' for f in fields)} from mart_paid_efficiency_daily "
             "group by campaign_id").fetchall()}
         for row in paid_efficiency(source, START, AS_OF)[:-1]:
-            actual = tuple(int(value) for value in daily[row["segment"]])
-            assert actual == tuple(row[f] for f in fields), f"paid efficiency daily {row['segment']}"
+            totals = tuple(int(value) for value in daily[row["segment"]])
+            assert totals == tuple(row[f] for f in fields), f"paid efficiency daily {row['segment']}"
     finally:
         warehouse.close()
         source.close()

@@ -23,13 +23,14 @@ Live synthetic dashboard: https://growthops-os.streamlit.app/ · GitHub: https:/
   no language model or API key. Guard, then certified phrases, then hybrid BM25 + local MiniLM retrieval over
   20 governed answers and the metric catalog, then a governed answer, a cited definition or a refusal.
   `ask_slots.py` reads the period ("last week", "in August", "since 1 September", "between July and August",
-  "Q2", "the first half of 2026", "the week before last", resolved against the data's as-of date), the ad
+  "Q2", "the first half of 2026", "the week before last", "July vs August", resolved against the data's as-of date), the ad
   platform or platforms compared, the campaign and the measure (including refund rate), so an answer is the one
-  asked for; windowed totals compare with the period before; an untracked ad platform, an impossible date or a
+  asked for; windowed totals compare with the period before, or with the other period named; an untracked ad platform, an impossible date or a
   period outside the data is refused, and an answer that cannot be cut by period says so. Themed
   suggested questions and per-answer follow-ups are each held by a test to reach a governed answer. On the
-  144-question contract, which also fails an answer that read the wrong platform, measure or period, hybrid and
-  keyword-only both score 144 right, 0 wrong, 0 refused. All three holdout sets' first scorings (30 questions,
+  152-question contract, which also fails an answer that read the wrong platform, measure or period, hybrid and
+  keyword-only both score 152 right, 0 wrong, 0 refused. A second test runs every contract question through the
+  full answer and recomputes the stated figure of each period and platform answer from the mart. All three holdout sets' first scorings (30 questions,
   then 15 for the details a question names: 13/1/1, then 15 for dates, ranges and comparisons: 13/2/0) are kept
   in the file with the cause of each miss. Every question is audited in `ask_log`.
 - **Production runtime**: fail-fast settings (`config.py`); API keys; replay-safe signed webhooks; request IDs,
@@ -40,7 +41,7 @@ Live synthetic dashboard: https://growthops-os.streamlit.app/ · GitHub: https:/
   webhook and posts the daily update once a day; container heartbeat health check.
 - **Deployment**: a non-root, read-only, multi-stage image with the verified embedding model baked in;
   `compose.yaml` with api, worker and dashboard; `.env.example`; runbook and security notes. CI gates coverage
-  at 80%, runs pip-audit, and smoke-tests the container in production mode.
+  at 80%, type-checks the package with mypy (zero errors), runs pip-audit, and smoke-tests the container in production mode.
 - **Lifecycle engine** (`workflow.py`): HMAC-signed webhooks, event and payment idempotency, per-step traces,
   exponential backoff retry worker, dead-letter queue, role-gated operator replay, operations health metrics.
   The last 30 days of payments are replayed through it with simulated provider faults.

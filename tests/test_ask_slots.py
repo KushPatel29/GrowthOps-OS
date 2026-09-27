@@ -40,6 +40,7 @@ AS_OF, FIRST = date(2026, 9, 25), date(2025, 7, 1)
     ("revenue 2026", "2026-01-01", "2026-09-25"),
     ("leads the week before last", "2026-09-12", "2026-09-18"),
     ("calls booked in the last fortnight", "2026-09-12", "2026-09-25"),
+    ("leads last calendar week", "2026-09-14", "2026-09-20"),  # Monday to Sunday; "last week" stays rolling
 ])
 def test_windows_resolve_against_the_data_not_the_calendar(question, start, end):
     window = resolve_window(parse(question).window, AS_OF, FIRST)
@@ -93,3 +94,20 @@ def test_platform_measure_and_campaign(question, platform, measure, campaign):
 @pytest.mark.parametrize("question", ["TikTok cost per lead", "pinterest spend", "snapchat CPL", "reddit ads"])
 def test_ad_platforms_that_are_not_bought_are_flagged(question):
     assert parse(question).untracked_platform
+
+
+@pytest.mark.parametrize("question, answer_span, against_span", [
+    ("compare revenue in July and August", ("2026-08-01", "2026-08-31"), ("2026-07-01", "2026-07-31")),
+    ("net cash August vs July", ("2026-08-01", "2026-08-31"), ("2026-07-01", "2026-07-31")),
+    ("leads December vs January", ("2026-01-01", "2026-01-31"), ("2025-12-01", "2025-12-31")),
+])
+def test_two_named_periods_compare_the_later_with_the_earlier(question, answer_span, against_span):
+    window = resolve_window(parse(question).window, AS_OF, FIRST)
+    assert (window["start"].isoformat(), window["end"].isoformat()) == answer_span
+    other = window["compare_with"]
+    assert (other["start"].isoformat(), other["end"].isoformat()) == against_span
+
+
+def test_a_range_is_not_a_comparison():
+    assert parse("revenue between July and August").window["kind"] == "span"
+    assert resolve_window(parse("compare leads in June 2025 and July 2025").window, AS_OF, FIRST) is None

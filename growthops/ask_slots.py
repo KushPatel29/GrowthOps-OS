@@ -153,14 +153,19 @@ def parse_window(text: str) -> dict | None:
     if re.search(r"\b(last|past|previous|this past)\s+fortnight\b", t):
         return {"kind": "days", "n": 14, "offset": 0, "phrase": "the last 14 days"}
     m = re.search(r"\b(last|past|previous|trailing|over the last|in the last)\s+(\d+|[a-z]+)\s+(day|week|month)s?\b", t)
-    if m and _count(m.group(2)):
-        n, unit = _count(m.group(2)), m.group(3)
+    n = _count(m.group(2)) if m else None
+    if m and n:
+        unit = m.group(3)
         if unit == "month":
             return {"kind": "months", "n": n, "phrase": f"the last {n} month{'s' * (n > 1)}"}
         days = n * (7 if unit == "week" else 1)
         return {"kind": "days", "n": days, "offset": 0, "phrase": f"the last {days} days"}
     if re.search(r"\b(this|current) week\b|\bweek to date\b|\bwtd\b", t):
         return {"kind": "week_to_date", "phrase": "this week to date"}
+    # "Last week" is the last seven days, the same rolling week the morning brief reports; the calendar reading
+    # (the previous Monday to Sunday) is there for anyone who asks for it by name.
+    if re.search(r"\b(last|past|previous|prior) (calendar|full) week\b|\bweek before this one\b", t):
+        return {"kind": "previous_week", "phrase": "last calendar week (Monday to Sunday)"}
     if re.search(r"\b(last|past|previous) week\b|\bthis past week\b", t):
         return {"kind": "days", "n": 7, "offset": 0, "phrase": "the last 7 days"}
     if re.search(r"\b(this|current) month\b|\bmonth to date\b|\bmtd\b", t):
@@ -238,6 +243,11 @@ def _explicit(t: str) -> dict | None:
     if len(points) >= 2:
         (m0, first), (m1, second) = points[0], points[1]
         joined = t[m0.end():m1.start()]
+        # "compare July and August", "August vs July": two periods side by side, not one range.
+        if re.search(r"\b(compare[sd]?|comparing|vs|versus|against)\b", t) \
+                and re.search(r"^\s*(and|vs\.?|versus|against|with|compared (to|with))\s*$", joined):
+            return {"kind": "compare", "from": first, "to": second,
+                    "phrase": f"{first['phrase']} vs {second['phrase']}"}
         # "between July and August", "July to August", "from the start of June to the end of July".
         if (re.search(rf"\b(between|from){_EDGE_START}\s*$", t[:m0.start()])
                 and re.search(rf"^\s*(and|to|until|till|through|thru|-|–){_EDGE_END}\s*$", joined)) \
@@ -316,6 +326,14 @@ def resolve_window(spec: dict | None, as_of: date, first: date) -> dict | None:
     kind = spec["kind"]
     if kind == "invalid":
         return None
+    if kind == "compare":
+        # The later period is the answer and the earlier one its comparison, in whichever order they were named.
+        one, other = (resolve_window(spec[side], as_of, first) for side in ("from", "to"))
+        if one is None or other is None:
+            return None
+        later, earlier = sorted((one, other), key=lambda w: w["start"], reverse=True)
+        return {**later, "phrase": spec["phrase"], "compare_with": earlier,
+                "clipped": later["clipped"] or earlier["clipped"]}
     if kind in ("date", "month", "quarter", "half", "year", "since", "span"):
         start, end = _bounds(spec, as_of, first)
         if start > end:
@@ -329,6 +347,9 @@ def resolve_window(spec: dict | None, as_of: date, first: date) -> dict | None:
         end, start = as_of, _add_months(as_of, -spec["n"]) + timedelta(days=1)
     elif kind == "week_to_date":
         end, start = as_of, as_of - timedelta(days=as_of.weekday())
+    elif kind == "previous_week":
+        end = as_of - timedelta(days=as_of.weekday() + 1)
+        start = end - timedelta(days=6)
     elif kind == "month_to_date":
         end, start = as_of, as_of.replace(day=1)
     elif kind == "previous_month":
@@ -348,10 +369,11 @@ def resolve_window(spec: dict | None, as_of: date, first: date) -> dict | None:
         raise ValueError(kind)
     if end < first or start > as_of:
         return None
-    clipped = start < first or end > as_of
+    clipped_start, clipped_end = start < first, end > as_of
     start, end = max(start, first), min(end, as_of)
     label = day_label(start) if start == end else f"{day_label(start)} to {day_label(end)}"
-    return {"start": start, "end": end, "label": label, "clipped": clipped,
+    return {"start": start, "end": end, "label": label, "clipped": clipped_start or clipped_end,
+            "clipped_start": clipped_start, "clipped_end": clipped_end,
             "phrase": spec["phrase"], "days": (end - start).days + 1}
 
 

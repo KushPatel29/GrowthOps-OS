@@ -17,6 +17,7 @@ from collections import defaultdict
 from dataclasses import dataclass
 from datetime import date, timedelta
 from statistics import median
+from typing import Any
 
 from growthops.scenario import AS_OF
 
@@ -132,10 +133,11 @@ def _series(cube: Cube, spec: MetricSpec, end: date) -> list[dict]:
             phi = max(1.0, observed_var / (sum(expected) / len(expected))) if expected else 1.0
             z = (value - base_value) / math.sqrt(phi * base_value * (1 - base_value) / den_now)
         elif spec.kind == "volume" and value is not None:
-            rolling = []
+            rolling: list[float] = []
             probe = base_start + timedelta(days=WINDOW - 1)
             while probe <= base_end:
-                rolling.append(_value("volume", _window(cube, probe - timedelta(days=WINDOW - 1), probe), WINDOW))
+                span = _window(cube, probe - timedelta(days=WINDOW - 1), probe)
+                rolling.append(sum(v[0] for v in span.values()) / WINDOW)  # the volume _value, never None
                 probe += timedelta(days=1)
             centre = median(rolling)
             mad = median(abs(r - centre) for r in rolling) * 1.4826
@@ -168,7 +170,7 @@ def decompose(cube: Cube, spec: MetricSpec, baseline: tuple[date, date], current
     days_before = (baseline[1] - baseline[0]).days + 1
     days_after = (current[1] - current[0]).days + 1
     segments = sorted(set(before) | set(after))
-    drivers = []
+    drivers: list[dict[str, Any]] = []
     if spec.kind == "rate":
         den0 = sum(v[1] for v in before.values())
         den1 = sum(v[1] for v in after.values())

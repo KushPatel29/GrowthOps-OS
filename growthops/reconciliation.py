@@ -44,7 +44,7 @@ def duplicate_contacts(connection: sqlite3.Connection) -> set[str]:
     groups: dict[str, list] = defaultdict(list)
     for row in rows:
         groups[row["email"]].append(row)
-    duplicates = set()
+    duplicates: set[str] = set()
     for members in groups.values():
         survivor = min(members, key=lambda r: (r["legacy_id"] is None, r["created_at"] or "", r["contact_id"]))
         duplicates.update(r["contact_id"] for r in members if r["contact_id"] != survivor["contact_id"])

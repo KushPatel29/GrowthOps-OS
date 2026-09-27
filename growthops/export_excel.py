@@ -20,6 +20,7 @@ import argparse
 import csv
 import re
 import zipfile
+from collections.abc import Sequence
 from datetime import date, datetime, timedelta
 from pathlib import Path
 
@@ -36,8 +37,10 @@ from openpyxl.formatting.rule import (
 )
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Protection, Side
 from openpyxl.utils import get_column_letter
+from openpyxl.utils.cell import coordinate_from_string
 from openpyxl.workbook.defined_name import DefinedName
 from openpyxl.worksheet.datavalidation import DataValidation
+from openpyxl.worksheet.pagebreak import Break
 from openpyxl.worksheet.table import Table, TableStyleInfo
 
 SOURCE = Path("dashboards/powerbi-data")
@@ -168,7 +171,36 @@ def _header_band(sheet, title: str, subtitle: str, width: int) -> None:
     sheet.page_setup.fitToWidth = 1
     sheet.page_setup.fitToHeight = 0
     sheet.sheet_properties.pageSetUpPr.fitToPage = True
-    sheet.print_area = f"A1:{last}{max(sheet.max_row, 40)}"
+    sheet.print_area = f"A1:{last}{max(sheet.max_row, 40)}"  # provisional; _fit_print_areas sets the rows
+
+
+def _chart_bottom(sheet, chart) -> int:
+    """The last row a chart covers, from its anchor row, its height and the sheet's row heights."""
+    anchor, height = chart.anchor, chart.height
+    if isinstance(anchor, str):
+        row = coordinate_from_string(anchor)[1]
+    else:  # read back from a saved file: a one-cell anchor whose size is in EMUs (360,000 per cm)
+        row = anchor._from.row + 1
+        if getattr(anchor, "ext", None) is not None:
+            height = anchor.ext.height / 360_000
+    remaining = height * 28.35  # cm to points
+    while remaining > 0:
+        remaining -= sheet.row_dimensions[row].height or 15
+        row += 1
+    return row
+
+
+def _fit_print_areas(book: Book) -> None:
+    """Print each report sheet to its last row of content or chart, not a fixed 40 rows (which printed
+    blank second pages), and start a chart on a new page when it would otherwise be cut in two."""
+    for title in REPORT_SHEETS:
+        sheet = book.wb[title]
+        if not sheet.print_area:
+            continue
+        area = sheet.print_area if isinstance(sheet.print_area, str) else sheet.print_area[0]
+        columns = area.split("!")[-1].split(":")[1].replace("$", "").rstrip("0123456789")
+        bottom = max([sheet.max_row] + [_chart_bottom(sheet, chart) for chart in sheet._charts])
+        sheet.print_area = f"A1:{columns}{bottom + 1}"
 
 
 def _section(sheet, cell: str, text: str) -> None:
@@ -176,16 +208,17 @@ def _section(sheet, cell: str, text: str) -> None:
     sheet[cell].font = _font(11, bold=True, color=NAVY)
 
 
-def _table_header(sheet, row: int, col: int, labels: list[str], widths: list[float] | None = None,
-                  left: int = 1) -> None:
-    """Column headings; the first `left` columns hold text and align left, the rest hold numbers."""
+def _table_header(sheet, row: int, col: int, labels: list[str], widths: Sequence[float] | None = None,
+                  left: int = 1, text: tuple[int, ...] = ()) -> None:
+    """Column headings; the first `left` columns and any offsets in `text` hold text and align left, the rest
+    hold numbers and align right, so each heading sits over its values."""
     for offset, label in enumerate(labels):
         cell = sheet.cell(row, col + offset, label)
         cell.font = _font(9, bold=True, color=MUTED)
         cell.fill = _fill(HEAD)
         cell.border = Border(bottom=_rule(FAINT))
-        cell.alignment = Alignment(horizontal="left" if offset < left else "right", vertical="center",
-                                   wrap_text=True)
+        cell.alignment = Alignment(horizontal="left" if offset < left or offset in text else "right",
+                                   vertical="center", wrap_text=True)
         if widths:
             sheet.column_dimensions[get_column_letter(col + offset)].width = widths[offset]
     sheet.row_dimensions[row].height = 32
@@ -234,8 +267,8 @@ def _data_sheet(book: Book, title: str, source: str, prefix: str) -> dict[str, i
         elif column.endswith("_rate") or column in ("rate", "target"):
             fmt = PCT
         if fmt:
-            for row in range(2, last + 1):
-                sheet.cell(row, index).number_format = fmt
+            for data_row in range(2, last + 1):
+                sheet.cell(data_row, index).number_format = fmt
         # One defined name per column, so report formulas read as words.
         book.name(f"{prefix}_{column}", f"'{title}'!${letter}$2:${letter}${last}")
     sheet.freeze_panes = "A2"
@@ -342,8 +375,8 @@ def _calc_sheet(book: Book, months: list[date], domains: list[str], bridge: list
         for col in range(2, 9):
             sheet.cell(row, col).font = _font(9)
     bridge_rows = (btop + 1, btop + len(bridge))
-    for col, width in zip("BCDEFGH", (40, 18, 18, 14, 14, 14, 14)):
-        sheet.column_dimensions[col].width = width
+    for letter, width in zip("BCDEFGH", (40, 18, 18, 14, 14, 14, 14)):
+        sheet.column_dimensions[letter].width = width
     sheet.sheet_properties.tabColor = "8A929C"
     return {"months": month_rows, "weeks": week_rows, "bridge": bridge_rows, "domains": domains}
 
@@ -391,8 +424,8 @@ def _dashboard(book: Book, calc: dict) -> None:
     width = 19
     for c in range(2, width + 1):
         sheet.column_dimensions[get_column_letter(c)].width = 10.5
-    for c in ("D", "G", "J", "M", "P"):
-        sheet.column_dimensions[c].width = 2.5
+    for gap in ("D", "G", "J", "M", "P"):
+        sheet.column_dimensions[gap].width = 2.5
     _header_band(sheet, "ScaleLab GrowthOps · Executive dashboard",
                  "Synthetic portfolio case · USD · every figure is a formula over the dbt marts · change the "
                  "window below and every report sheet follows", width)
@@ -470,10 +503,13 @@ def _dashboard(book: Book, calc: dict) -> None:
         calc_sheet.cell(row, 10, label).font = _font(10, color=MUTED)
         _body(calc_sheet.cell(row, 11, prior), fmt, align="left")
         col = TILE_COLUMNS[offset]
+        # Rounded to the precision the tile shows: a sign format reads the raw value, so a change of -0.00004
+        # would otherwise show a red "▼ -0.0%".
         if kind == "pct":
-            delta = f"=IFERROR({col}9/Calc!$K${row}-1,NA())"
+            delta = f"=IFERROR(ROUND({col}9/Calc!$K${row}-1,3),NA())"
         else:
-            delta = f"=IFERROR(({col}9-Calc!$K${row})*100,NA())"
+            places = 2 if delta_fmt == PTS_DOWN_GOOD else 1
+            delta = f"=IFERROR(ROUND(({col}9-Calc!$K${row})*100,{places}),NA())"
         _tile(sheet, col, label, current, f"=Calc!$K${row}", fmt, delta, delta_fmt)
     calc_sheet.column_dimensions["J"].width = 24
     calc_sheet.column_dimensions["K"].width = 14
@@ -487,7 +523,7 @@ def _dashboard(book: Book, calc: dict) -> None:
     worst = (f'IFERROR(INDEX({names},MATCH(MIN({rates}),{rates},0))&" at "&TEXT(MIN({rates}),"0.0%"),'
              '"none with 50+ leads")')
     sentences = [
-        ('="Net cash was "&TEXT(B9,"$#,##0")&" ("&TEXT(B11,"+0%;-0%")&" on the prior window) on "'
+        ('="Net cash was "&TEXT(B9,"$#,##0")&" ("&TEXT(ROUND(B11,2),"+0%;-0%;+0%")&" on the prior window) on "'
         '&TEXT(E9,"$#,##0")&" of paid spend."'),
         '="Paid media bought leads at "&TEXT(H9,"$#,##0.00")&" each, and "&TEXT(K9,"0.0%")&" of them '
         'qualified ("&TEXT(Calc!$K$9,"0.0%")&" in the prior window). Lowest MQL rate at scale '
@@ -538,11 +574,11 @@ def _dashboard(book: Book, calc: dict) -> None:
     _style_series(roas, (ORANGE, BLUE))
     roas.y_axis.number_format = '0.0"x"'
     _value_labels(roas, '0.0"x"')
-    _chart_frame(roas, 12.5, 8.5)
+    _chart_frame(roas, 11.6, 8.5)  # ends with the header band at column S
     sheet.add_chart(roas, "M19")
     sheet.freeze_panes = "A7"
     sheet.page_setup.fitToHeight = 1
-    sheet.print_area = "A1:S37"
+    sheet.print_area = "A1:T37"  # one blank column of right margin
     sheet.sheet_properties.tabColor = BLUE
 
 
@@ -564,6 +600,9 @@ def _style_series(chart, colours) -> None:
 def _chart_frame(chart, width: float, height: float) -> None:
     chart.width, chart.height = width, height
     chart.legend.position = "b"
+    # Unset, Excel may draw the legend over the plot area, on top of the category labels.
+    chart.legend.overlay = False
+    _title_clear_of_plot(chart)
     chart.style = 2
     if chart.y_axis.majorGridlines is not None:
         chart.y_axis.majorGridlines.spPr = GraphicalProperties(ln=LineProperties(solidFill="E6E9EF"))
@@ -668,8 +707,15 @@ def _scorecard(book: Book, paid_campaigns: list[tuple[str, str]]) -> None:
     sheet.sheet_properties.tabColor = BLUE
 
 
+def _title_clear_of_plot(chart) -> None:
+    # Likewise a title left to Excel can sit on top of the first bar or the axis maximum.
+    if chart.title is not None:
+        chart.title.overlay = False
+
+
 def _chart_frame_nolegend(chart, width: float, height: float) -> None:
     chart.width, chart.height = width, height
+    _title_clear_of_plot(chart)
     chart.style = 2
     chart.x_axis.delete = False
     chart.y_axis.delete = False
@@ -830,6 +876,7 @@ def _revenue(book: Book, calc: dict, bridge: list[list], platforms: int) -> None
     _chart_frame(chart, 18, 8)
     chart.legend = None
     sheet.add_chart(chart, f"B{total + 3}")
+    sheet.row_breaks.append(Break(id=total + 1))  # the waterfall prints whole, on its own page
     sheet.sheet_properties.tabColor = BLUE
 
 
@@ -843,7 +890,7 @@ def _funnel(book: Book, stages: int) -> None:
                  "All time. People reaching each lifecycle stage, and the visitor-randomized CTA test decided on "
                  "cash per visitor rather than on leads.", 15)
     _section(sheet, "B5", "Lead to renewal")
-    _table_header(sheet, 6, 2, ["Stage", "People", "From previous stage", "Of all leads"], [22, 12, 22, 13])
+    _table_header(sheet, 6, 2, ["Stage", "People", "Step conversion", "Of all leads"], [22, 12, 22, 13])
     for index in range(stages):
         row = 7 + index
         source = index + 2
@@ -886,15 +933,15 @@ def _funnel(book: Book, stages: int) -> None:
             _body(sheet.cell(row, col), fmt, align="left" if col == 2 else "right")
     lift = top + 4
     sheet.cell(lift, 2, "Variant against control")
-    sheet.cell(lift, 5, f"=IFERROR(E{lift - 1}/E{lift - 2}-1,NA())")
-    sheet.cell(lift, 8, f"=IFERROR(H{lift - 1}/H{lift - 2}-1,NA())")
+    sheet.cell(lift, 5, f"=IFERROR(ROUND(E{lift - 1}/E{lift - 2}-1,3),NA())")
+    sheet.cell(lift, 8, f"=IFERROR(ROUND(H{lift - 1}/H{lift - 2}-1,3),NA())")
     for col in range(2, 9):
         _body(sheet.cell(lift, col), NEUTRAL if col in (5, 8) else None, bold=True,
               align="left" if col == 2 else "right")
         sheet.cell(lift, col).fill = _fill(HEAD)
     sheet.cell(lift + 1, 2,
                f'="Decision: "&IF(AND(E{lift}>0,H{lift}<=0),"keep the control. The variant lifts leads "'
-               f'&TEXT(E{lift},"0%")&" but cash per visitor moves "&TEXT(H{lift},"+0%;-0%")&" on only "'
+               f'&TEXT(E{lift},"0%")&" but cash per visitor moves "&TEXT(ROUND(H{lift},2),"+0%;-0%;+0%")&" on only "'
                f'&G{lift - 2}+G{lift - 1}&" buyers.","review with the API\'s bootstrap interval before shipping.")')
     sheet.cell(lift + 1, 2).font = _font(10, bold=True, color=NAVY)
     sheet.sheet_properties.tabColor = BLUE
@@ -911,7 +958,7 @@ def _quality(book: Book, checks: int, links: int, incidents: int) -> None:
                  "register; the renewal queue.", 12)
     _section(sheet, "B5", "Checks against target")
     _table_header(sheet, 6, 2, ["Area", "Check", "Pass rate", "Target", "Gap", "Status"], [14, 26, 11, 10, 10, 16],
-                  left=2)
+                  left=2, text=(5,))
     for index in range(checks):
         row = 7 + index
         source = index + 2
@@ -937,17 +984,21 @@ def _quality(book: Book, checks: int, links: int, incidents: int) -> None:
     _section(sheet, f"B{top}", "Short links against the campaign registry")
     _table_header(sheet, top + 1, 2, ["Link", "Channel", "UTM campaign", "Missing UTM", "Unregistered",
                                       "Off taxonomy", "Clicks, last 30 days", "Defect"],
-                  [14, 26, 22, 11, 10, 14, 14, 12], left=3)
+                  [14, 26, 22, 11, 13, 14, 14, 12], left=3, text=(7,))
+    for offset in (3, 4, 5):  # the three flag columns read Yes or blank, so centre them under their headings
+        sheet.cell(top + 1, 2 + offset).alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
     for index in range(links):
         row = top + 2 + index
         source = index + 2
         cells = [(2, f"=Links!A{source}", None), (3, f"=Links!B{source}", None),
                  (4, f'=IF(Links!E{source}="","(none)",Links!E{source})', None),
-                 (5, f"=Links!F{source}", None), (6, f"=Links!G{source}", None), (7, f"=Links!H{source}", None),
-                 (8, f"=Links!J{source}", COUNT), (9, f'=IF(OR(E{row},F{row},G{row}),"Fix","")', None)]
+                 (5, f'=IF(Links!F{source},"Yes","")', None), (6, f'=IF(Links!G{source},"Yes","")', None),
+                 (7, f'=IF(Links!H{source},"Yes","")', None),
+                 (8, f"=Links!J{source}", COUNT), (9, f'=IF(COUNTIF(E{row}:G{row},"Yes")>0,"Fix","")', None)]
         for col, formula, fmt in cells:
             sheet.cell(row, col, formula)
-            _body(sheet.cell(row, col), fmt, align="left" if col in (2, 3, 4, 9) else "right")
+            _body(sheet.cell(row, col), fmt,
+                  align="left" if col in (2, 3, 4, 9) else "center" if col in (5, 6, 7) else "right")
         sheet.cell(row, 9).font = _font(10, bold=True, color=RED)
     llast = top + 1 + links
     sheet.cell(llast + 1, 2, "Share of recent clicks on defective links")
@@ -957,8 +1008,12 @@ def _quality(book: Book, checks: int, links: int, incidents: int) -> None:
         sheet.cell(llast + 1, col).fill = _fill(HEAD)
 
     top = llast + 4
+    sheet.row_breaks.append(Break(id=top - 1))  # the register starts a page rather than orphaning its heading
     _section(sheet, f"B{top}", "Incident register")
-    _table_header(sheet, top + 1, 2, ["Started", "Ended", "Kind", "Description"])
+    _table_header(sheet, top + 1, 2, ["Started", "Ended", "Kind", "Description"], left=4)
+    for col in range(6, 13):
+        sheet.cell(top + 1, col).fill = _fill(HEAD)
+        sheet.cell(top + 1, col).border = Border(bottom=_rule(FAINT))
     sheet.merge_cells(start_row=top + 1, start_column=5, end_row=top + 1, end_column=12)
     for index in range(incidents):
         row = top + 2 + index
@@ -973,6 +1028,8 @@ def _quality(book: Book, checks: int, links: int, incidents: int) -> None:
         _body(sheet.cell(row, 4), align="left")
         _body(sheet.cell(row, 5), align="left")
         sheet.cell(row, 5).alignment = Alignment(wrap_text=True, vertical="center")
+        for col in range(6, 13):
+            sheet.cell(row, col).border = Border(bottom=_rule())
         sheet.row_dimensions[row].height = 30
 
     top = top + 3 + incidents
@@ -987,6 +1044,8 @@ def _quality(book: Book, checks: int, links: int, incidents: int) -> None:
         sheet.merge_cells(start_row=top + offset, start_column=2, end_row=top + offset, end_column=5)
         _body(sheet.cell(top + offset, 2), align="left")
         _body(sheet.cell(top + offset, 6), COUNT, bold=True)
+        for col in (3, 4, 5):  # merged into the label: carry its rule across to the value
+            sheet.cell(top + offset, col).border = Border(bottom=_rule())
     sheet.sheet_properties.tabColor = BLUE
 
 
@@ -998,7 +1057,7 @@ def _audit(book: Book, paid_campaigns: int) -> int:
     sheet = book.wb["Audit"]
     _header_band(sheet, "Audit", "Reconciliation checks over the data sheets. Every difference must be zero; "
                                  "they test source data, not constants.", 6)
-    _table_header(sheet, 6, 2, ["Check", "Difference (cents or rows)", "Status"], [56, 22, 16])
+    _table_header(sheet, 6, 2, ["Check", "Difference (cents or rows)", "Status"], [66, 22, 16], text=(2,))
     paid = ('SUMIFS(cp_{c},cp_medium,"paid_social")+SUMIFS(cp_{c},cp_medium,"paid_search")')
     checks = [
         ("Gross collected − refunds − net collected", "=Revenue!B2-Revenue!C2-Revenue!D2"),
@@ -1156,6 +1215,7 @@ def build(output: Path = OUTPUT) -> Path:
     checks = _audit(book, len(paid_campaigns))
     _definitions(book)
     _cover(book, checks)
+    _fit_print_areas(book)
 
     for sheet in book.wb.worksheets:
         # Locked against accidental edits, no password; filters and sorting stay usable.

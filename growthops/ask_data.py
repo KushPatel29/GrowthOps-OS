@@ -41,6 +41,7 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
+from typing import Any
 
 from growthops.ask_slots import Slots, day_label, parse, resolve_window
 from growthops.retrieval import Entry, HybridIndex, resolve_mode, tokens
@@ -96,15 +97,15 @@ def _pct(value: float | None, digits: int = 1) -> str:
     return "n/a" if value is None else f"{value:.{digits}%}"
 
 
-def _change(now: float | None, before: float | None, rate: bool = False) -> str:
+def _change(now: float | None, before: float | None, rate: bool = False, against: str = "the period before") -> str:
     if now is None or before is None:
         return ""
     # Round before signing, so a tiny fall reads "+0%" rather than "-0%".
     if rate:
-        return f" ({round((now - before) * 100, 1) + 0.0:+.1f} pts on the period before)"
+        return f" ({round((now - before) * 100, 1) + 0.0:+.1f} pts on {against})"
     if not before:
         return ""
-    return f" ({round((now - before) / abs(before), 2) + 0.0:+.0%} on the period before)"
+    return f" ({round((now - before) / abs(before), 2) + 0.0:+.0%} on {against})"
 
 
 # --- governed answers ------------------------------------------------------
@@ -224,12 +225,26 @@ def _kpi_value(totals: dict, measure: str) -> float | None:
     return totals[measure] if column is None else totals[column]
 
 
-def _kpi_text(measure: str, value: float | None, before: float | None) -> str:
+def _kpi_text(measure: str, value: float | None, before: float | None, against: str = "the period before") -> str:
     label, _column, money = KPI_COLUMNS[measure]
     if measure in RATIOS:
-        return f"{label} {_pct(value)}{_change(value, before, rate=True)}"
+        return f"{label} {_pct(value)}{_change(value, before, rate=True, against=against)}"
+    assert value is not None  # only the ratio measures can be undefined
     shown = _usd(value) if money else f"{value:,}"
-    return f"{label} {shown}{_change(value, before)}"
+    return f"{label} {shown}{_change(value, before, against=against)}"
+
+
+def _clip_note(ctx) -> str:
+    """Say which end of an asked-for period the data cut, and where the data stops."""
+    window = ctx.window or {}
+    parts = []
+    if window.get("clipped_start"):
+        parts.append(f"the data starts on {day_label(ctx.first)}")
+    if window.get("clipped_end"):
+        parts.append(f"the latest complete day is {day_label(ctx.as_of)}")
+    if not parts:
+        return ""
+    return f" The period is cut to what exists: {' and '.join(parts)}."
 
 
 def _kpi_totals(connection, ctx=None):
@@ -244,17 +259,26 @@ def _kpi_totals(connection, ctx=None):
         start, end, label = ctx.first, ctx.as_of, f"all time ({day_label(ctx.first)} to {day_label(ctx.as_of)})"
     days = (end - start).days + 1
     now = _period_totals(connection, start, end)
-    prior_end, prior_start = start - timedelta(days=1), start - timedelta(days=days)
-    before = _period_totals(connection, prior_start, prior_end) if prior_start >= ctx.first else None
+    against = "the period before"
+    compared = (ctx.window or {}).get("compare_with")
+    if compared:  # "compare July and August": the named earlier period, not the same number of days before
+        before = _period_totals(connection, compared["start"], compared["end"])
+        against = f"{compared['phrase']} ({compared['label']})"
+    else:
+        prior_end, prior_start = start - timedelta(days=1), start - timedelta(days=days)
+        before = _period_totals(connection, prior_start, prior_end) if prior_start >= ctx.first else None
     measure = ctx.slots.measure if ctx.slots.measure in KPI_MEASURES else None
     order = [measure] if measure else []
     order += [m for m in ("net_cash", "spend", "leads", "mqls", "mql_rate", "calls_booked", "deals_won")
               if m not in order]
-    first_line = _kpi_text(order[0], _kpi_value(now, order[0]), before and _kpi_value(before, order[0]))
-    rest = "; ".join(_kpi_text(m, _kpi_value(now, m), before and _kpi_value(before, m)) for m in order[1:4])
+    first_line = _kpi_text(order[0], _kpi_value(now, order[0]), before and _kpi_value(before, order[0]),
+                           against)
+    # The comparison period's dates are given once, on the first figure; the rest name it briefly.
+    brief = compared["phrase"] if compared else against
+    rest = "; ".join(_kpi_text(m, _kpi_value(now, m), before and _kpi_value(before, m), brief)
+                     for m in order[1:4])
     note = "" if before else " There is no earlier period of the same length in the data to compare with."
-    clipped = f" The data starts on {day_label(ctx.first)}, so the period is cut to what exists." if (
-        ctx.window and ctx.window.get("clipped")) else ""
+    clipped = _clip_note(ctx)
     basis = (" Cash is dated by payment and refund, leads and MQLs by the day they happened, so the MQL rate is "
              "an event-basis read of lead quality.") if measure in (None, "mql_rate", "mqls", "leads") else ""
     return (f"{label[0].upper() + label[1:]}: {first_line}. Also {rest}.{note}{clipped}{basis}",
@@ -306,14 +330,24 @@ def _paid_efficiency(connection, ctx=None):
             return f"{name} had no paid spend or paid-created leads from {label}.", "ad_spend_daily"
     lag = " Cash lags leads by weeks, so a short-window ROAS understates." if (
         measure == "roas" or not measure) else ""
+    other = (ctx.window or {}).get("compare_with")
+    if other:  # "Meta CPL in July vs August": the same figures for the named earlier period
+        other_rows = paid_efficiency(connection, other["start"], other["end"], by="campaign" if campaign else "platform")
     if focus:
-        return ((f"{name}, {label}: {describe(focus, measure)}. All paid media for comparison: "
+        against = ""
+        if other:
+            before = next((row for row in other_rows[:-1] if row["segment"] == focus["segment"]), None)
+            against = (f" {other['phrase']} ({other['label']}): {describe(before, measure)}." if before
+                       else f" {other['phrase']} ({other['label']}): no paid activity.")
+        return ((f"{name}, {label}: {describe(focus, measure)}.{against} All paid media for comparison: "
                  f"{describe(total, measure)}.{lag}"),
                 "ad_spend_daily, lifecycle events (activity basis)")
     compared = [row for row in rows[:-1] if not ctx.slots.platforms or row["segment"] in ctx.slots.platforms]
     parts = [f"{PLATFORM_LABELS.get(row['segment'], row['segment'])}: {describe(row, measure)}" for row in compared]
-    return (f"{label[0].upper() + label[1:]}: " + "; ".join(parts) + f". All paid: {describe(total, measure)}.{lag}",
-            "ad_spend_daily, lifecycle events (activity basis)")
+    against = (f" {other['phrase']} ({other['label']}), all paid: {describe(other_rows[-1], measure)}."
+               if other else "")
+    return (f"{label[0].upper() + label[1:]}: " + "; ".join(parts) + f". All paid: {describe(total, measure)}."
+            f"{against}{lag}", "ad_spend_daily, lifecycle events (activity basis)")
 
 
 def _tracking(connection, ctx=None):
@@ -680,14 +714,15 @@ def _slot_route(text: str, slots: Slots) -> str | None:
     meta_broad_v17") is paid efficiency. Anything else is left to retrieval, which knows the other answers.
     """
     named = slots.platform or slots.campaign or slots.platforms
+    # "Meta vs Google CPL" and "July vs August" compare; "vs" only means reconciliation beside a word like "claim".
+    comparing = slots.platforms or (slots.window and slots.window["kind"] == "compare")
+    reconcile = RECONCILE.search(re.sub(r"\b(vs|versus)\b", " ", text, flags=re.IGNORECASE) if comparing else text)
     if slots.window and slots.measure in KPI_MEASURES and not named \
-            and not (RECONCILE.search(text) or DIAGNOSTIC.search(text) or BREAKDOWN.search(text)):
+            and not (reconcile or DIAGNOSTIC.search(text) or BREAKDOWN.search(text)):
         return "kpi_totals"
-    # "Meta vs Google CPL" compares platforms; "vs" only means reconciliation alongside a word like "claim".
-    if slots.platforms and slots.measure in EFFICIENCY_MEASURES | PAID_VOLUMES | {"roas", None} \
-            and not RECONCILE.search(re.sub(r"\b(vs|versus)\b", " ", text, flags=re.IGNORECASE)):
+    if slots.platforms and slots.measure in EFFICIENCY_MEASURES | PAID_VOLUMES | {"roas", None} and not reconcile:
         return "paid_efficiency"
-    if RECONCILE.search(text):
+    if reconcile:
         return None
     if (slots.platform or slots.campaign) and slots.measure in EFFICIENCY_MEASURES | PAID_VOLUMES:
         return "paid_efficiency"
@@ -760,8 +795,12 @@ def answer(connection: sqlite3.Connection, question: str, mode: str | None = Non
         first, as_of = data_range(connection)
         window = resolve_window(slots.window, as_of, first)
         if window is None:
+            outside = slots.window["phrase"]
+            if slots.window["kind"] == "compare":  # name the period that is missing, not the pair
+                outside = " and ".join(slots.window[side]["phrase"] for side in ("from", "to")
+                                       if resolve_window(slots.window[side], as_of, first) is None)
             decision = {**_refuse(f"The data covers {day_label(first)} to {day_label(as_of)}; "
-                                  f"{slots.window['phrase']} is outside it.", mode=decision.get("mode")),
+                                  f"{outside} is outside it.", mode=decision.get("mode")),
                         "slots": slots}
     follow_ups: list[str] = []
     if decision["route"] in ("certified", "metric"):
@@ -771,8 +810,8 @@ def answer(connection: sqlite3.Connection, question: str, mode: str | None = Non
         if window and intent.id not in SLOT_AWARE | RECENT_BY_DESIGN:
             # Never let a named period pass silently: this answer is not cut by period, so say what it covers.
             text = (f"This answer is not cut by period, so it covers the data as of {day_label(as_of)} rather than "
-                    f"{slots.window['phrase']}. {text}")
-        result = {"answer": text, "source": source, "metric_id": intent.id, "citations": []}
+                    f"{window['phrase']}. {text}")
+        result: dict[str, Any] = {"answer": text, "source": source, "metric_id": intent.id, "citations": []}
         follow_ups = [q for q in FOLLOW_UPS.get(intent.id, ()) if q.lower().rstrip("?") != question.lower().rstrip("?")]
     elif decision["route"] == "definition":
         entry = decision["hits"][0].entry
@@ -791,7 +830,8 @@ def answer(connection: sqlite3.Connection, question: str, mode: str | None = Non
     shaped = decision.get("target") in SLOT_AWARE and decision["route"] in ("certified", "metric")
     understood = slots.describe() if shaped else ""
     if window and shaped:
-        understood = f"{understood} ({window['label']})" if understood else window["label"]
+        dates = window["label"] + (f", against {window['compare_with']['label']}" if window.get("compare_with") else "")
+        understood = f"{understood} ({dates})" if understood else dates
     return {**result, "route": decision["route"], "target": decision.get("target"), "confidence": decision.get("score"),
             "retrieval_mode": decision.get("mode"), "retrieved": retrieved, "latency_ms": latency,
             "understood": understood, "follow_ups": follow_ups}

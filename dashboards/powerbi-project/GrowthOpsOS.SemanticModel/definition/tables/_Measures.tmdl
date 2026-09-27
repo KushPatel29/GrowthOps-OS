@@ -634,13 +634,15 @@ table _Measures
 		displayFolder: 09 Windows
 
 	/// Net cash against the period before.
-	measure 'Net cash vs prior' = DIVIDE([Net cash] - [Net cash prior period], ABS([Net cash prior period]))
+	measure 'Net cash vs prior' =
+			VAR vChange = DIVIDE([Net cash] - [Net cash prior period], ABS([Net cash prior period]))
+			RETURN IF(NOT ISBLANK(vChange), ROUND(vChange, 3))
 		formatString: +0.0%;-0.0%;0.0%
 		lineageTag: 4cdd9764-11aa-5840-85b7-45d1e1877159
 		displayFolder: 09 Windows
 
 	/// Tile caption for Net cash.
-	measure 'Net cash caption' = IF(ISBLANK([Net cash vs prior]), "all dates in view · pick months to compare", FORMAT([Net cash vs prior], "+0%;-0%;0%") & " vs prior period")
+	measure 'Net cash caption' = IF(ISBLANK([Net cash vs prior]), IF(ISFILTERED(dim_date), "no earlier data to compare with", "all dates in view · pick months to compare"), FORMAT(ROUND([Net cash vs prior], 2), "+0%;-0%;+0%") & " vs prior period")
 		lineageTag: 1e880777-a96d-5d98-bc70-ae1ad6f31b38
 		displayFolder: 10 Captions
 
@@ -656,13 +658,15 @@ table _Measures
 		displayFolder: 09 Windows
 
 	/// Ad spend against the period before.
-	measure 'Ad spend vs prior' = DIVIDE([Ad spend] - [Ad spend prior period], ABS([Ad spend prior period]))
+	measure 'Ad spend vs prior' =
+			VAR vChange = DIVIDE([Ad spend] - [Ad spend prior period], ABS([Ad spend prior period]))
+			RETURN IF(NOT ISBLANK(vChange), ROUND(vChange, 3))
 		formatString: +0.0%;-0.0%;0.0%
 		lineageTag: d6e0adb8-121f-5c28-8abe-4c9d9c181929
 		displayFolder: 09 Windows
 
 	/// Tile caption for Ad spend.
-	measure 'Ad spend caption' = IF(ISBLANK([Ad spend vs prior]), "all dates in view · pick months to compare", FORMAT([Ad spend vs prior], "+0%;-0%;0%") & " vs prior period")
+	measure 'Ad spend caption' = IF(ISBLANK([Ad spend vs prior]), IF(ISFILTERED(dim_date), "no earlier data to compare with", "all dates in view · pick months to compare"), FORMAT(ROUND([Ad spend vs prior], 2), "+0%;-0%;+0%") & " vs prior period")
 		lineageTag: 54fdc977-5e90-51ca-926b-4b9c1166eed1
 		displayFolder: 10 Captions
 
@@ -678,13 +682,15 @@ table _Measures
 		displayFolder: 09 Windows
 
 	/// Leads against the period before.
-	measure 'Leads vs prior' = DIVIDE([Leads] - [Leads prior period], ABS([Leads prior period]))
+	measure 'Leads vs prior' =
+			VAR vChange = DIVIDE([Leads] - [Leads prior period], ABS([Leads prior period]))
+			RETURN IF(NOT ISBLANK(vChange), ROUND(vChange, 3))
 		formatString: +0.0%;-0.0%;0.0%
 		lineageTag: 3bb007ee-c2fb-5ff1-b8ab-6022761431c8
 		displayFolder: 09 Windows
 
 	/// Tile caption for Leads.
-	measure 'Leads caption' = IF(ISBLANK([Leads vs prior]), "all dates in view · pick months to compare", FORMAT([Leads vs prior], "+0%;-0%;0%") & " vs prior period")
+	measure 'Leads caption' = IF(ISBLANK([Leads vs prior]), IF(ISFILTERED(dim_date), "no earlier data to compare with", "all dates in view · pick months to compare"), FORMAT(ROUND([Leads vs prior], 2), "+0%;-0%;+0%") & " vs prior period")
 		lineageTag: da33dc75-ffa8-514a-b493-ba2dc905a087
 		displayFolder: 10 Captions
 
@@ -700,13 +706,13 @@ table _Measures
 		displayFolder: 09 Windows
 
 	/// MQL rate against the period before (points).
-	measure 'MQL rate vs prior' = IF(NOT ISBLANK([MQL rate prior period]), [MQL rate] - [MQL rate prior period])
+	measure 'MQL rate vs prior' = IF(NOT ISBLANK([MQL rate prior period]), ROUND([MQL rate] - [MQL rate prior period], 4))
 		formatString: +0.00%;-0.00%;0.00%
 		lineageTag: bd5ecf48-78e0-569e-8e2a-258b48a1aaad
 		displayFolder: 09 Windows
 
 	/// Tile caption for MQL rate.
-	measure 'MQL rate caption' = IF(ISBLANK([MQL rate vs prior]), "all dates in view · pick months to compare", FORMAT([MQL rate vs prior] * 100, "+0.0;-0.0;0.0") & " pts" & " vs prior period")
+	measure 'MQL rate caption' = IF(ISBLANK([MQL rate vs prior]), IF(ISFILTERED(dim_date), "no earlier data to compare with", "all dates in view · pick months to compare"), FORMAT(ROUND([MQL rate vs prior] * 100, 1), "+0.0;-0.0;+0.0") & " pts" & " vs prior period")
 		lineageTag: 3431cda6-84ec-5e2a-abcd-5906a316b039
 		displayFolder: 10 Captions
 
@@ -722,13 +728,15 @@ table _Measures
 		displayFolder: 09 Windows
 
 	/// Paid spend against the period before.
-	measure 'Paid spend vs prior' = DIVIDE([Paid spend] - [Paid spend prior period], ABS([Paid spend prior period]))
+	measure 'Paid spend vs prior' =
+			VAR vChange = DIVIDE([Paid spend] - [Paid spend prior period], ABS([Paid spend prior period]))
+			RETURN IF(NOT ISBLANK(vChange), ROUND(vChange, 3))
 		formatString: +0.0%;-0.0%;0.0%
 		lineageTag: 7e6bc15c-f65a-5dbd-9885-fc3d867b99bd
 		displayFolder: 09 Windows
 
 	/// Tile caption for Paid spend.
-	measure 'Paid spend caption' = IF(ISBLANK([Paid spend vs prior]), "all dates in view · pick months to compare", FORMAT([Paid spend vs prior], "+0%;-0%;0%") & " vs prior period")
+	measure 'Paid spend caption' = IF(ISBLANK([Paid spend vs prior]), IF(ISFILTERED(dim_date), "no earlier data to compare with", "all dates in view · pick months to compare"), FORMAT(ROUND([Paid spend vs prior], 2), "+0%;-0%;+0%") & " vs prior period")
 		lineageTag: 220c6f7e-3175-51bb-beae-cb1abc7d2124
 		displayFolder: 10 Captions
 
@@ -744,13 +752,15 @@ table _Measures
 		displayFolder: 09 Windows
 
 	/// Cost per lead against the period before.
-	measure 'Cost per lead vs prior' = DIVIDE([Cost per lead] - [Cost per lead prior period], ABS([Cost per lead prior period]))
+	measure 'Cost per lead vs prior' =
+			VAR vChange = DIVIDE([Cost per lead] - [Cost per lead prior period], ABS([Cost per lead prior period]))
+			RETURN IF(NOT ISBLANK(vChange), ROUND(vChange, 3))
 		formatString: +0.0%;-0.0%;0.0%
 		lineageTag: f01cd1db-5751-532b-acc0-7bf1a65b7138
 		displayFolder: 09 Windows
 
 	/// Tile caption for Cost per lead.
-	measure 'Cost per lead caption' = IF(ISBLANK([Cost per lead vs prior]), "all dates in view · pick months to compare", FORMAT([Cost per lead vs prior], "+0%;-0%;0%") & " vs prior period")
+	measure 'Cost per lead caption' = IF(ISBLANK([Cost per lead vs prior]), IF(ISFILTERED(dim_date), "no earlier data to compare with", "all dates in view · pick months to compare"), FORMAT(ROUND([Cost per lead vs prior], 2), "+0%;-0%;+0%") & " vs prior period")
 		lineageTag: 5e2e5178-0f48-57f6-bf90-3654f635a678
 		displayFolder: 10 Captions
 
@@ -766,13 +776,15 @@ table _Measures
 		displayFolder: 09 Windows
 
 	/// Cost per booked call against the period before.
-	measure 'Cost per booked call vs prior' = DIVIDE([Cost per booked call] - [Cost per booked call prior period], ABS([Cost per booked call prior period]))
+	measure 'Cost per booked call vs prior' =
+			VAR vChange = DIVIDE([Cost per booked call] - [Cost per booked call prior period], ABS([Cost per booked call prior period]))
+			RETURN IF(NOT ISBLANK(vChange), ROUND(vChange, 3))
 		formatString: +0.0%;-0.0%;0.0%
 		lineageTag: fa0859e6-48e2-5446-9571-171147f78a83
 		displayFolder: 09 Windows
 
 	/// Tile caption for Cost per booked call.
-	measure 'Cost per booked call caption' = IF(ISBLANK([Cost per booked call vs prior]), "all dates in view · pick months to compare", FORMAT([Cost per booked call vs prior], "+0%;-0%;0%") & " vs prior period")
+	measure 'Cost per booked call caption' = IF(ISBLANK([Cost per booked call vs prior]), IF(ISFILTERED(dim_date), "no earlier data to compare with", "all dates in view · pick months to compare"), FORMAT(ROUND([Cost per booked call vs prior], 2), "+0%;-0%;+0%") & " vs prior period")
 		lineageTag: aa1f748c-71e4-55ac-8332-81a00aaafd04
 		displayFolder: 10 Captions
 
@@ -788,13 +800,13 @@ table _Measures
 		displayFolder: 09 Windows
 
 	/// CTR against the period before (points).
-	measure 'CTR vs prior' = IF(NOT ISBLANK([CTR prior period]), [CTR] - [CTR prior period])
+	measure 'CTR vs prior' = IF(NOT ISBLANK([CTR prior period]), ROUND([CTR] - [CTR prior period], 4))
 		formatString: +0.00%;-0.00%;0.00%
 		lineageTag: 99eea684-9ef3-5eee-a58f-ccca13006a7f
 		displayFolder: 09 Windows
 
 	/// Tile caption for CTR.
-	measure 'CTR caption' = IF(ISBLANK([CTR vs prior]), "all dates in view · pick months to compare", FORMAT([CTR vs prior] * 100, "+0.0;-0.0;0.0") & " pts" & " vs prior period")
+	measure 'CTR caption' = IF(ISBLANK([CTR vs prior]), IF(ISFILTERED(dim_date), "no earlier data to compare with", "all dates in view · pick months to compare"), FORMAT(ROUND([CTR vs prior] * 100, 1), "+0.0;-0.0;+0.0") & " pts" & " vs prior period")
 		lineageTag: d44bee8f-92a2-5274-b43e-6a7494eb3529
 		displayFolder: 10 Captions
 
@@ -810,13 +822,13 @@ table _Measures
 		displayFolder: 09 Windows
 
 	/// Paid MQL rate against the period before (points).
-	measure 'Paid MQL rate vs prior' = IF(NOT ISBLANK([Paid MQL rate prior period]), [Paid MQL rate] - [Paid MQL rate prior period])
+	measure 'Paid MQL rate vs prior' = IF(NOT ISBLANK([Paid MQL rate prior period]), ROUND([Paid MQL rate] - [Paid MQL rate prior period], 4))
 		formatString: +0.00%;-0.00%;0.00%
 		lineageTag: 2d766f88-18c9-53ff-8712-2a88379dcd33
 		displayFolder: 09 Windows
 
 	/// Tile caption for Paid MQL rate.
-	measure 'Paid MQL rate caption' = IF(ISBLANK([Paid MQL rate vs prior]), "all dates in view · pick months to compare", FORMAT([Paid MQL rate vs prior] * 100, "+0.0;-0.0;0.0") & " pts" & " vs prior period")
+	measure 'Paid MQL rate caption' = IF(ISBLANK([Paid MQL rate vs prior]), IF(ISFILTERED(dim_date), "no earlier data to compare with", "all dates in view · pick months to compare"), FORMAT(ROUND([Paid MQL rate vs prior] * 100, 1), "+0.0;-0.0;+0.0") & " pts" & " vs prior period")
 		lineageTag: 9bef8880-61e0-5a05-a6a4-1c74c26f3e10
 		displayFolder: 10 Captions
 
@@ -832,13 +844,15 @@ table _Measures
 		displayFolder: 09 Windows
 
 	/// Calls booked against the period before.
-	measure 'Calls booked vs prior' = DIVIDE([Calls booked] - [Calls booked prior period], ABS([Calls booked prior period]))
+	measure 'Calls booked vs prior' =
+			VAR vChange = DIVIDE([Calls booked] - [Calls booked prior period], ABS([Calls booked prior period]))
+			RETURN IF(NOT ISBLANK(vChange), ROUND(vChange, 3))
 		formatString: +0.0%;-0.0%;0.0%
 		lineageTag: 4998598d-a1a1-5ff0-bb50-1c7b9f251d7d
 		displayFolder: 09 Windows
 
 	/// Tile caption for Calls booked.
-	measure 'Calls booked caption' = IF(ISBLANK([Calls booked vs prior]), "all dates in view · pick months to compare", FORMAT([Calls booked vs prior], "+0%;-0%;0%") & " vs prior period")
+	measure 'Calls booked caption' = IF(ISBLANK([Calls booked vs prior]), IF(ISFILTERED(dim_date), "no earlier data to compare with", "all dates in view · pick months to compare"), FORMAT(ROUND([Calls booked vs prior], 2), "+0%;-0%;+0%") & " vs prior period")
 		lineageTag: fc76b5b6-0423-5c91-8f00-39f216990580
 		displayFolder: 10 Captions
 
@@ -854,13 +868,15 @@ table _Measures
 		displayFolder: 09 Windows
 
 	/// Deals won against the period before.
-	measure 'Deals won vs prior' = DIVIDE([Deals won] - [Deals won prior period], ABS([Deals won prior period]))
+	measure 'Deals won vs prior' =
+			VAR vChange = DIVIDE([Deals won] - [Deals won prior period], ABS([Deals won prior period]))
+			RETURN IF(NOT ISBLANK(vChange), ROUND(vChange, 3))
 		formatString: +0.0%;-0.0%;0.0%
 		lineageTag: 62c30a5e-3523-53c4-ae88-42dd73ea2b15
 		displayFolder: 09 Windows
 
 	/// Tile caption for Deals won.
-	measure 'Deals won caption' = IF(ISBLANK([Deals won vs prior]), "all dates in view · pick months to compare", FORMAT([Deals won vs prior], "+0%;-0%;0%") & " vs prior period")
+	measure 'Deals won caption' = IF(ISBLANK([Deals won vs prior]), IF(ISFILTERED(dim_date), "no earlier data to compare with", "all dates in view · pick months to compare"), FORMAT(ROUND([Deals won vs prior], 2), "+0%;-0%;+0%") & " vs prior period")
 		lineageTag: c93ab573-1020-525f-a3b9-d8d773fe43e7
 		displayFolder: 10 Captions
 
@@ -876,13 +892,15 @@ table _Measures
 		displayFolder: 09 Windows
 
 	/// Attributed net cash against the period before.
-	measure 'Attributed net cash vs prior' = DIVIDE([Attributed net cash] - [Attributed net cash prior period], ABS([Attributed net cash prior period]))
+	measure 'Attributed net cash vs prior' =
+			VAR vChange = DIVIDE([Attributed net cash] - [Attributed net cash prior period], ABS([Attributed net cash prior period]))
+			RETURN IF(NOT ISBLANK(vChange), ROUND(vChange, 3))
 		formatString: +0.0%;-0.0%;0.0%
 		lineageTag: 8b57f2c0-f50b-579d-8db8-88a1bbac0649
 		displayFolder: 09 Windows
 
 	/// Tile caption for Attributed net cash.
-	measure 'Attributed net cash caption' = IF(ISBLANK([Attributed net cash vs prior]), "all dates in view · pick months to compare", FORMAT([Attributed net cash vs prior], "+0%;-0%;0%") & " vs prior period")
+	measure 'Attributed net cash caption' = IF(ISBLANK([Attributed net cash vs prior]), IF(ISFILTERED(dim_date), "no earlier data to compare with", "all dates in view · pick months to compare"), FORMAT(ROUND([Attributed net cash vs prior], 2), "+0%;-0%;+0%") & " vs prior period")
 		lineageTag: 0387f9b2-7c30-5a77-ad52-c4d29e6ff046
 		displayFolder: 10 Captions
 
@@ -898,13 +916,13 @@ table _Measures
 		displayFolder: 09 Windows
 
 	/// Cash ROAS against the period before.
-	measure 'Cash ROAS vs prior' = IF(NOT ISBLANK([Cash ROAS prior period]), [Cash ROAS] - [Cash ROAS prior period])
+	measure 'Cash ROAS vs prior' = IF(NOT ISBLANK([Cash ROAS prior period]), ROUND([Cash ROAS] - [Cash ROAS prior period], 2))
 		formatString: +0.00"x";-0.00"x";0.00"x"
 		lineageTag: 66e90193-4e23-54f7-be5b-05cd268202e8
 		displayFolder: 09 Windows
 
 	/// Tile caption for Cash ROAS.
-	measure 'Cash ROAS caption' = IF(ISBLANK([Cash ROAS vs prior]), "all dates in view · pick months to compare", FORMAT([Cash ROAS vs prior], "+0.00;-0.00;0.00") & "x" & " vs prior period")
+	measure 'Cash ROAS caption' = IF(ISBLANK([Cash ROAS vs prior]), IF(ISFILTERED(dim_date), "no earlier data to compare with", "all dates in view · pick months to compare"), FORMAT([Cash ROAS vs prior], "+0.00;-0.00;+0.00") & "x" & " vs prior period")
 		lineageTag: c4f14bc8-b0b6-5bcc-ac5a-f6e2ff708d81
 		displayFolder: 10 Captions
 
@@ -920,13 +938,15 @@ table _Measures
 		displayFolder: 09 Windows
 
 	/// Emails delivered against the period before.
-	measure 'Emails delivered vs prior' = DIVIDE([Emails delivered] - [Emails delivered prior period], ABS([Emails delivered prior period]))
+	measure 'Emails delivered vs prior' =
+			VAR vChange = DIVIDE([Emails delivered] - [Emails delivered prior period], ABS([Emails delivered prior period]))
+			RETURN IF(NOT ISBLANK(vChange), ROUND(vChange, 3))
 		formatString: +0.0%;-0.0%;0.0%
 		lineageTag: 26818151-b1aa-5a2a-98f9-5c68fcd1bf14
 		displayFolder: 09 Windows
 
 	/// Tile caption for Emails delivered.
-	measure 'Emails delivered caption' = IF(ISBLANK([Emails delivered vs prior]), "all dates in view · pick months to compare", FORMAT([Emails delivered vs prior], "+0%;-0%;0%") & " vs prior period")
+	measure 'Emails delivered caption' = IF(ISBLANK([Emails delivered vs prior]), IF(ISFILTERED(dim_date), "no earlier data to compare with", "all dates in view · pick months to compare"), FORMAT(ROUND([Emails delivered vs prior], 2), "+0%;-0%;+0%") & " vs prior period")
 		lineageTag: 49d4d9f9-d5ca-5e30-a93b-0928a0e01f35
 		displayFolder: 10 Captions
 
@@ -942,13 +962,13 @@ table _Measures
 		displayFolder: 09 Windows
 
 	/// Human open rate against the period before (points).
-	measure 'Human open rate vs prior' = IF(NOT ISBLANK([Human open rate prior period]), [Human open rate] - [Human open rate prior period])
+	measure 'Human open rate vs prior' = IF(NOT ISBLANK([Human open rate prior period]), ROUND([Human open rate] - [Human open rate prior period], 4))
 		formatString: +0.00%;-0.00%;0.00%
 		lineageTag: dd5a2e01-4236-5b95-88e9-8f0404af6922
 		displayFolder: 09 Windows
 
 	/// Tile caption for Human open rate.
-	measure 'Human open rate caption' = IF(ISBLANK([Human open rate vs prior]), "all dates in view · pick months to compare", FORMAT([Human open rate vs prior] * 100, "+0.0;-0.0;0.0") & " pts" & " vs prior period")
+	measure 'Human open rate caption' = IF(ISBLANK([Human open rate vs prior]), IF(ISFILTERED(dim_date), "no earlier data to compare with", "all dates in view · pick months to compare"), FORMAT(ROUND([Human open rate vs prior] * 100, 1), "+0.0;-0.0;+0.0") & " pts" & " vs prior period")
 		lineageTag: 1e5851e0-a148-5727-a89d-2a1798c10dd8
 		displayFolder: 10 Captions
 
@@ -964,13 +984,13 @@ table _Measures
 		displayFolder: 09 Windows
 
 	/// Bounce rate against the period before (points).
-	measure 'Bounce rate vs prior' = IF(NOT ISBLANK([Bounce rate prior period]), [Bounce rate] - [Bounce rate prior period])
+	measure 'Bounce rate vs prior' = IF(NOT ISBLANK([Bounce rate prior period]), ROUND([Bounce rate] - [Bounce rate prior period], 4))
 		formatString: +0.00%;-0.00%;0.00%
 		lineageTag: 555de930-f096-56a9-ac47-58b0ee44c5a4
 		displayFolder: 09 Windows
 
 	/// Tile caption for Bounce rate.
-	measure 'Bounce rate caption' = IF(ISBLANK([Bounce rate vs prior]), "all dates in view · pick months to compare", FORMAT([Bounce rate vs prior] * 100, "+0.0;-0.0;0.0") & " pts" & " vs prior period")
+	measure 'Bounce rate caption' = IF(ISBLANK([Bounce rate vs prior]), IF(ISFILTERED(dim_date), "no earlier data to compare with", "all dates in view · pick months to compare"), FORMAT(ROUND([Bounce rate vs prior] * 100, 1), "+0.0;-0.0;+0.0") & " pts" & " vs prior period")
 		lineageTag: f14eb33c-5350-5352-856c-5db096aa4681
 		displayFolder: 10 Captions
 
@@ -986,13 +1006,13 @@ table _Measures
 		displayFolder: 09 Windows
 
 	/// Complaint rate against the period before (points).
-	measure 'Complaint rate vs prior' = IF(NOT ISBLANK([Complaint rate prior period]), [Complaint rate] - [Complaint rate prior period])
+	measure 'Complaint rate vs prior' = IF(NOT ISBLANK([Complaint rate prior period]), ROUND([Complaint rate] - [Complaint rate prior period], 4))
 		formatString: +0.00%;-0.00%;0.00%
 		lineageTag: 2f60fd13-647f-5c16-9351-51fd5eccae6b
 		displayFolder: 09 Windows
 
 	/// Tile caption for Complaint rate.
-	measure 'Complaint rate caption' = IF(ISBLANK([Complaint rate vs prior]), "all dates in view · pick months to compare", FORMAT([Complaint rate vs prior] * 100, "+0.0;-0.0;0.0") & " pts" & " vs prior period")
+	measure 'Complaint rate caption' = IF(ISBLANK([Complaint rate vs prior]), IF(ISFILTERED(dim_date), "no earlier data to compare with", "all dates in view · pick months to compare"), FORMAT(ROUND([Complaint rate vs prior] * 100, 1), "+0.0;-0.0;+0.0") & " pts" & " vs prior period")
 		lineageTag: 09ef69fe-9c50-5093-8e43-afeef480bd11
 		displayFolder: 10 Captions
 
@@ -1009,13 +1029,15 @@ table _Measures
 		displayFolder: 11 Last 28 days
 
 	/// Net cash, last 28 days against the 28 days before.
-	measure 'Net cash, 28-day change' = DIVIDE([Net cash, last 28 days] - [Net cash, prior 28 days], ABS([Net cash, prior 28 days]))
+	measure 'Net cash, 28-day change' =
+			VAR vChange = DIVIDE([Net cash, last 28 days] - [Net cash, prior 28 days], ABS([Net cash, prior 28 days]))
+			RETURN IF(NOT ISBLANK(vChange), ROUND(vChange, 3))
 		formatString: +0.0%;-0.0%;0.0%
 		lineageTag: 95172a1c-48cd-5091-9089-99b4dd671d5a
 		displayFolder: 11 Last 28 days
 
 	/// Tile caption for Net cash, last 28 days.
-	measure 'Net cash, 28-day caption' = IF(ISBLANK([Net cash, 28-day change]), "all dates in view · pick months to compare", FORMAT([Net cash, 28-day change], "+0%;-0%;0%") & " vs prior 28 days")
+	measure 'Net cash, 28-day caption' = IF(ISBLANK([Net cash, 28-day change]), IF(ISFILTERED(dim_date), "no earlier data to compare with", "all dates in view · pick months to compare"), FORMAT(ROUND([Net cash, 28-day change], 2), "+0%;-0%;+0%") & " vs prior 28 days")
 		lineageTag: 7c475413-f9ed-5dfc-a590-32d5fc79281d
 		displayFolder: 10 Captions
 
@@ -1032,13 +1054,15 @@ table _Measures
 		displayFolder: 11 Last 28 days
 
 	/// Ad spend, last 28 days against the 28 days before.
-	measure 'Ad spend, 28-day change' = DIVIDE([Ad spend, last 28 days] - [Ad spend, prior 28 days], ABS([Ad spend, prior 28 days]))
+	measure 'Ad spend, 28-day change' =
+			VAR vChange = DIVIDE([Ad spend, last 28 days] - [Ad spend, prior 28 days], ABS([Ad spend, prior 28 days]))
+			RETURN IF(NOT ISBLANK(vChange), ROUND(vChange, 3))
 		formatString: +0.0%;-0.0%;0.0%
 		lineageTag: 10ca6268-6154-551e-a778-b1676e491d5a
 		displayFolder: 11 Last 28 days
 
 	/// Tile caption for Ad spend, last 28 days.
-	measure 'Ad spend, 28-day caption' = IF(ISBLANK([Ad spend, 28-day change]), "all dates in view · pick months to compare", FORMAT([Ad spend, 28-day change], "+0%;-0%;0%") & " vs prior 28 days")
+	measure 'Ad spend, 28-day caption' = IF(ISBLANK([Ad spend, 28-day change]), IF(ISFILTERED(dim_date), "no earlier data to compare with", "all dates in view · pick months to compare"), FORMAT(ROUND([Ad spend, 28-day change], 2), "+0%;-0%;+0%") & " vs prior 28 days")
 		lineageTag: e8b94ea8-5b12-5801-a009-c84950afc4c7
 		displayFolder: 10 Captions
 
@@ -1055,13 +1079,15 @@ table _Measures
 		displayFolder: 11 Last 28 days
 
 	/// Leads, last 28 days against the 28 days before.
-	measure 'Leads, 28-day change' = DIVIDE([Leads, last 28 days] - [Leads, prior 28 days], ABS([Leads, prior 28 days]))
+	measure 'Leads, 28-day change' =
+			VAR vChange = DIVIDE([Leads, last 28 days] - [Leads, prior 28 days], ABS([Leads, prior 28 days]))
+			RETURN IF(NOT ISBLANK(vChange), ROUND(vChange, 3))
 		formatString: +0.0%;-0.0%;0.0%
 		lineageTag: aa5f9362-7465-59d2-a360-d8aa764a6c5a
 		displayFolder: 11 Last 28 days
 
 	/// Tile caption for Leads, last 28 days.
-	measure 'Leads, 28-day caption' = IF(ISBLANK([Leads, 28-day change]), "all dates in view · pick months to compare", FORMAT([Leads, 28-day change], "+0%;-0%;0%") & " vs prior 28 days")
+	measure 'Leads, 28-day caption' = IF(ISBLANK([Leads, 28-day change]), IF(ISFILTERED(dim_date), "no earlier data to compare with", "all dates in view · pick months to compare"), FORMAT(ROUND([Leads, 28-day change], 2), "+0%;-0%;+0%") & " vs prior 28 days")
 		lineageTag: 43acb1b1-9c0d-579b-be30-7c3321aeab6e
 		displayFolder: 10 Captions
 
@@ -1078,13 +1104,13 @@ table _Measures
 		displayFolder: 11 Last 28 days
 
 	/// MQL rate, last 28 days against the 28 days before.
-	measure 'MQL rate, 28-day change' = IF(NOT ISBLANK([MQL rate, prior 28 days]), [MQL rate, last 28 days] - [MQL rate, prior 28 days])
+	measure 'MQL rate, 28-day change' = IF(NOT ISBLANK([MQL rate, prior 28 days]), ROUND([MQL rate, last 28 days] - [MQL rate, prior 28 days], 4))
 		formatString: +0.00%;-0.00%;0.00%
 		lineageTag: aa351bf5-82eb-53a0-85ae-d132d9b55145
 		displayFolder: 11 Last 28 days
 
 	/// Tile caption for MQL rate, last 28 days.
-	measure 'MQL rate, 28-day caption' = IF(ISBLANK([MQL rate, 28-day change]), "all dates in view · pick months to compare", FORMAT([MQL rate, 28-day change] * 100, "+0.0;-0.0;0.0") & " pts" & " vs prior 28 days")
+	measure 'MQL rate, 28-day caption' = IF(ISBLANK([MQL rate, 28-day change]), IF(ISFILTERED(dim_date), "no earlier data to compare with", "all dates in view · pick months to compare"), FORMAT(ROUND([MQL rate, 28-day change] * 100, 1), "+0.0;-0.0;+0.0") & " pts" & " vs prior 28 days")
 		lineageTag: b9e35549-30cc-5267-85c6-ebd271b68d83
 		displayFolder: 10 Captions
 
@@ -1101,13 +1127,15 @@ table _Measures
 		displayFolder: 11 Last 28 days
 
 	/// Paid spend, last 28 days against the 28 days before.
-	measure 'Paid spend, 28-day change' = DIVIDE([Paid spend, last 28 days] - [Paid spend, prior 28 days], ABS([Paid spend, prior 28 days]))
+	measure 'Paid spend, 28-day change' =
+			VAR vChange = DIVIDE([Paid spend, last 28 days] - [Paid spend, prior 28 days], ABS([Paid spend, prior 28 days]))
+			RETURN IF(NOT ISBLANK(vChange), ROUND(vChange, 3))
 		formatString: +0.0%;-0.0%;0.0%
 		lineageTag: fdc74952-4fb9-5b31-b18b-58e6f746c1fc
 		displayFolder: 11 Last 28 days
 
 	/// Tile caption for Paid spend, last 28 days.
-	measure 'Paid spend, 28-day caption' = IF(ISBLANK([Paid spend, 28-day change]), "all dates in view · pick months to compare", FORMAT([Paid spend, 28-day change], "+0%;-0%;0%") & " vs prior 28 days")
+	measure 'Paid spend, 28-day caption' = IF(ISBLANK([Paid spend, 28-day change]), IF(ISFILTERED(dim_date), "no earlier data to compare with", "all dates in view · pick months to compare"), FORMAT(ROUND([Paid spend, 28-day change], 2), "+0%;-0%;+0%") & " vs prior 28 days")
 		lineageTag: 54785766-e86a-5619-b4a1-524938eb2856
 		displayFolder: 10 Captions
 
@@ -1124,13 +1152,15 @@ table _Measures
 		displayFolder: 11 Last 28 days
 
 	/// Paid leads, last 28 days against the 28 days before.
-	measure 'Paid leads, 28-day change' = DIVIDE([Paid leads, last 28 days] - [Paid leads, prior 28 days], ABS([Paid leads, prior 28 days]))
+	measure 'Paid leads, 28-day change' =
+			VAR vChange = DIVIDE([Paid leads, last 28 days] - [Paid leads, prior 28 days], ABS([Paid leads, prior 28 days]))
+			RETURN IF(NOT ISBLANK(vChange), ROUND(vChange, 3))
 		formatString: +0.0%;-0.0%;0.0%
 		lineageTag: 8770493e-b8bc-5a39-834b-929bc1b664e8
 		displayFolder: 11 Last 28 days
 
 	/// Tile caption for Paid leads, last 28 days.
-	measure 'Paid leads, 28-day caption' = IF(ISBLANK([Paid leads, 28-day change]), "all dates in view · pick months to compare", FORMAT([Paid leads, 28-day change], "+0%;-0%;0%") & " vs prior 28 days")
+	measure 'Paid leads, 28-day caption' = IF(ISBLANK([Paid leads, 28-day change]), IF(ISFILTERED(dim_date), "no earlier data to compare with", "all dates in view · pick months to compare"), FORMAT(ROUND([Paid leads, 28-day change], 2), "+0%;-0%;+0%") & " vs prior 28 days")
 		lineageTag: f6910df8-5675-5a3a-a614-af22c98a9849
 		displayFolder: 10 Captions
 
@@ -1147,13 +1177,15 @@ table _Measures
 		displayFolder: 11 Last 28 days
 
 	/// Paid MQLs, last 28 days against the 28 days before.
-	measure 'Paid MQLs, 28-day change' = DIVIDE([Paid MQLs, last 28 days] - [Paid MQLs, prior 28 days], ABS([Paid MQLs, prior 28 days]))
+	measure 'Paid MQLs, 28-day change' =
+			VAR vChange = DIVIDE([Paid MQLs, last 28 days] - [Paid MQLs, prior 28 days], ABS([Paid MQLs, prior 28 days]))
+			RETURN IF(NOT ISBLANK(vChange), ROUND(vChange, 3))
 		formatString: +0.0%;-0.0%;0.0%
 		lineageTag: ea6d2547-928e-57b2-ae72-e6446e8400a9
 		displayFolder: 11 Last 28 days
 
 	/// Tile caption for Paid MQLs, last 28 days.
-	measure 'Paid MQLs, 28-day caption' = IF(ISBLANK([Paid MQLs, 28-day change]), "all dates in view · pick months to compare", FORMAT([Paid MQLs, 28-day change], "+0%;-0%;0%") & " vs prior 28 days")
+	measure 'Paid MQLs, 28-day caption' = IF(ISBLANK([Paid MQLs, 28-day change]), IF(ISFILTERED(dim_date), "no earlier data to compare with", "all dates in view · pick months to compare"), FORMAT(ROUND([Paid MQLs, 28-day change], 2), "+0%;-0%;+0%") & " vs prior 28 days")
 		lineageTag: 937b78f3-039c-516c-a801-386024974f2c
 		displayFolder: 10 Captions
 
@@ -1170,13 +1202,15 @@ table _Measures
 		displayFolder: 11 Last 28 days
 
 	/// Cost per lead, last 28 days against the 28 days before.
-	measure 'Cost per lead, 28-day change' = DIVIDE([Cost per lead, last 28 days] - [Cost per lead, prior 28 days], ABS([Cost per lead, prior 28 days]))
+	measure 'Cost per lead, 28-day change' =
+			VAR vChange = DIVIDE([Cost per lead, last 28 days] - [Cost per lead, prior 28 days], ABS([Cost per lead, prior 28 days]))
+			RETURN IF(NOT ISBLANK(vChange), ROUND(vChange, 3))
 		formatString: +0.0%;-0.0%;0.0%
 		lineageTag: bb01c6bb-3dd3-5785-a39c-406e998ebab3
 		displayFolder: 11 Last 28 days
 
 	/// Tile caption for Cost per lead, last 28 days.
-	measure 'Cost per lead, 28-day caption' = IF(ISBLANK([Cost per lead, 28-day change]), "all dates in view · pick months to compare", FORMAT([Cost per lead, 28-day change], "+0%;-0%;0%") & " vs prior 28 days")
+	measure 'Cost per lead, 28-day caption' = IF(ISBLANK([Cost per lead, 28-day change]), IF(ISFILTERED(dim_date), "no earlier data to compare with", "all dates in view · pick months to compare"), FORMAT(ROUND([Cost per lead, 28-day change], 2), "+0%;-0%;+0%") & " vs prior 28 days")
 		lineageTag: cd323584-52e1-50e0-a8cc-c6731bbf8b04
 		displayFolder: 10 Captions
 
@@ -1193,13 +1227,13 @@ table _Measures
 		displayFolder: 11 Last 28 days
 
 	/// Paid MQL rate, last 28 days against the 28 days before.
-	measure 'Paid MQL rate, 28-day change' = IF(NOT ISBLANK([Paid MQL rate, prior 28 days]), [Paid MQL rate, last 28 days] - [Paid MQL rate, prior 28 days])
+	measure 'Paid MQL rate, 28-day change' = IF(NOT ISBLANK([Paid MQL rate, prior 28 days]), ROUND([Paid MQL rate, last 28 days] - [Paid MQL rate, prior 28 days], 4))
 		formatString: +0.00%;-0.00%;0.00%
 		lineageTag: 5633a489-51de-5984-9180-1443788e883f
 		displayFolder: 11 Last 28 days
 
 	/// Tile caption for Paid MQL rate, last 28 days.
-	measure 'Paid MQL rate, 28-day caption' = IF(ISBLANK([Paid MQL rate, 28-day change]), "all dates in view · pick months to compare", FORMAT([Paid MQL rate, 28-day change] * 100, "+0.0;-0.0;0.0") & " pts" & " vs prior 28 days")
+	measure 'Paid MQL rate, 28-day caption' = IF(ISBLANK([Paid MQL rate, 28-day change]), IF(ISFILTERED(dim_date), "no earlier data to compare with", "all dates in view · pick months to compare"), FORMAT(ROUND([Paid MQL rate, 28-day change] * 100, 1), "+0.0;-0.0;+0.0") & " pts" & " vs prior 28 days")
 		lineageTag: 2e2e8243-0959-5ae9-ad7e-7dc50e116447
 		displayFolder: 10 Captions
 
@@ -1216,13 +1250,13 @@ table _Measures
 		displayFolder: 11 Last 28 days
 
 	/// Bounce rate, last 28 days against the 28 days before.
-	measure 'Bounce rate, 28-day change' = IF(NOT ISBLANK([Bounce rate, prior 28 days]), [Bounce rate, last 28 days] - [Bounce rate, prior 28 days])
+	measure 'Bounce rate, 28-day change' = IF(NOT ISBLANK([Bounce rate, prior 28 days]), ROUND([Bounce rate, last 28 days] - [Bounce rate, prior 28 days], 4))
 		formatString: +0.00%;-0.00%;0.00%
 		lineageTag: 8d58c498-94ec-5451-8639-39a9a9787383
 		displayFolder: 11 Last 28 days
 
 	/// Tile caption for Bounce rate, last 28 days.
-	measure 'Bounce rate, 28-day caption' = IF(ISBLANK([Bounce rate, 28-day change]), "all dates in view · pick months to compare", FORMAT([Bounce rate, 28-day change] * 100, "+0.0;-0.0;0.0") & " pts" & " vs prior 28 days")
+	measure 'Bounce rate, 28-day caption' = IF(ISBLANK([Bounce rate, 28-day change]), IF(ISFILTERED(dim_date), "no earlier data to compare with", "all dates in view · pick months to compare"), FORMAT(ROUND([Bounce rate, 28-day change] * 100, 1), "+0.0;-0.0;+0.0") & " pts" & " vs prior 28 days")
 		lineageTag: 4deda3aa-8af5-5c81-8497-a0d2593d630a
 		displayFolder: 10 Captions
 
@@ -1239,13 +1273,15 @@ table _Measures
 		displayFolder: 11 Last 28 days
 
 	/// Calls booked, last 28 days against the 28 days before.
-	measure 'Calls booked, 28-day change' = DIVIDE([Calls booked, last 28 days] - [Calls booked, prior 28 days], ABS([Calls booked, prior 28 days]))
+	measure 'Calls booked, 28-day change' =
+			VAR vChange = DIVIDE([Calls booked, last 28 days] - [Calls booked, prior 28 days], ABS([Calls booked, prior 28 days]))
+			RETURN IF(NOT ISBLANK(vChange), ROUND(vChange, 3))
 		formatString: +0.0%;-0.0%;0.0%
 		lineageTag: 790145ec-fc69-567f-92bb-b1d197fe0911
 		displayFolder: 11 Last 28 days
 
 	/// Tile caption for Calls booked, last 28 days.
-	measure 'Calls booked, 28-day caption' = IF(ISBLANK([Calls booked, 28-day change]), "all dates in view · pick months to compare", FORMAT([Calls booked, 28-day change], "+0%;-0%;0%") & " vs prior 28 days")
+	measure 'Calls booked, 28-day caption' = IF(ISBLANK([Calls booked, 28-day change]), IF(ISFILTERED(dim_date), "no earlier data to compare with", "all dates in view · pick months to compare"), FORMAT(ROUND([Calls booked, 28-day change], 2), "+0%;-0%;+0%") & " vs prior 28 days")
 		lineageTag: 35ac397e-cf7a-5abc-a8a0-2d397a0b0fa9
 		displayFolder: 10 Captions
 

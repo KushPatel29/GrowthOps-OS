@@ -3,7 +3,7 @@
 **Marketing measurement, revenue reconciliation and lifecycle automation for a creator-led B2B business.**
 
 [![GrowthOps checks](https://github.com/KushPatel29/GrowthOps-OS/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/KushPatel29/GrowthOps-OS/actions/workflows/ci.yml)
-[![tests](https://img.shields.io/badge/tests-384%20passing-brightgreen)](tests)
+[![tests](https://img.shields.io/badge/tests-550%20passing-brightgreen)](tests)
 [![guardrail eval](https://img.shields.io/badge/guardrail%20eval-30%2F30-brightgreen)](evals/narrative_guardrail_cases.json)
 
 [**Live dashboard**](https://growthops-os.streamlit.app/) · [Power BI and Excel](docs/power-bi-handoff.md) · [Case study](docs/case-study.md) · [Metric catalog](docs/metric-catalog.md) · [API](docs/api-contracts.md)
@@ -55,7 +55,7 @@ if it ever stops doing so.
 | SQL modelling and analytics engineering: dbt staging → intermediate → marts with data tests | [`warehouse/dbt`](warehouse/dbt), verified against the Python reference in CI |
 | BI delivery: a 7-page Power BI report (211 described measures, SVG KPI tiles, a filter panel, a written summary computed in DAX) generated from a spec and verified in Desktop, and an Excel workbook driven by one window control with a campaign scorecard and 14 zero-difference audit checks; both read the same governed snapshot and agree to the cent | [Power BI and Excel](docs/power-bi-handoff.md), [`growthops/bi`](growthops/bi), [`export_excel.py`](growthops/export_excel.py), [measure reference](docs/power-bi-measures.md) |
 | Lifecycle automation: payment → CRM → access, idempotency, retries, dead letters, operator replay | [`workflow.py`](growthops/workflow.py), [`api.py`](growthops/api.py) |
-| Keyless, local AI: ask-your-data answers from governed metrics or cited definitions using BM25, with local MiniLM added when its verified model is preloaded. It reads the period, ad platform, campaign and measure a question names ("what did a lead cost on Google last month", "Meta vs Google CPL between July and August", "refund rate since the start of June", "spend in Q2"), refuses untracked platforms, impossible dates and periods the data does not cover, says so when an answer cannot be cut by the period asked for, offers themed suggested questions and follow-ups, and is held to a 144-question contract that checks the details it read as well as the answer it chose, with zero wrong answers; no language model, no API key | [`ask_data.py`](growthops/ask_data.py), [`retrieval.py`](growthops/retrieval.py), [`evals/ask_questions.json`](evals/ask_questions.json) |
+| Keyless, local AI: ask-your-data answers from governed metrics or cited definitions using BM25, with local MiniLM added when its verified model is preloaded. It reads the period, ad platform, campaign and measure a question names ("what did a lead cost on Google last month", "Meta vs Google CPL between July and August", "refund rate since the start of June", "spend in Q2", "compare net cash in July and August"), refuses untracked platforms, impossible dates and periods the data does not cover, says so when an answer cannot be cut by the period asked for, offers themed suggested questions and follow-ups, and is held to a 152-question contract that checks the details it read, the answer it chose and, for every period and platform answer, that the figure it states equals the mart, with zero wrong answers; no language model, no API key | [`ask_data.py`](growthops/ask_data.py), [`retrieval.py`](growthops/retrieval.py), [`evals/ask_questions.json`](evals/ask_questions.json) |
 | Evidence-bound narrative: a validator rejects invented numbers, dates or causal claims in any draft; 30-case eval set | [`narrator.py`](growthops/narrator.py), [`evals/`](evals/narrative_guardrail_cases.json) |
 | Production operation: fail-fast config, API keys, replay-safe signed webhooks, readiness and Prometheus metrics, migrations, verified backups, a worker for retries, alerts and the daily update, provider adapters (HubSpot, signed webhooks), non-root read-only containers | [runbook](docs/production-runbook.md), [security](docs/security.md), [`worker.py`](growthops/worker.py), [`adapters.py`](growthops/adapters.py) |
 
@@ -150,14 +150,16 @@ runs keyword-only and says so.
 ## How it is kept honest
 
 - **Nothing is hand-typed.** The case study, the whole Power BI project (model, measures, pages, theme) and the
-  Excel workbook are generated from the code; CI fails if any committed copy drifts.
+  Excel workbook are generated from the code; CI fails if any committed copy drifts. The headline figures in this
+  README are recomputed by a test, so they cannot go stale either.
 - **Every total ties out.** All attribution models sum to net cash; both revenue bridges have zero residual;
   the Excel audit sheet's 14 checks all equal zero; dbt marts match the Python reference; the workbook's
   calculated values equal the same figures computed in Python, and Power BI's equal both.
 - **Ground truth.** The generator records the incidents it plants (`incidents` table); tests assert the
   detector finds each one with the right root cause.
 - **No model in the loop.** Ask-your-data retrieves; it never generates. Numbers come from governed functions,
-  definitions from the committed metric catalog, and the question contract fails CI on any wrong answer.
+  definitions from the committed metric catalog, and the question contract fails CI on any wrong answer, including
+  a right answer that states the wrong figure or the wrong period.
 - **No causal overreach.** Drivers are arithmetic shares of a change; recommendations are phrased as checks.
   Attribution is descriptive, not incremental.
 

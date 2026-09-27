@@ -160,221 +160,221 @@ Generated from `growthops/bi/model_spec.py` by `python -m growthops.bi.build_pbi
 | Measure | Definition | Format | DAX |
 |---|---|---|---|
 | Net cash prior period | Net cash over the same number of days immediately before the dates in view. | `\$#,0` | `VAR vStart = MIN(dim_date[date]) VAR vEnd = MAX(dim_date[date]) VAR vDays = INT(vEnd - vStart) + 1 RETURN CALCULATE([Net cash], REMOVEFILTERS(dim_date), dim_date[date] >= vStart - vDays, dim_date[date] < vStart)` |
-| Net cash vs prior | Net cash against the period before. | `+0.0%;-0.0%;0.0%` | `DIVIDE([Net cash] - [Net cash prior period], ABS([Net cash prior period]))` |
+| Net cash vs prior | Net cash against the period before. | `+0.0%;-0.0%;0.0%` | `VAR vChange = DIVIDE([Net cash] - [Net cash prior period], ABS([Net cash prior period])) RETURN IF(NOT ISBLANK(vChange), ROUND(vChange, 3))` |
 
 ## 10 Captions
 
 | Measure | Definition | Format | DAX |
 |---|---|---|---|
-| Net cash caption | Tile caption for Net cash. | `text` | `IF(ISBLANK([Net cash vs prior]), "all dates in view · pick months to compare", FORMAT([Net cash vs prior], "+0%;-0%;0%") & " vs prior period")` |
+| Net cash caption | Tile caption for Net cash. | `text` | `IF(ISBLANK([Net cash vs prior]), IF(ISFILTERED(dim_date), "no earlier data to compare with", "all dates in view · pick months to compare"), FORMAT(ROUND([Net cash vs prior], 2), "+0%;-0%;+0%") & " vs prior period")` |
 
 ## 09 Windows
 
 | Measure | Definition | Format | DAX |
 |---|---|---|---|
 | Ad spend prior period | Ad spend over the same number of days immediately before the dates in view. | `\$#,0` | `VAR vStart = MIN(dim_date[date]) VAR vEnd = MAX(dim_date[date]) VAR vDays = INT(vEnd - vStart) + 1 RETURN CALCULATE([Ad spend], REMOVEFILTERS(dim_date), dim_date[date] >= vStart - vDays, dim_date[date] < vStart)` |
-| Ad spend vs prior | Ad spend against the period before. | `+0.0%;-0.0%;0.0%` | `DIVIDE([Ad spend] - [Ad spend prior period], ABS([Ad spend prior period]))` |
+| Ad spend vs prior | Ad spend against the period before. | `+0.0%;-0.0%;0.0%` | `VAR vChange = DIVIDE([Ad spend] - [Ad spend prior period], ABS([Ad spend prior period])) RETURN IF(NOT ISBLANK(vChange), ROUND(vChange, 3))` |
 
 ## 10 Captions
 
 | Measure | Definition | Format | DAX |
 |---|---|---|---|
-| Ad spend caption | Tile caption for Ad spend. | `text` | `IF(ISBLANK([Ad spend vs prior]), "all dates in view · pick months to compare", FORMAT([Ad spend vs prior], "+0%;-0%;0%") & " vs prior period")` |
+| Ad spend caption | Tile caption for Ad spend. | `text` | `IF(ISBLANK([Ad spend vs prior]), IF(ISFILTERED(dim_date), "no earlier data to compare with", "all dates in view · pick months to compare"), FORMAT(ROUND([Ad spend vs prior], 2), "+0%;-0%;+0%") & " vs prior period")` |
 
 ## 09 Windows
 
 | Measure | Definition | Format | DAX |
 |---|---|---|---|
 | Leads prior period | Leads over the same number of days immediately before the dates in view. | `#,0` | `VAR vStart = MIN(dim_date[date]) VAR vEnd = MAX(dim_date[date]) VAR vDays = INT(vEnd - vStart) + 1 RETURN CALCULATE([Leads], REMOVEFILTERS(dim_date), dim_date[date] >= vStart - vDays, dim_date[date] < vStart)` |
-| Leads vs prior | Leads against the period before. | `+0.0%;-0.0%;0.0%` | `DIVIDE([Leads] - [Leads prior period], ABS([Leads prior period]))` |
+| Leads vs prior | Leads against the period before. | `+0.0%;-0.0%;0.0%` | `VAR vChange = DIVIDE([Leads] - [Leads prior period], ABS([Leads prior period])) RETURN IF(NOT ISBLANK(vChange), ROUND(vChange, 3))` |
 
 ## 10 Captions
 
 | Measure | Definition | Format | DAX |
 |---|---|---|---|
-| Leads caption | Tile caption for Leads. | `text` | `IF(ISBLANK([Leads vs prior]), "all dates in view · pick months to compare", FORMAT([Leads vs prior], "+0%;-0%;0%") & " vs prior period")` |
+| Leads caption | Tile caption for Leads. | `text` | `IF(ISBLANK([Leads vs prior]), IF(ISFILTERED(dim_date), "no earlier data to compare with", "all dates in view · pick months to compare"), FORMAT(ROUND([Leads vs prior], 2), "+0%;-0%;+0%") & " vs prior period")` |
 
 ## 09 Windows
 
 | Measure | Definition | Format | DAX |
 |---|---|---|---|
 | MQL rate prior period | MQL rate over the same number of days immediately before the dates in view. | `0.0%` | `VAR vStart = MIN(dim_date[date]) VAR vEnd = MAX(dim_date[date]) VAR vDays = INT(vEnd - vStart) + 1 RETURN CALCULATE([MQL rate], REMOVEFILTERS(dim_date), dim_date[date] >= vStart - vDays, dim_date[date] < vStart)` |
-| MQL rate vs prior | MQL rate against the period before (points). | `+0.00%;-0.00%;0.00%` | `IF(NOT ISBLANK([MQL rate prior period]), [MQL rate] - [MQL rate prior period])` |
+| MQL rate vs prior | MQL rate against the period before (points). | `+0.00%;-0.00%;0.00%` | `IF(NOT ISBLANK([MQL rate prior period]), ROUND([MQL rate] - [MQL rate prior period], 4))` |
 
 ## 10 Captions
 
 | Measure | Definition | Format | DAX |
 |---|---|---|---|
-| MQL rate caption | Tile caption for MQL rate. | `text` | `IF(ISBLANK([MQL rate vs prior]), "all dates in view · pick months to compare", FORMAT([MQL rate vs prior] * 100, "+0.0;-0.0;0.0") & " pts" & " vs prior period")` |
+| MQL rate caption | Tile caption for MQL rate. | `text` | `IF(ISBLANK([MQL rate vs prior]), IF(ISFILTERED(dim_date), "no earlier data to compare with", "all dates in view · pick months to compare"), FORMAT(ROUND([MQL rate vs prior] * 100, 1), "+0.0;-0.0;+0.0") & " pts" & " vs prior period")` |
 
 ## 09 Windows
 
 | Measure | Definition | Format | DAX |
 |---|---|---|---|
 | Paid spend prior period | Paid spend over the same number of days immediately before the dates in view. | `\$#,0` | `VAR vStart = MIN(dim_date[date]) VAR vEnd = MAX(dim_date[date]) VAR vDays = INT(vEnd - vStart) + 1 RETURN CALCULATE([Paid spend], REMOVEFILTERS(dim_date), dim_date[date] >= vStart - vDays, dim_date[date] < vStart)` |
-| Paid spend vs prior | Paid spend against the period before. | `+0.0%;-0.0%;0.0%` | `DIVIDE([Paid spend] - [Paid spend prior period], ABS([Paid spend prior period]))` |
+| Paid spend vs prior | Paid spend against the period before. | `+0.0%;-0.0%;0.0%` | `VAR vChange = DIVIDE([Paid spend] - [Paid spend prior period], ABS([Paid spend prior period])) RETURN IF(NOT ISBLANK(vChange), ROUND(vChange, 3))` |
 
 ## 10 Captions
 
 | Measure | Definition | Format | DAX |
 |---|---|---|---|
-| Paid spend caption | Tile caption for Paid spend. | `text` | `IF(ISBLANK([Paid spend vs prior]), "all dates in view · pick months to compare", FORMAT([Paid spend vs prior], "+0%;-0%;0%") & " vs prior period")` |
+| Paid spend caption | Tile caption for Paid spend. | `text` | `IF(ISBLANK([Paid spend vs prior]), IF(ISFILTERED(dim_date), "no earlier data to compare with", "all dates in view · pick months to compare"), FORMAT(ROUND([Paid spend vs prior], 2), "+0%;-0%;+0%") & " vs prior period")` |
 
 ## 09 Windows
 
 | Measure | Definition | Format | DAX |
 |---|---|---|---|
 | Cost per lead prior period | Cost per lead over the same number of days immediately before the dates in view. | `\$#,0.00` | `VAR vStart = MIN(dim_date[date]) VAR vEnd = MAX(dim_date[date]) VAR vDays = INT(vEnd - vStart) + 1 RETURN CALCULATE([Cost per lead], REMOVEFILTERS(dim_date), dim_date[date] >= vStart - vDays, dim_date[date] < vStart)` |
-| Cost per lead vs prior | Cost per lead against the period before. | `+0.0%;-0.0%;0.0%` | `DIVIDE([Cost per lead] - [Cost per lead prior period], ABS([Cost per lead prior period]))` |
+| Cost per lead vs prior | Cost per lead against the period before. | `+0.0%;-0.0%;0.0%` | `VAR vChange = DIVIDE([Cost per lead] - [Cost per lead prior period], ABS([Cost per lead prior period])) RETURN IF(NOT ISBLANK(vChange), ROUND(vChange, 3))` |
 
 ## 10 Captions
 
 | Measure | Definition | Format | DAX |
 |---|---|---|---|
-| Cost per lead caption | Tile caption for Cost per lead. | `text` | `IF(ISBLANK([Cost per lead vs prior]), "all dates in view · pick months to compare", FORMAT([Cost per lead vs prior], "+0%;-0%;0%") & " vs prior period")` |
+| Cost per lead caption | Tile caption for Cost per lead. | `text` | `IF(ISBLANK([Cost per lead vs prior]), IF(ISFILTERED(dim_date), "no earlier data to compare with", "all dates in view · pick months to compare"), FORMAT(ROUND([Cost per lead vs prior], 2), "+0%;-0%;+0%") & " vs prior period")` |
 
 ## 09 Windows
 
 | Measure | Definition | Format | DAX |
 |---|---|---|---|
 | Cost per booked call prior period | Cost per booked call over the same number of days immediately before the dates in view. | `\$#,0.00` | `VAR vStart = MIN(dim_date[date]) VAR vEnd = MAX(dim_date[date]) VAR vDays = INT(vEnd - vStart) + 1 RETURN CALCULATE([Cost per booked call], REMOVEFILTERS(dim_date), dim_date[date] >= vStart - vDays, dim_date[date] < vStart)` |
-| Cost per booked call vs prior | Cost per booked call against the period before. | `+0.0%;-0.0%;0.0%` | `DIVIDE([Cost per booked call] - [Cost per booked call prior period], ABS([Cost per booked call prior period]))` |
+| Cost per booked call vs prior | Cost per booked call against the period before. | `+0.0%;-0.0%;0.0%` | `VAR vChange = DIVIDE([Cost per booked call] - [Cost per booked call prior period], ABS([Cost per booked call prior period])) RETURN IF(NOT ISBLANK(vChange), ROUND(vChange, 3))` |
 
 ## 10 Captions
 
 | Measure | Definition | Format | DAX |
 |---|---|---|---|
-| Cost per booked call caption | Tile caption for Cost per booked call. | `text` | `IF(ISBLANK([Cost per booked call vs prior]), "all dates in view · pick months to compare", FORMAT([Cost per booked call vs prior], "+0%;-0%;0%") & " vs prior period")` |
+| Cost per booked call caption | Tile caption for Cost per booked call. | `text` | `IF(ISBLANK([Cost per booked call vs prior]), IF(ISFILTERED(dim_date), "no earlier data to compare with", "all dates in view · pick months to compare"), FORMAT(ROUND([Cost per booked call vs prior], 2), "+0%;-0%;+0%") & " vs prior period")` |
 
 ## 09 Windows
 
 | Measure | Definition | Format | DAX |
 |---|---|---|---|
 | CTR prior period | CTR over the same number of days immediately before the dates in view. | `0.00%` | `VAR vStart = MIN(dim_date[date]) VAR vEnd = MAX(dim_date[date]) VAR vDays = INT(vEnd - vStart) + 1 RETURN CALCULATE([CTR], REMOVEFILTERS(dim_date), dim_date[date] >= vStart - vDays, dim_date[date] < vStart)` |
-| CTR vs prior | CTR against the period before (points). | `+0.00%;-0.00%;0.00%` | `IF(NOT ISBLANK([CTR prior period]), [CTR] - [CTR prior period])` |
+| CTR vs prior | CTR against the period before (points). | `+0.00%;-0.00%;0.00%` | `IF(NOT ISBLANK([CTR prior period]), ROUND([CTR] - [CTR prior period], 4))` |
 
 ## 10 Captions
 
 | Measure | Definition | Format | DAX |
 |---|---|---|---|
-| CTR caption | Tile caption for CTR. | `text` | `IF(ISBLANK([CTR vs prior]), "all dates in view · pick months to compare", FORMAT([CTR vs prior] * 100, "+0.0;-0.0;0.0") & " pts" & " vs prior period")` |
+| CTR caption | Tile caption for CTR. | `text` | `IF(ISBLANK([CTR vs prior]), IF(ISFILTERED(dim_date), "no earlier data to compare with", "all dates in view · pick months to compare"), FORMAT(ROUND([CTR vs prior] * 100, 1), "+0.0;-0.0;+0.0") & " pts" & " vs prior period")` |
 
 ## 09 Windows
 
 | Measure | Definition | Format | DAX |
 |---|---|---|---|
 | Paid MQL rate prior period | Paid MQL rate over the same number of days immediately before the dates in view. | `0.0%` | `VAR vStart = MIN(dim_date[date]) VAR vEnd = MAX(dim_date[date]) VAR vDays = INT(vEnd - vStart) + 1 RETURN CALCULATE([Paid MQL rate], REMOVEFILTERS(dim_date), dim_date[date] >= vStart - vDays, dim_date[date] < vStart)` |
-| Paid MQL rate vs prior | Paid MQL rate against the period before (points). | `+0.00%;-0.00%;0.00%` | `IF(NOT ISBLANK([Paid MQL rate prior period]), [Paid MQL rate] - [Paid MQL rate prior period])` |
+| Paid MQL rate vs prior | Paid MQL rate against the period before (points). | `+0.00%;-0.00%;0.00%` | `IF(NOT ISBLANK([Paid MQL rate prior period]), ROUND([Paid MQL rate] - [Paid MQL rate prior period], 4))` |
 
 ## 10 Captions
 
 | Measure | Definition | Format | DAX |
 |---|---|---|---|
-| Paid MQL rate caption | Tile caption for Paid MQL rate. | `text` | `IF(ISBLANK([Paid MQL rate vs prior]), "all dates in view · pick months to compare", FORMAT([Paid MQL rate vs prior] * 100, "+0.0;-0.0;0.0") & " pts" & " vs prior period")` |
+| Paid MQL rate caption | Tile caption for Paid MQL rate. | `text` | `IF(ISBLANK([Paid MQL rate vs prior]), IF(ISFILTERED(dim_date), "no earlier data to compare with", "all dates in view · pick months to compare"), FORMAT(ROUND([Paid MQL rate vs prior] * 100, 1), "+0.0;-0.0;+0.0") & " pts" & " vs prior period")` |
 
 ## 09 Windows
 
 | Measure | Definition | Format | DAX |
 |---|---|---|---|
 | Calls booked prior period | Calls booked over the same number of days immediately before the dates in view. | `#,0` | `VAR vStart = MIN(dim_date[date]) VAR vEnd = MAX(dim_date[date]) VAR vDays = INT(vEnd - vStart) + 1 RETURN CALCULATE([Calls booked], REMOVEFILTERS(dim_date), dim_date[date] >= vStart - vDays, dim_date[date] < vStart)` |
-| Calls booked vs prior | Calls booked against the period before. | `+0.0%;-0.0%;0.0%` | `DIVIDE([Calls booked] - [Calls booked prior period], ABS([Calls booked prior period]))` |
+| Calls booked vs prior | Calls booked against the period before. | `+0.0%;-0.0%;0.0%` | `VAR vChange = DIVIDE([Calls booked] - [Calls booked prior period], ABS([Calls booked prior period])) RETURN IF(NOT ISBLANK(vChange), ROUND(vChange, 3))` |
 
 ## 10 Captions
 
 | Measure | Definition | Format | DAX |
 |---|---|---|---|
-| Calls booked caption | Tile caption for Calls booked. | `text` | `IF(ISBLANK([Calls booked vs prior]), "all dates in view · pick months to compare", FORMAT([Calls booked vs prior], "+0%;-0%;0%") & " vs prior period")` |
+| Calls booked caption | Tile caption for Calls booked. | `text` | `IF(ISBLANK([Calls booked vs prior]), IF(ISFILTERED(dim_date), "no earlier data to compare with", "all dates in view · pick months to compare"), FORMAT(ROUND([Calls booked vs prior], 2), "+0%;-0%;+0%") & " vs prior period")` |
 
 ## 09 Windows
 
 | Measure | Definition | Format | DAX |
 |---|---|---|---|
 | Deals won prior period | Deals won over the same number of days immediately before the dates in view. | `#,0` | `VAR vStart = MIN(dim_date[date]) VAR vEnd = MAX(dim_date[date]) VAR vDays = INT(vEnd - vStart) + 1 RETURN CALCULATE([Deals won], REMOVEFILTERS(dim_date), dim_date[date] >= vStart - vDays, dim_date[date] < vStart)` |
-| Deals won vs prior | Deals won against the period before. | `+0.0%;-0.0%;0.0%` | `DIVIDE([Deals won] - [Deals won prior period], ABS([Deals won prior period]))` |
+| Deals won vs prior | Deals won against the period before. | `+0.0%;-0.0%;0.0%` | `VAR vChange = DIVIDE([Deals won] - [Deals won prior period], ABS([Deals won prior period])) RETURN IF(NOT ISBLANK(vChange), ROUND(vChange, 3))` |
 
 ## 10 Captions
 
 | Measure | Definition | Format | DAX |
 |---|---|---|---|
-| Deals won caption | Tile caption for Deals won. | `text` | `IF(ISBLANK([Deals won vs prior]), "all dates in view · pick months to compare", FORMAT([Deals won vs prior], "+0%;-0%;0%") & " vs prior period")` |
+| Deals won caption | Tile caption for Deals won. | `text` | `IF(ISBLANK([Deals won vs prior]), IF(ISFILTERED(dim_date), "no earlier data to compare with", "all dates in view · pick months to compare"), FORMAT(ROUND([Deals won vs prior], 2), "+0%;-0%;+0%") & " vs prior period")` |
 
 ## 09 Windows
 
 | Measure | Definition | Format | DAX |
 |---|---|---|---|
 | Attributed net cash prior period | Attributed net cash over the same number of days immediately before the dates in view. | `\$#,0` | `VAR vStart = MIN(dim_date[date]) VAR vEnd = MAX(dim_date[date]) VAR vDays = INT(vEnd - vStart) + 1 RETURN CALCULATE([Attributed net cash], REMOVEFILTERS(dim_date), dim_date[date] >= vStart - vDays, dim_date[date] < vStart)` |
-| Attributed net cash vs prior | Attributed net cash against the period before. | `+0.0%;-0.0%;0.0%` | `DIVIDE([Attributed net cash] - [Attributed net cash prior period], ABS([Attributed net cash prior period]))` |
+| Attributed net cash vs prior | Attributed net cash against the period before. | `+0.0%;-0.0%;0.0%` | `VAR vChange = DIVIDE([Attributed net cash] - [Attributed net cash prior period], ABS([Attributed net cash prior period])) RETURN IF(NOT ISBLANK(vChange), ROUND(vChange, 3))` |
 
 ## 10 Captions
 
 | Measure | Definition | Format | DAX |
 |---|---|---|---|
-| Attributed net cash caption | Tile caption for Attributed net cash. | `text` | `IF(ISBLANK([Attributed net cash vs prior]), "all dates in view · pick months to compare", FORMAT([Attributed net cash vs prior], "+0%;-0%;0%") & " vs prior period")` |
+| Attributed net cash caption | Tile caption for Attributed net cash. | `text` | `IF(ISBLANK([Attributed net cash vs prior]), IF(ISFILTERED(dim_date), "no earlier data to compare with", "all dates in view · pick months to compare"), FORMAT(ROUND([Attributed net cash vs prior], 2), "+0%;-0%;+0%") & " vs prior period")` |
 
 ## 09 Windows
 
 | Measure | Definition | Format | DAX |
 |---|---|---|---|
 | Cash ROAS prior period | Cash ROAS over the same number of days immediately before the dates in view. | `0.00"x"` | `VAR vStart = MIN(dim_date[date]) VAR vEnd = MAX(dim_date[date]) VAR vDays = INT(vEnd - vStart) + 1 RETURN CALCULATE([Cash ROAS], REMOVEFILTERS(dim_date), dim_date[date] >= vStart - vDays, dim_date[date] < vStart)` |
-| Cash ROAS vs prior | Cash ROAS against the period before. | `+0.00"x";-0.00"x";0.00"x"` | `IF(NOT ISBLANK([Cash ROAS prior period]), [Cash ROAS] - [Cash ROAS prior period])` |
+| Cash ROAS vs prior | Cash ROAS against the period before. | `+0.00"x";-0.00"x";0.00"x"` | `IF(NOT ISBLANK([Cash ROAS prior period]), ROUND([Cash ROAS] - [Cash ROAS prior period], 2))` |
 
 ## 10 Captions
 
 | Measure | Definition | Format | DAX |
 |---|---|---|---|
-| Cash ROAS caption | Tile caption for Cash ROAS. | `text` | `IF(ISBLANK([Cash ROAS vs prior]), "all dates in view · pick months to compare", FORMAT([Cash ROAS vs prior], "+0.00;-0.00;0.00") & "x" & " vs prior period")` |
+| Cash ROAS caption | Tile caption for Cash ROAS. | `text` | `IF(ISBLANK([Cash ROAS vs prior]), IF(ISFILTERED(dim_date), "no earlier data to compare with", "all dates in view · pick months to compare"), FORMAT([Cash ROAS vs prior], "+0.00;-0.00;+0.00") & "x" & " vs prior period")` |
 
 ## 09 Windows
 
 | Measure | Definition | Format | DAX |
 |---|---|---|---|
 | Emails delivered prior period | Emails delivered over the same number of days immediately before the dates in view. | `#,0` | `VAR vStart = MIN(dim_date[date]) VAR vEnd = MAX(dim_date[date]) VAR vDays = INT(vEnd - vStart) + 1 RETURN CALCULATE([Emails delivered], REMOVEFILTERS(dim_date), dim_date[date] >= vStart - vDays, dim_date[date] < vStart)` |
-| Emails delivered vs prior | Emails delivered against the period before. | `+0.0%;-0.0%;0.0%` | `DIVIDE([Emails delivered] - [Emails delivered prior period], ABS([Emails delivered prior period]))` |
+| Emails delivered vs prior | Emails delivered against the period before. | `+0.0%;-0.0%;0.0%` | `VAR vChange = DIVIDE([Emails delivered] - [Emails delivered prior period], ABS([Emails delivered prior period])) RETURN IF(NOT ISBLANK(vChange), ROUND(vChange, 3))` |
 
 ## 10 Captions
 
 | Measure | Definition | Format | DAX |
 |---|---|---|---|
-| Emails delivered caption | Tile caption for Emails delivered. | `text` | `IF(ISBLANK([Emails delivered vs prior]), "all dates in view · pick months to compare", FORMAT([Emails delivered vs prior], "+0%;-0%;0%") & " vs prior period")` |
+| Emails delivered caption | Tile caption for Emails delivered. | `text` | `IF(ISBLANK([Emails delivered vs prior]), IF(ISFILTERED(dim_date), "no earlier data to compare with", "all dates in view · pick months to compare"), FORMAT(ROUND([Emails delivered vs prior], 2), "+0%;-0%;+0%") & " vs prior period")` |
 
 ## 09 Windows
 
 | Measure | Definition | Format | DAX |
 |---|---|---|---|
 | Human open rate prior period | Human open rate over the same number of days immediately before the dates in view. | `0.0%` | `VAR vStart = MIN(dim_date[date]) VAR vEnd = MAX(dim_date[date]) VAR vDays = INT(vEnd - vStart) + 1 RETURN CALCULATE([Human open rate], REMOVEFILTERS(dim_date), dim_date[date] >= vStart - vDays, dim_date[date] < vStart)` |
-| Human open rate vs prior | Human open rate against the period before (points). | `+0.00%;-0.00%;0.00%` | `IF(NOT ISBLANK([Human open rate prior period]), [Human open rate] - [Human open rate prior period])` |
+| Human open rate vs prior | Human open rate against the period before (points). | `+0.00%;-0.00%;0.00%` | `IF(NOT ISBLANK([Human open rate prior period]), ROUND([Human open rate] - [Human open rate prior period], 4))` |
 
 ## 10 Captions
 
 | Measure | Definition | Format | DAX |
 |---|---|---|---|
-| Human open rate caption | Tile caption for Human open rate. | `text` | `IF(ISBLANK([Human open rate vs prior]), "all dates in view · pick months to compare", FORMAT([Human open rate vs prior] * 100, "+0.0;-0.0;0.0") & " pts" & " vs prior period")` |
+| Human open rate caption | Tile caption for Human open rate. | `text` | `IF(ISBLANK([Human open rate vs prior]), IF(ISFILTERED(dim_date), "no earlier data to compare with", "all dates in view · pick months to compare"), FORMAT(ROUND([Human open rate vs prior] * 100, 1), "+0.0;-0.0;+0.0") & " pts" & " vs prior period")` |
 
 ## 09 Windows
 
 | Measure | Definition | Format | DAX |
 |---|---|---|---|
 | Bounce rate prior period | Bounce rate over the same number of days immediately before the dates in view. | `0.00%` | `VAR vStart = MIN(dim_date[date]) VAR vEnd = MAX(dim_date[date]) VAR vDays = INT(vEnd - vStart) + 1 RETURN CALCULATE([Bounce rate], REMOVEFILTERS(dim_date), dim_date[date] >= vStart - vDays, dim_date[date] < vStart)` |
-| Bounce rate vs prior | Bounce rate against the period before (points). | `+0.00%;-0.00%;0.00%` | `IF(NOT ISBLANK([Bounce rate prior period]), [Bounce rate] - [Bounce rate prior period])` |
+| Bounce rate vs prior | Bounce rate against the period before (points). | `+0.00%;-0.00%;0.00%` | `IF(NOT ISBLANK([Bounce rate prior period]), ROUND([Bounce rate] - [Bounce rate prior period], 4))` |
 
 ## 10 Captions
 
 | Measure | Definition | Format | DAX |
 |---|---|---|---|
-| Bounce rate caption | Tile caption for Bounce rate. | `text` | `IF(ISBLANK([Bounce rate vs prior]), "all dates in view · pick months to compare", FORMAT([Bounce rate vs prior] * 100, "+0.0;-0.0;0.0") & " pts" & " vs prior period")` |
+| Bounce rate caption | Tile caption for Bounce rate. | `text` | `IF(ISBLANK([Bounce rate vs prior]), IF(ISFILTERED(dim_date), "no earlier data to compare with", "all dates in view · pick months to compare"), FORMAT(ROUND([Bounce rate vs prior] * 100, 1), "+0.0;-0.0;+0.0") & " pts" & " vs prior period")` |
 
 ## 09 Windows
 
 | Measure | Definition | Format | DAX |
 |---|---|---|---|
 | Complaint rate prior period | Complaint rate over the same number of days immediately before the dates in view. | `0.000%` | `VAR vStart = MIN(dim_date[date]) VAR vEnd = MAX(dim_date[date]) VAR vDays = INT(vEnd - vStart) + 1 RETURN CALCULATE([Complaint rate], REMOVEFILTERS(dim_date), dim_date[date] >= vStart - vDays, dim_date[date] < vStart)` |
-| Complaint rate vs prior | Complaint rate against the period before (points). | `+0.00%;-0.00%;0.00%` | `IF(NOT ISBLANK([Complaint rate prior period]), [Complaint rate] - [Complaint rate prior period])` |
+| Complaint rate vs prior | Complaint rate against the period before (points). | `+0.00%;-0.00%;0.00%` | `IF(NOT ISBLANK([Complaint rate prior period]), ROUND([Complaint rate] - [Complaint rate prior period], 4))` |
 
 ## 10 Captions
 
 | Measure | Definition | Format | DAX |
 |---|---|---|---|
-| Complaint rate caption | Tile caption for Complaint rate. | `text` | `IF(ISBLANK([Complaint rate vs prior]), "all dates in view · pick months to compare", FORMAT([Complaint rate vs prior] * 100, "+0.0;-0.0;0.0") & " pts" & " vs prior period")` |
+| Complaint rate caption | Tile caption for Complaint rate. | `text` | `IF(ISBLANK([Complaint rate vs prior]), IF(ISFILTERED(dim_date), "no earlier data to compare with", "all dates in view · pick months to compare"), FORMAT(ROUND([Complaint rate vs prior] * 100, 1), "+0.0;-0.0;+0.0") & " pts" & " vs prior period")` |
 
 ## 11 Last 28 days
 
@@ -382,13 +382,13 @@ Generated from `growthops/bi/model_spec.py` by `python -m growthops.bi.build_pbi
 |---|---|---|---|
 | Net cash, last 28 days | Net cash in the 28 days ending on the as-of date. | `\$#,0` | `CALCULATE([Net cash], REMOVEFILTERS(dim_date), dim_date[is_last_28_days] = TRUE())` |
 | Net cash, prior 28 days | Net cash in the 28 days before those. | `\$#,0` | `CALCULATE([Net cash], REMOVEFILTERS(dim_date), dim_date[is_prior_28_days] = TRUE())` |
-| Net cash, 28-day change | Net cash, last 28 days against the 28 days before. | `+0.0%;-0.0%;0.0%` | `DIVIDE([Net cash, last 28 days] - [Net cash, prior 28 days], ABS([Net cash, prior 28 days]))` |
+| Net cash, 28-day change | Net cash, last 28 days against the 28 days before. | `+0.0%;-0.0%;0.0%` | `VAR vChange = DIVIDE([Net cash, last 28 days] - [Net cash, prior 28 days], ABS([Net cash, prior 28 days])) RETURN IF(NOT ISBLANK(vChange), ROUND(vChange, 3))` |
 
 ## 10 Captions
 
 | Measure | Definition | Format | DAX |
 |---|---|---|---|
-| Net cash, 28-day caption | Tile caption for Net cash, last 28 days. | `text` | `IF(ISBLANK([Net cash, 28-day change]), "all dates in view · pick months to compare", FORMAT([Net cash, 28-day change], "+0%;-0%;0%") & " vs prior 28 days")` |
+| Net cash, 28-day caption | Tile caption for Net cash, last 28 days. | `text` | `IF(ISBLANK([Net cash, 28-day change]), IF(ISFILTERED(dim_date), "no earlier data to compare with", "all dates in view · pick months to compare"), FORMAT(ROUND([Net cash, 28-day change], 2), "+0%;-0%;+0%") & " vs prior 28 days")` |
 
 ## 11 Last 28 days
 
@@ -396,13 +396,13 @@ Generated from `growthops/bi/model_spec.py` by `python -m growthops.bi.build_pbi
 |---|---|---|---|
 | Ad spend, last 28 days | Ad spend in the 28 days ending on the as-of date. | `\$#,0` | `CALCULATE([Ad spend], REMOVEFILTERS(dim_date), dim_date[is_last_28_days] = TRUE())` |
 | Ad spend, prior 28 days | Ad spend in the 28 days before those. | `\$#,0` | `CALCULATE([Ad spend], REMOVEFILTERS(dim_date), dim_date[is_prior_28_days] = TRUE())` |
-| Ad spend, 28-day change | Ad spend, last 28 days against the 28 days before. | `+0.0%;-0.0%;0.0%` | `DIVIDE([Ad spend, last 28 days] - [Ad spend, prior 28 days], ABS([Ad spend, prior 28 days]))` |
+| Ad spend, 28-day change | Ad spend, last 28 days against the 28 days before. | `+0.0%;-0.0%;0.0%` | `VAR vChange = DIVIDE([Ad spend, last 28 days] - [Ad spend, prior 28 days], ABS([Ad spend, prior 28 days])) RETURN IF(NOT ISBLANK(vChange), ROUND(vChange, 3))` |
 
 ## 10 Captions
 
 | Measure | Definition | Format | DAX |
 |---|---|---|---|
-| Ad spend, 28-day caption | Tile caption for Ad spend, last 28 days. | `text` | `IF(ISBLANK([Ad spend, 28-day change]), "all dates in view · pick months to compare", FORMAT([Ad spend, 28-day change], "+0%;-0%;0%") & " vs prior 28 days")` |
+| Ad spend, 28-day caption | Tile caption for Ad spend, last 28 days. | `text` | `IF(ISBLANK([Ad spend, 28-day change]), IF(ISFILTERED(dim_date), "no earlier data to compare with", "all dates in view · pick months to compare"), FORMAT(ROUND([Ad spend, 28-day change], 2), "+0%;-0%;+0%") & " vs prior 28 days")` |
 
 ## 11 Last 28 days
 
@@ -410,13 +410,13 @@ Generated from `growthops/bi/model_spec.py` by `python -m growthops.bi.build_pbi
 |---|---|---|---|
 | Leads, last 28 days | Leads in the 28 days ending on the as-of date. | `#,0` | `CALCULATE([Leads], REMOVEFILTERS(dim_date), dim_date[is_last_28_days] = TRUE())` |
 | Leads, prior 28 days | Leads in the 28 days before those. | `#,0` | `CALCULATE([Leads], REMOVEFILTERS(dim_date), dim_date[is_prior_28_days] = TRUE())` |
-| Leads, 28-day change | Leads, last 28 days against the 28 days before. | `+0.0%;-0.0%;0.0%` | `DIVIDE([Leads, last 28 days] - [Leads, prior 28 days], ABS([Leads, prior 28 days]))` |
+| Leads, 28-day change | Leads, last 28 days against the 28 days before. | `+0.0%;-0.0%;0.0%` | `VAR vChange = DIVIDE([Leads, last 28 days] - [Leads, prior 28 days], ABS([Leads, prior 28 days])) RETURN IF(NOT ISBLANK(vChange), ROUND(vChange, 3))` |
 
 ## 10 Captions
 
 | Measure | Definition | Format | DAX |
 |---|---|---|---|
-| Leads, 28-day caption | Tile caption for Leads, last 28 days. | `text` | `IF(ISBLANK([Leads, 28-day change]), "all dates in view · pick months to compare", FORMAT([Leads, 28-day change], "+0%;-0%;0%") & " vs prior 28 days")` |
+| Leads, 28-day caption | Tile caption for Leads, last 28 days. | `text` | `IF(ISBLANK([Leads, 28-day change]), IF(ISFILTERED(dim_date), "no earlier data to compare with", "all dates in view · pick months to compare"), FORMAT(ROUND([Leads, 28-day change], 2), "+0%;-0%;+0%") & " vs prior 28 days")` |
 
 ## 11 Last 28 days
 
@@ -424,13 +424,13 @@ Generated from `growthops/bi/model_spec.py` by `python -m growthops.bi.build_pbi
 |---|---|---|---|
 | MQL rate, last 28 days | MQL rate in the 28 days ending on the as-of date. | `0.0%` | `CALCULATE([MQL rate], REMOVEFILTERS(dim_date), dim_date[is_last_28_days] = TRUE())` |
 | MQL rate, prior 28 days | MQL rate in the 28 days before those. | `0.0%` | `CALCULATE([MQL rate], REMOVEFILTERS(dim_date), dim_date[is_prior_28_days] = TRUE())` |
-| MQL rate, 28-day change | MQL rate, last 28 days against the 28 days before. | `+0.00%;-0.00%;0.00%` | `IF(NOT ISBLANK([MQL rate, prior 28 days]), [MQL rate, last 28 days] - [MQL rate, prior 28 days])` |
+| MQL rate, 28-day change | MQL rate, last 28 days against the 28 days before. | `+0.00%;-0.00%;0.00%` | `IF(NOT ISBLANK([MQL rate, prior 28 days]), ROUND([MQL rate, last 28 days] - [MQL rate, prior 28 days], 4))` |
 
 ## 10 Captions
 
 | Measure | Definition | Format | DAX |
 |---|---|---|---|
-| MQL rate, 28-day caption | Tile caption for MQL rate, last 28 days. | `text` | `IF(ISBLANK([MQL rate, 28-day change]), "all dates in view · pick months to compare", FORMAT([MQL rate, 28-day change] * 100, "+0.0;-0.0;0.0") & " pts" & " vs prior 28 days")` |
+| MQL rate, 28-day caption | Tile caption for MQL rate, last 28 days. | `text` | `IF(ISBLANK([MQL rate, 28-day change]), IF(ISFILTERED(dim_date), "no earlier data to compare with", "all dates in view · pick months to compare"), FORMAT(ROUND([MQL rate, 28-day change] * 100, 1), "+0.0;-0.0;+0.0") & " pts" & " vs prior 28 days")` |
 
 ## 11 Last 28 days
 
@@ -438,13 +438,13 @@ Generated from `growthops/bi/model_spec.py` by `python -m growthops.bi.build_pbi
 |---|---|---|---|
 | Paid spend, last 28 days | Paid spend in the 28 days ending on the as-of date. | `\$#,0` | `CALCULATE([Paid spend], REMOVEFILTERS(dim_date), dim_date[is_last_28_days] = TRUE())` |
 | Paid spend, prior 28 days | Paid spend in the 28 days before those. | `\$#,0` | `CALCULATE([Paid spend], REMOVEFILTERS(dim_date), dim_date[is_prior_28_days] = TRUE())` |
-| Paid spend, 28-day change | Paid spend, last 28 days against the 28 days before. | `+0.0%;-0.0%;0.0%` | `DIVIDE([Paid spend, last 28 days] - [Paid spend, prior 28 days], ABS([Paid spend, prior 28 days]))` |
+| Paid spend, 28-day change | Paid spend, last 28 days against the 28 days before. | `+0.0%;-0.0%;0.0%` | `VAR vChange = DIVIDE([Paid spend, last 28 days] - [Paid spend, prior 28 days], ABS([Paid spend, prior 28 days])) RETURN IF(NOT ISBLANK(vChange), ROUND(vChange, 3))` |
 
 ## 10 Captions
 
 | Measure | Definition | Format | DAX |
 |---|---|---|---|
-| Paid spend, 28-day caption | Tile caption for Paid spend, last 28 days. | `text` | `IF(ISBLANK([Paid spend, 28-day change]), "all dates in view · pick months to compare", FORMAT([Paid spend, 28-day change], "+0%;-0%;0%") & " vs prior 28 days")` |
+| Paid spend, 28-day caption | Tile caption for Paid spend, last 28 days. | `text` | `IF(ISBLANK([Paid spend, 28-day change]), IF(ISFILTERED(dim_date), "no earlier data to compare with", "all dates in view · pick months to compare"), FORMAT(ROUND([Paid spend, 28-day change], 2), "+0%;-0%;+0%") & " vs prior 28 days")` |
 
 ## 11 Last 28 days
 
@@ -452,13 +452,13 @@ Generated from `growthops/bi/model_spec.py` by `python -m growthops.bi.build_pbi
 |---|---|---|---|
 | Paid leads, last 28 days | Paid leads in the 28 days ending on the as-of date. | `#,0` | `CALCULATE([Paid leads], REMOVEFILTERS(dim_date), dim_date[is_last_28_days] = TRUE())` |
 | Paid leads, prior 28 days | Paid leads in the 28 days before those. | `#,0` | `CALCULATE([Paid leads], REMOVEFILTERS(dim_date), dim_date[is_prior_28_days] = TRUE())` |
-| Paid leads, 28-day change | Paid leads, last 28 days against the 28 days before. | `+0.0%;-0.0%;0.0%` | `DIVIDE([Paid leads, last 28 days] - [Paid leads, prior 28 days], ABS([Paid leads, prior 28 days]))` |
+| Paid leads, 28-day change | Paid leads, last 28 days against the 28 days before. | `+0.0%;-0.0%;0.0%` | `VAR vChange = DIVIDE([Paid leads, last 28 days] - [Paid leads, prior 28 days], ABS([Paid leads, prior 28 days])) RETURN IF(NOT ISBLANK(vChange), ROUND(vChange, 3))` |
 
 ## 10 Captions
 
 | Measure | Definition | Format | DAX |
 |---|---|---|---|
-| Paid leads, 28-day caption | Tile caption for Paid leads, last 28 days. | `text` | `IF(ISBLANK([Paid leads, 28-day change]), "all dates in view · pick months to compare", FORMAT([Paid leads, 28-day change], "+0%;-0%;0%") & " vs prior 28 days")` |
+| Paid leads, 28-day caption | Tile caption for Paid leads, last 28 days. | `text` | `IF(ISBLANK([Paid leads, 28-day change]), IF(ISFILTERED(dim_date), "no earlier data to compare with", "all dates in view · pick months to compare"), FORMAT(ROUND([Paid leads, 28-day change], 2), "+0%;-0%;+0%") & " vs prior 28 days")` |
 
 ## 11 Last 28 days
 
@@ -466,13 +466,13 @@ Generated from `growthops/bi/model_spec.py` by `python -m growthops.bi.build_pbi
 |---|---|---|---|
 | Paid MQLs, last 28 days | Paid MQLs in the 28 days ending on the as-of date. | `#,0` | `CALCULATE([Paid MQLs], REMOVEFILTERS(dim_date), dim_date[is_last_28_days] = TRUE())` |
 | Paid MQLs, prior 28 days | Paid MQLs in the 28 days before those. | `#,0` | `CALCULATE([Paid MQLs], REMOVEFILTERS(dim_date), dim_date[is_prior_28_days] = TRUE())` |
-| Paid MQLs, 28-day change | Paid MQLs, last 28 days against the 28 days before. | `+0.0%;-0.0%;0.0%` | `DIVIDE([Paid MQLs, last 28 days] - [Paid MQLs, prior 28 days], ABS([Paid MQLs, prior 28 days]))` |
+| Paid MQLs, 28-day change | Paid MQLs, last 28 days against the 28 days before. | `+0.0%;-0.0%;0.0%` | `VAR vChange = DIVIDE([Paid MQLs, last 28 days] - [Paid MQLs, prior 28 days], ABS([Paid MQLs, prior 28 days])) RETURN IF(NOT ISBLANK(vChange), ROUND(vChange, 3))` |
 
 ## 10 Captions
 
 | Measure | Definition | Format | DAX |
 |---|---|---|---|
-| Paid MQLs, 28-day caption | Tile caption for Paid MQLs, last 28 days. | `text` | `IF(ISBLANK([Paid MQLs, 28-day change]), "all dates in view · pick months to compare", FORMAT([Paid MQLs, 28-day change], "+0%;-0%;0%") & " vs prior 28 days")` |
+| Paid MQLs, 28-day caption | Tile caption for Paid MQLs, last 28 days. | `text` | `IF(ISBLANK([Paid MQLs, 28-day change]), IF(ISFILTERED(dim_date), "no earlier data to compare with", "all dates in view · pick months to compare"), FORMAT(ROUND([Paid MQLs, 28-day change], 2), "+0%;-0%;+0%") & " vs prior 28 days")` |
 
 ## 11 Last 28 days
 
@@ -480,13 +480,13 @@ Generated from `growthops/bi/model_spec.py` by `python -m growthops.bi.build_pbi
 |---|---|---|---|
 | Cost per lead, last 28 days | Cost per lead in the 28 days ending on the as-of date. | `\$#,0.00` | `CALCULATE([Cost per lead], REMOVEFILTERS(dim_date), dim_date[is_last_28_days] = TRUE())` |
 | Cost per lead, prior 28 days | Cost per lead in the 28 days before those. | `\$#,0.00` | `CALCULATE([Cost per lead], REMOVEFILTERS(dim_date), dim_date[is_prior_28_days] = TRUE())` |
-| Cost per lead, 28-day change | Cost per lead, last 28 days against the 28 days before. | `+0.0%;-0.0%;0.0%` | `DIVIDE([Cost per lead, last 28 days] - [Cost per lead, prior 28 days], ABS([Cost per lead, prior 28 days]))` |
+| Cost per lead, 28-day change | Cost per lead, last 28 days against the 28 days before. | `+0.0%;-0.0%;0.0%` | `VAR vChange = DIVIDE([Cost per lead, last 28 days] - [Cost per lead, prior 28 days], ABS([Cost per lead, prior 28 days])) RETURN IF(NOT ISBLANK(vChange), ROUND(vChange, 3))` |
 
 ## 10 Captions
 
 | Measure | Definition | Format | DAX |
 |---|---|---|---|
-| Cost per lead, 28-day caption | Tile caption for Cost per lead, last 28 days. | `text` | `IF(ISBLANK([Cost per lead, 28-day change]), "all dates in view · pick months to compare", FORMAT([Cost per lead, 28-day change], "+0%;-0%;0%") & " vs prior 28 days")` |
+| Cost per lead, 28-day caption | Tile caption for Cost per lead, last 28 days. | `text` | `IF(ISBLANK([Cost per lead, 28-day change]), IF(ISFILTERED(dim_date), "no earlier data to compare with", "all dates in view · pick months to compare"), FORMAT(ROUND([Cost per lead, 28-day change], 2), "+0%;-0%;+0%") & " vs prior 28 days")` |
 
 ## 11 Last 28 days
 
@@ -494,13 +494,13 @@ Generated from `growthops/bi/model_spec.py` by `python -m growthops.bi.build_pbi
 |---|---|---|---|
 | Paid MQL rate, last 28 days | Paid MQL rate in the 28 days ending on the as-of date. | `0.0%` | `CALCULATE([Paid MQL rate], REMOVEFILTERS(dim_date), dim_date[is_last_28_days] = TRUE())` |
 | Paid MQL rate, prior 28 days | Paid MQL rate in the 28 days before those. | `0.0%` | `CALCULATE([Paid MQL rate], REMOVEFILTERS(dim_date), dim_date[is_prior_28_days] = TRUE())` |
-| Paid MQL rate, 28-day change | Paid MQL rate, last 28 days against the 28 days before. | `+0.00%;-0.00%;0.00%` | `IF(NOT ISBLANK([Paid MQL rate, prior 28 days]), [Paid MQL rate, last 28 days] - [Paid MQL rate, prior 28 days])` |
+| Paid MQL rate, 28-day change | Paid MQL rate, last 28 days against the 28 days before. | `+0.00%;-0.00%;0.00%` | `IF(NOT ISBLANK([Paid MQL rate, prior 28 days]), ROUND([Paid MQL rate, last 28 days] - [Paid MQL rate, prior 28 days], 4))` |
 
 ## 10 Captions
 
 | Measure | Definition | Format | DAX |
 |---|---|---|---|
-| Paid MQL rate, 28-day caption | Tile caption for Paid MQL rate, last 28 days. | `text` | `IF(ISBLANK([Paid MQL rate, 28-day change]), "all dates in view · pick months to compare", FORMAT([Paid MQL rate, 28-day change] * 100, "+0.0;-0.0;0.0") & " pts" & " vs prior 28 days")` |
+| Paid MQL rate, 28-day caption | Tile caption for Paid MQL rate, last 28 days. | `text` | `IF(ISBLANK([Paid MQL rate, 28-day change]), IF(ISFILTERED(dim_date), "no earlier data to compare with", "all dates in view · pick months to compare"), FORMAT(ROUND([Paid MQL rate, 28-day change] * 100, 1), "+0.0;-0.0;+0.0") & " pts" & " vs prior 28 days")` |
 
 ## 11 Last 28 days
 
@@ -508,13 +508,13 @@ Generated from `growthops/bi/model_spec.py` by `python -m growthops.bi.build_pbi
 |---|---|---|---|
 | Bounce rate, last 28 days | Bounce rate in the 28 days ending on the as-of date. | `0.00%` | `CALCULATE([Bounce rate], REMOVEFILTERS(dim_date), dim_date[is_last_28_days] = TRUE())` |
 | Bounce rate, prior 28 days | Bounce rate in the 28 days before those. | `0.00%` | `CALCULATE([Bounce rate], REMOVEFILTERS(dim_date), dim_date[is_prior_28_days] = TRUE())` |
-| Bounce rate, 28-day change | Bounce rate, last 28 days against the 28 days before. | `+0.00%;-0.00%;0.00%` | `IF(NOT ISBLANK([Bounce rate, prior 28 days]), [Bounce rate, last 28 days] - [Bounce rate, prior 28 days])` |
+| Bounce rate, 28-day change | Bounce rate, last 28 days against the 28 days before. | `+0.00%;-0.00%;0.00%` | `IF(NOT ISBLANK([Bounce rate, prior 28 days]), ROUND([Bounce rate, last 28 days] - [Bounce rate, prior 28 days], 4))` |
 
 ## 10 Captions
 
 | Measure | Definition | Format | DAX |
 |---|---|---|---|
-| Bounce rate, 28-day caption | Tile caption for Bounce rate, last 28 days. | `text` | `IF(ISBLANK([Bounce rate, 28-day change]), "all dates in view · pick months to compare", FORMAT([Bounce rate, 28-day change] * 100, "+0.0;-0.0;0.0") & " pts" & " vs prior 28 days")` |
+| Bounce rate, 28-day caption | Tile caption for Bounce rate, last 28 days. | `text` | `IF(ISBLANK([Bounce rate, 28-day change]), IF(ISFILTERED(dim_date), "no earlier data to compare with", "all dates in view · pick months to compare"), FORMAT(ROUND([Bounce rate, 28-day change] * 100, 1), "+0.0;-0.0;+0.0") & " pts" & " vs prior 28 days")` |
 
 ## 11 Last 28 days
 
@@ -522,13 +522,13 @@ Generated from `growthops/bi/model_spec.py` by `python -m growthops.bi.build_pbi
 |---|---|---|---|
 | Calls booked, last 28 days | Calls booked in the 28 days ending on the as-of date. | `#,0` | `CALCULATE([Calls booked], REMOVEFILTERS(dim_date), dim_date[is_last_28_days] = TRUE())` |
 | Calls booked, prior 28 days | Calls booked in the 28 days before those. | `#,0` | `CALCULATE([Calls booked], REMOVEFILTERS(dim_date), dim_date[is_prior_28_days] = TRUE())` |
-| Calls booked, 28-day change | Calls booked, last 28 days against the 28 days before. | `+0.0%;-0.0%;0.0%` | `DIVIDE([Calls booked, last 28 days] - [Calls booked, prior 28 days], ABS([Calls booked, prior 28 days]))` |
+| Calls booked, 28-day change | Calls booked, last 28 days against the 28 days before. | `+0.0%;-0.0%;0.0%` | `VAR vChange = DIVIDE([Calls booked, last 28 days] - [Calls booked, prior 28 days], ABS([Calls booked, prior 28 days])) RETURN IF(NOT ISBLANK(vChange), ROUND(vChange, 3))` |
 
 ## 10 Captions
 
 | Measure | Definition | Format | DAX |
 |---|---|---|---|
-| Calls booked, 28-day caption | Tile caption for Calls booked, last 28 days. | `text` | `IF(ISBLANK([Calls booked, 28-day change]), "all dates in view · pick months to compare", FORMAT([Calls booked, 28-day change], "+0%;-0%;0%") & " vs prior 28 days")` |
+| Calls booked, 28-day caption | Tile caption for Calls booked, last 28 days. | `text` | `IF(ISBLANK([Calls booked, 28-day change]), IF(ISFILTERED(dim_date), "no earlier data to compare with", "all dates in view · pick months to compare"), FORMAT(ROUND([Calls booked, 28-day change], 2), "+0%;-0%;+0%") & " vs prior 28 days")` |
 | Platform claim caption | Tile caption: how far platform claims exceed cash. | `text` | `FORMAT([Claim multiple], "0.00") & "x the cash the warehouse can find"` |
 | CRM booked caption | Tile caption: how far bookings run ahead of cash. | `text` | `FORMAT(DIVIDE([Booked (CRM, all time)], [Net collected (all time)]) - 1, "+0.0%") & " over net collected cash"` |
 | Net collected caption | Tile caption: refunds taken out of gross. | `text` | `"after " & FORMAT([Refunds (all time)] / 1000, "$#,0") & "K of refunds"` |

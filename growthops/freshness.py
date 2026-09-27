@@ -28,7 +28,7 @@ def _parse(value: str) -> datetime:
 def check(connection: sqlite3.Connection, settings: Settings | None = None) -> list[dict]:
     settings = settings or get_settings()
     now = settings.reference_time()
-    results = []
+    results: list[dict[str, object]] = []
     for source, (table, column, sla) in SOURCES.items():
         sla = sla or settings.freshness_sla_hours
         try:

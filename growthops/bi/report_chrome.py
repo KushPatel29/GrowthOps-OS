@@ -21,6 +21,8 @@ actually draws rather than on the positions before the header moved them.
 
 from __future__ import annotations
 
+from collections.abc import Mapping
+
 CANVAS_W, CANVAS_H = 1280, 720
 HEADER_X, HEADER_Y, HEADER_H = 24, 16, 56
 BODY_TOP, BODY_BOTTOM = 88, 704
@@ -320,8 +322,9 @@ def _tile_dax(measure: str, subtitle: str | None, fmt: str | None, width: int,
               rail_on: bool = True) -> str:
     # A rail reads as "how full": right for a rate out of 100%, wrong for a 2%
     # bounce rate, which would draw as an empty track.
-    percent = rail_on and bool(fmt) and "%" in fmt and not fmt.startswith("+")
-    money = bool(fmt) and "$" in fmt
+    text = fmt or ""
+    percent = rail_on and "%" in text and not text.startswith("+")
+    money = "$" in text
     if fmt:
         shown = f"FORMAT(vValue, {_dax_text(fmt)})"
         if money:
@@ -427,7 +430,7 @@ def _header_dax(display: str, index: int, total: int, context: str | None, width
     ])
 
 
-def ui_measures(pages: list[dict], formats: dict[str, str | None]) -> list[tuple[str, str, bool]]:
+def ui_measures(pages: list[dict], formats: Mapping[str, str | None]) -> list[tuple[str, str, bool]]:
     """(name, DAX, draws an image) for every Report UI measure the pages bind."""
     out: dict[str, tuple[str, str, bool]] = {}
     for page in pages:

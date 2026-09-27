@@ -91,9 +91,9 @@ class Metrics:
                   f"growthops_process_uptime_seconds {time.time() - self.started:.0f}"]
         for name, (help_text, samples) in gauges.items():
             lines += [f"# HELP growthops_{name} {help_text}", f"# TYPE growthops_{name} gauge"]
-            for labels, value in samples:
+            for labels, sample in samples:
                 label = ",".join(f'{key}="{val}"' for key, val in labels.items())
-                lines.append(f"growthops_{name}{{{label}}} {value}" if label else f"growthops_{name} {value}")
+                lines.append(f"growthops_{name}{{{label}}} {sample}" if label else f"growthops_{name} {sample}")
         return "\n".join(lines) + "\n"
 
 

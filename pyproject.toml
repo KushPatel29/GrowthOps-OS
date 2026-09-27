@@ -22,3 +22,11 @@ growthops = ["sql/*.sql", "static/*.html"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+
+[tool.mypy]
+# Run from its own environment (CI job "types"): mypy's pathspec floor conflicts with dbt-core's pin.
+files = ["growthops"]
+python_version = "3.12"
+ignore_missing_imports = true
+warn_unused_ignores = true
+warn_redundant_casts = true

@@ -35,6 +35,7 @@ import sys
 import tempfile
 import uuid
 from pathlib import Path
+from typing import Any
 
 import pandas as pd
 
@@ -387,7 +388,7 @@ def display_name(column: str) -> str:
 
 def projection(reference: str, *, active: bool = False) -> dict:
     expression, query_ref, native = field_expr(reference)
-    out = {"field": expression, "queryRef": query_ref, "nativeQueryRef": native}
+    out: dict[str, object] = {"field": expression, "queryRef": query_ref, "nativeQueryRef": native}
     if not reference.strip().startswith("["):
         label = display_name(reference.split("[", 1)[1].rstrip("]"))
         if label != native:
@@ -703,7 +704,7 @@ def theme_json() -> dict:
     slots were checked for separation under protanopia, deuteranopia and tritanopia
     against this surface, and reordering them breaks that without changing a hex.
     """
-    theme = {
+    theme: dict[str, Any] = {
         # The theme's name has to be its file name, .json included: report.json
         # refers to it that way, and the validator reports a mismatch.
         "name": THEME,

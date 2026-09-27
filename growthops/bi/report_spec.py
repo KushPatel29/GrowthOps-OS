@@ -34,7 +34,7 @@ def cards(*specs: dict) -> list[dict]:
 
 def tile(field: str, alt: str, *, subtitle: str | None = None, trend: str | None = None,
          good: str | None = None, label: str | None = None, rail: bool = True) -> dict:
-    spec = {"field": field, "alt": alt}
+    spec: dict[str, object] = {"field": field, "alt": alt}
     if subtitle:
         spec["subtitle"] = subtitle
     if trend:

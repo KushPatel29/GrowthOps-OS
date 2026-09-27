@@ -9,7 +9,7 @@ from fractions import Fraction
 from typing import Literal
 
 AttributionModel = Literal["first_touch", "lead_creation", "last_non_direct", "u_shaped", "linear"]
-MODELS = ("first_touch", "lead_creation", "last_non_direct", "u_shaped", "linear")
+MODELS: tuple[AttributionModel, ...] = ("first_touch", "lead_creation", "last_non_direct", "u_shaped", "linear")
 
 
 def _split_cents(amount: int, weights: dict[str, Fraction]) -> dict[str, int]:
@@ -94,7 +94,7 @@ def allocations(connection: sqlite3.Connection, model: AttributionModel) -> list
 
 
 def summary(connection: sqlite3.Connection, model: AttributionModel) -> list[dict]:
-    totals = defaultdict(int)
+    totals: defaultdict[str, int] = defaultdict(int)
     for row in allocations(connection, model):
         totals[row["campaign_id"]] += row["credited_cents"]
     return [{"campaign_id": campaign_id, "net_cash_cents": cents, "model": model}

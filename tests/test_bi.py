@@ -135,7 +135,8 @@ def test_dashboard_values_equal_python_on_the_same_csvs(cached):
     bounce = _window(email, "bounces", start, end, "sent_date") / _window(email, "sends", start, end, "sent_date")
     assert sheet["Q9"].value == pytest.approx(bounce)
     prior = _window(daily, "net_cash_cents", prior_start, prior_end) / 100
-    assert sheet["B11"].value == pytest.approx(sheet["B9"].value / prior - 1)
+    # The tile's change is rounded to the 0.1% it shows, so a tiny fall cannot display as "▼ -0.0%".
+    assert sheet["B11"].value == pytest.approx(round(sheet["B9"].value / prior - 1, 3))
     # The written summary names the planted lead-quality incident without being told about it.
     assert "meta_broad_v17" in cached["Dashboard"]["B16"].value
 
@@ -149,3 +150,21 @@ def test_scorecard_rows_equal_python(cached):
         campaign = sheet.cell(row, 2).value
         spend = _window(paid, "spend_cents", start, end, where=lambda r, c=campaign: r["campaign_id"] == c) / 100
         assert sheet.cell(row, 4).value == pytest.approx(spend), campaign
+
+
+def test_every_report_sheet_prints_its_content_and_charts_and_nothing_more(built):
+    from growthops.export_excel import _chart_bottom
+
+    for title in REPORT_SHEETS:
+        sheet = built[title]
+        if not sheet.print_area:
+            continue
+        area = sheet.print_area if isinstance(sheet.print_area, str) else sheet.print_area[0]
+        last_row = int(area.split(":")[-1].lstrip("$ABCDEFGHIJKLMNOPQRSTUVWXYZ").replace("$", ""))
+        charts = [_chart_bottom(sheet, chart) for chart in sheet._charts]
+        # Every chart is inside the print area, and no more than a row of margin follows the content: a fixed
+        # 40-row area used to print blank second pages.
+        assert all(bottom <= last_row for bottom in charts), (title, charts, last_row)
+        assert last_row <= max([sheet.max_row] + charts) + 1, (title, last_row)
+    breaks = {b.id for b in built["Revenue truth"].row_breaks.brk}
+    assert breaks, "the bookings-to-cash waterfall must start its own page instead of printing cut in two"

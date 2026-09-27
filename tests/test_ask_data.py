@@ -161,3 +161,18 @@ def test_a_tiny_fall_never_reads_as_minus_zero():
     assert _change(0.2, 0.20004, rate=True) == " (+0.0 pts on the period before)"
     assert _change(90, 100) == " (-10% on the period before)"
     assert _vs(1434, 1435) == "+0% vs 7-day avg"
+
+
+def test_a_comparison_of_two_months_uses_both_and_matches_the_mart(connection):
+    result = answer(connection, "compare net cash in July and August")
+    aug = _mart(connection, "net_cash_cents", "2026-08-01", "2026-08-31")
+    jul = _mart(connection, "net_cash_cents", "2026-07-01", "2026-07-31")
+    change = round((aug - jul) / jul, 2) + 0.0
+    assert result["answer"].startswith(
+        f"1 Aug 2026 to 31 Aug 2026: net cash collected ${aug / 100:,.0f} ({change:+.0%} on July (1 Jul 2026 to 31 Jul 2026))")
+    assert result["understood"].endswith("(1 Aug 2026 to 31 Aug 2026, against 1 Jul 2026 to 31 Jul 2026)")
+
+
+def test_a_period_cut_at_the_end_says_so(connection):
+    result = answer(connection, "revenue in 2026")
+    assert "the latest complete day is" in result["answer"] and "the data starts" not in result["answer"]

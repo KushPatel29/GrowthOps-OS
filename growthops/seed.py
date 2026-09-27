@@ -17,6 +17,7 @@ from bisect import bisect_left
 from collections import defaultdict
 from datetime import date, datetime, time, timedelta, timezone
 from pathlib import Path
+from typing import Literal
 
 from growthops import scenario as sc
 from growthops.db import connect, initialize
@@ -218,12 +219,17 @@ class Generator:
         if campaign.campaign_id != "direct" and campaign.source != "youtube" and rng.random() < 0.3:
             seen = lead_at - timedelta(days=rng.uniform(3, 40), hours=rng.uniform(0, 12))
             video = self.pick_video(seen)
-            if video:
-                touch_id, _ = self.touch(contact_id, sc.CAMPAIGN_BY_ID["youtube_founder_guide"], seen, "content_visit")
+            visit = self.touch(contact_id, sc.CAMPAIGN_BY_ID["youtube_founder_guide"], seen, "content_visit") \
+                if video else None
+            if video and visit:
+                touch_id, _ = visit
                 self.add("content_engagements", f"ce-{n:06d}-d", contact_id, video["content_id"], touch_id,
                          _iso(seen), int(rng.uniform(60, 900)))
                 intent *= 1 + (sc.CONTENT_TOPICS[video["topic"]][0] - 1) * 0.5
-        lead_touch, lost = self.touch(contact_id, campaign, lead_at, "lead_creation")
+        created = self.touch(contact_id, campaign, lead_at, "lead_creation")
+        if created is None:  # a lead after the data cut-off never enters the data
+            return
+        lead_touch, lost = created
         if lost:
             contact["source"] = None
         if campaign.source == "youtube":
@@ -296,7 +302,8 @@ class Generator:
         self.collect(contact, deal_id, product, amount, decided_at + checkout_delay)
 
     # --- revenue --------------------------------------------------------
-    def payment(self, contact: dict, deal_id: str | None, amount: int, at: datetime, payment_type: str,
+    def payment(self, contact: dict, deal_id: str | None, amount: int, at: datetime,
+                payment_type: Literal["new", "installment", "renewal"],
                 product: str, subscription_id: str | None = None, status: str = "succeeded") -> str | None:
         if at > END:
             return None
@@ -330,7 +337,7 @@ class Generator:
         due = first_at
         paid_first = False
         for index in range(count):
-            payment_type = "new" if index == 0 else "installment"
+            payment_type: Literal["new", "installment"] = "new" if index == 0 else "installment"
             if index and rng.random() < 0.07:
                 self.payment(contact, deal_id, installment, due, payment_type, product, status="failed")
                 if rng.random() >= 0.65:

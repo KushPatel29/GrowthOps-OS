@@ -128,7 +128,7 @@ def findings(connection: sqlite3.Connection, as_of: date = AS_OF, recent_days: i
     for key, episodes in groups.items():
         episodes.sort(key=lambda e: ACTION_ORDER.index(e["metric_id"]))
         lead = episodes[0]
-        changes = []
+        changes: list[str] = []
         for episode in episodes:
             verb = "rose" if episode["direction"] == "up" else "fell"
             text = f"{episode['label']} {verb} from {episode['baseline_text']} to {episode['current_text']}"

@@ -15,6 +15,7 @@ import argparse
 import csv
 import os
 import tempfile
+from collections.abc import Mapping
 from datetime import date, timedelta
 from pathlib import Path
 
@@ -55,7 +56,7 @@ BRIDGE_STEPS = {
 RISK_ORDER = {"high": 1, "medium": 2, "not_due": 3}
 
 
-def _case(column: str, mapping: dict[str, object]) -> str:
+def _case(column: str, mapping: Mapping[str, object]) -> str:
     def quoted(value: object) -> str:
         return str(value) if isinstance(value, int) else "'" + str(value).replace("'", "''") + "'"
     return f"CASE {column} " + " ".join(f"WHEN '{k}' THEN {quoted(v)}" for k, v in mapping.items()) + " END"
@@ -124,6 +125,14 @@ DATE_KEYS = {"mart_growth_daily": "day", "mart_paid_efficiency_daily": "day",
 TABLES = (*MARTS, *EXTRAS, "dim_date")
 
 
+def _scalar(connection, sql: str):
+    """The single value a query returns; a query that returns no row is a broken export, not a None."""
+    row = connection.execute(sql).fetchone()
+    if row is None:
+        raise RuntimeError(f"no row from: {sql}")
+    return row[0]
+
+
 def _write(path: Path, header: list[str], rows: list) -> None:
     with path.open("w", encoding="utf-8-sig", newline="") as file:
         writer = csv.writer(file, lineterminator="\n")
@@ -189,11 +198,11 @@ def export(warehouse_database: str, output: str = "data/powerbi") -> dict[str, i
             for table in DATE_KEYS:
                 connection.execute(f"CREATE OR REPLACE TEMP VIEW staged_{table} AS "
                                    f"SELECT * FROM read_csv_auto('{(staging / f'{table}.csv').as_posix()}')")
-            first = connection.execute(f"SELECT min(d) FROM ({starts})").fetchone()[0]
-            as_of = connection.execute("SELECT max(day) FROM mart_growth_daily").fetchone()[0]
-            header, rows = date_dimension(first, as_of)
-            _write(staging / "dim_date.csv", header, rows)
-            counts["dim_date"] = len(rows)
+            first = _scalar(connection, f"SELECT min(d) FROM ({starts})")
+            as_of = _scalar(connection, "SELECT max(day) FROM mart_growth_daily")
+            header, days = date_dimension(first, as_of)
+            _write(staging / "dim_date.csv", header, days)
+            counts["dim_date"] = len(days)
             destination.mkdir(parents=True, exist_ok=True)
             for name in counts:
                 os.replace(staging / f"{name}.csv", destination / f"{name}.csv")
