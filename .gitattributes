@@ -1,0 +1,7 @@
+# Generated files are compared byte for byte with a fresh build (CI and tests/test_powerbi.py).
+# Keep them LF on every checkout, whatever core.autocrlf says.
+dashboards/powerbi-project/** text eol=lf
+dashboards/powerbi-data/*.csv text eol=lf
+docs/power-bi-measures.md text eol=lf
+*.xlsx binary
+*.png binary
