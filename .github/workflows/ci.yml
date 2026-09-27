@@ -35,7 +35,7 @@ jobs:
       - name: Narrative guardrail eval (30 labelled cases)
         run: python -m growthops.narrator --eval
       - name: Cache the local embedding model (checksum-verified on load)
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: ~/.cache/growthops/models
           key: minilm-onnx-913d7300
