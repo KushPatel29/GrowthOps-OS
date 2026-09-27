@@ -1,0 +1,59 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.7.0/schema.json",
+  "name": "d54076ce0483530b9de3",
+  "position": {
+    "x": 227,
+    "y": 20,
+    "z": 5001,
+    "width": 195,
+    "height": 120,
+    "tabOrder": 5001
+  },
+  "visual": {
+    "visualType": "cardVisual",
+    "query": {
+      "queryState": {
+        "Data": {
+          "projections": [
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "mart_paid_efficiency_daily"
+                    }
+                  },
+                  "Property": "Cost per MQL USD"
+                }
+              },
+              "queryRef": "mart_paid_efficiency_daily.Cost per MQL USD",
+              "nativeQueryRef": "Cost per MQL USD"
+            }
+          ]
+        }
+      }
+    },
+    "visualContainerObjects": {
+      "title": [
+        {
+          "properties": {
+            "text": {
+              "expr": {
+                "Literal": {
+                  "Value": "'Cost per MQL'"
+                }
+              }
+            },
+            "show": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

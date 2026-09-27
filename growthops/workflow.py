@@ -13,12 +13,15 @@ import hashlib
 import json
 import math
 import sqlite3
+import time
 import uuid
 from collections import Counter
 from datetime import datetime, timedelta, timezone
 from typing import Callable, Literal
 
 from pydantic import BaseModel, Field, field_validator
+
+from growthops.adapters import Adapters, ProviderError, call_step
 
 MAX_ATTEMPTS = 5
 BACKOFF_BASE = timedelta(minutes=5)
@@ -144,12 +147,17 @@ def process_payment(
     faults: FaultInjector | None = None,
     latency: LatencyModel | None = None,
     delivery: bool = True,
+    adapters: Adapters | None = None,
 ) -> dict:
     """Persist each step before moving on; a redelivery resumes after the last step.
 
     ``delivery`` is False when the retry worker (not the provider) re-runs the event,
-    so internal retries are not counted as duplicate deliveries.
+    so internal retries are not counted as duplicate deliveries. ``adapters`` performs
+    the real side effects; ``None`` (the synthetic scenario) simulates them. A provider
+    call happens outside the database transaction, so a slow provider never holds the
+    write lock, and every adapter call is idempotent so a retried step is safe.
     """
+    live = adapters is not None and not adapters.simulated
     clock = now or datetime.now(timezone.utc)
     latency = latency or default_latency
     digest = _payload_digest(event)
@@ -210,7 +218,16 @@ def process_payment(
             error = f"simulated {step} failure" if fail_step == step else None
             if error is None and faults is not None:
                 error = faults(step, event, attempt, cursor)
-            duration = latency(step, event, attempt, error is not None)
+            if live:
+                began = time.perf_counter()
+                if error is None:
+                    try:
+                        call_step(adapters, step, event)
+                    except ProviderError as exc:
+                        error = str(exc)
+                duration = round((time.perf_counter() - began) * 1000)
+            else:
+                duration = latency(step, event, attempt, error is not None)
             started = cursor
             cursor = cursor + timedelta(milliseconds=duration)
             connection.execute("BEGIN IMMEDIATE")
@@ -274,6 +291,7 @@ def run_due(
     faults: FaultInjector | None = None,
     latency: LatencyModel | None = None,
     limit: int = 200,
+    adapters: Adapters | None = None,
 ) -> list[dict]:
     """Retry worker: resume every failed event whose backoff has elapsed."""
     rows = connection.execute(
@@ -284,11 +302,13 @@ def run_due(
     results = []
     for row in rows:
         event = PaymentEvent.model_validate_json(row["payload_json"])
-        results.append(process_payment(connection, event, now=now, faults=faults, latency=latency, delivery=False))
+        results.append(process_payment(connection, event, now=now, faults=faults, latency=latency, delivery=False,
+                                       adapters=adapters))
     return results
 
 
-def replay_dead_letter(connection: sqlite3.Connection, event_id: str, now: datetime | None = None) -> dict:
+def replay_dead_letter(connection: sqlite3.Connection, event_id: str, now: datetime | None = None,
+                       adapters: Adapters | None = None) -> dict:
     """Operator action: give a dead-lettered event a fresh retry budget and run it now."""
     row = connection.execute(
         "SELECT status, payload_json FROM processed_events WHERE event_id=?", (event_id,)
@@ -301,7 +321,8 @@ def replay_dead_letter(connection: sqlite3.Connection, event_id: str, now: datet
         "UPDATE processed_events SET status='failed', attempts=0, next_attempt_at=NULL WHERE event_id=?",
         (event_id,),
     )
-    return process_payment(connection, PaymentEvent.model_validate_json(row["payload_json"]), now=now, delivery=False)
+    return process_payment(connection, PaymentEvent.model_validate_json(row["payload_json"]), now=now, delivery=False,
+                           adapters=adapters)
 
 
 def _percentile(values: list[float], share: float) -> float | None:

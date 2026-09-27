@@ -4,17 +4,26 @@ from __future__ import annotations
 
 import hashlib
 import hmac
-import os
+import logging
+import sqlite3
+import time
+import uuid
 from contextlib import asynccontextmanager
 from datetime import date, timedelta
 from importlib.resources import files
 from typing import Literal
 
 from fastapi import FastAPI, Header, HTTPException, Query, Request
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse, RedirectResponse
 from pydantic import ValidationError
 
-from growthops.db import connect, initialize
+from growthops.adapters import build_adapters
+from growthops.ask_data import answer as ask_data, usage as ask_usage_summary
+from growthops.config import get_settings
+from growthops.db import SCHEMA_VERSION, connect, initialize, schema_version
+from growthops.freshness import check as freshness_check
+from growthops.observability import METRICS, business_gauges, configure_logging, log, request_id
 from growthops.campaign_links import LinkRequest, build_link
 from growthops.attribution import summary as attribution_summary
 from growthops.funnel import funnel
@@ -38,18 +47,70 @@ from growthops.hubspot import audit as hubspot_audit, property_definitions
 from growthops.performance import daily_update, paid_efficiency
 
 
+logger = logging.getLogger("growthops.api")
+PROTECTED_PREFIXES = ("/metrics", "/ops", "/crm", "/campaign-links", "/ask", "/docs", "/redoc", "/openapi.json")
+SECURITY_HEADERS = {"X-Content-Type-Options": "nosniff", "X-Frame-Options": "DENY",
+                    "Referrer-Policy": "no-referrer", "Cache-Control": "no-store"}
+
+
 def database_path() -> str:
-    return os.getenv("GROWTHOPS_DATABASE", "data/growthops-sample.db")
+    return get_settings().database
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    build_warehouse(database_path())
+    settings = get_settings()
+    settings.require_safe()  # a misconfigured production deployment stops here
+    configure_logging(settings.log_level, settings.log_format)
+    build_warehouse(settings.database)
+    log(logger, logging.INFO, "api started", env=settings.env, data_mode=settings.data_mode,
+        schema_version=SCHEMA_VERSION, crm_adapter=settings.crm_adapter)
     yield
 
 
-app = FastAPI(title="GrowthOps OS", version="0.2.0", lifespan=lifespan)
+app = FastAPI(title="GrowthOps OS", version="0.3.0", lifespan=lifespan)
+if _origins := get_settings().cors_origins:  # browsers only; server-to-server callers use API keys
+    app.add_middleware(CORSMiddleware, allow_origins=_origins, allow_methods=["GET"],
+                       allow_headers=["X-API-Key", "Authorization", "X-Request-ID"])
 assert set(MODELS) == {"first_touch", "lead_creation", "last_non_direct", "u_shaped", "linear"}
+
+
+def _authorized(request: Request, keys: list[str]) -> bool:
+    supplied = request.headers.get("x-api-key", "")
+    bearer = request.headers.get("authorization", "")
+    if bearer.lower().startswith("bearer "):
+        supplied = supplied or bearer[7:]
+    return bool(supplied) and any(hmac.compare_digest(supplied, key) for key in keys)
+
+
+@app.middleware("http")
+async def request_context(request: Request, call_next):
+    """Request ID, API-key check, access log, latency metrics and security headers for every request."""
+    rid = request.headers.get("x-request-id") or uuid.uuid4().hex[:16]
+    token = request_id.set(rid)
+    started = time.perf_counter()
+    settings = get_settings()
+    try:
+        protected = request.url.path.startswith(PROTECTED_PREFIXES)
+        if protected and (settings.production or settings.api_keys) and not _authorized(request, settings.api_keys):
+            response = JSONResponse({"detail": "missing or invalid API key"}, status_code=401)
+        else:
+            try:
+                response = await call_next(request)
+            except Exception:  # never leak internals; the log keeps the traceback
+                logger.exception("unhandled error", extra={"fields": {"path": request.url.path}})
+                response = JSONResponse({"detail": "internal error", "request_id": rid}, status_code=500)
+        route = getattr(request.scope.get("route"), "path", "unmatched")
+        elapsed = time.perf_counter() - started
+        METRICS.observe(request.method, route, response.status_code, elapsed)
+        response.headers["X-Request-ID"] = rid
+        for header, value in SECURITY_HEADERS.items():
+            response.headers.setdefault(header, value)
+        log(logger, logging.INFO, "request", method=request.method, route=route, status=response.status_code,
+            duration_ms=round(elapsed * 1000, 1))
+        return response
+    finally:
+        request_id.reset(token)
 
 
 def _read(function, *args):
@@ -62,7 +123,40 @@ def _read(function, *args):
 
 @app.get("/health")
 def health() -> dict:
+    """Liveness: the process is up. Use /ready for dependencies."""
     return {"status": "ok"}
+
+
+@app.get("/ready")
+def ready() -> JSONResponse:
+    """Readiness: the database answers, the schema is current, and each source's freshness."""
+    settings = get_settings()
+    try:
+        connection = connect(settings.database)
+        try:
+            connection.execute("SELECT 1").fetchone()
+            version = schema_version(connection)
+            sources = freshness_check(connection, settings)
+        finally:
+            connection.close()
+    except sqlite3.Error as exc:
+        return JSONResponse({"status": "unavailable", "database": str(exc)}, status_code=503)
+    schema_ok = version == SCHEMA_VERSION
+    stale = [item["source"] for item in sources if item["status"] != "fresh"]
+    body = {"status": "ready" if schema_ok else "schema_mismatch", "schema_version": version,
+            "expected_schema_version": SCHEMA_VERSION, "stale_sources": stale, "sources": sources}
+    return JSONResponse(body, status_code=200 if schema_ok else 503)
+
+
+@app.get("/metrics", response_class=PlainTextResponse)
+def prometheus_metrics() -> PlainTextResponse:
+    """Prometheus exposition: HTTP traffic plus workflow, access and freshness gauges."""
+    connection = connect(database_path())
+    try:
+        gauges = business_gauges(connection, freshness_check(connection))
+    finally:
+        connection.close()
+    return PlainTextResponse(METRICS.render(gauges), media_type="text/plain; version=0.0.4")
 
 
 @app.get("/", include_in_schema=False)
@@ -72,6 +166,8 @@ def root() -> RedirectResponse:
 
 @app.get("/dashboard", response_class=HTMLResponse, include_in_schema=False)
 def dashboard() -> HTMLResponse:
+    if get_settings().production:  # the static page calls endpoints without an API key
+        raise HTTPException(status_code=404, detail="not available in production")
     html = files("growthops").joinpath("static/dashboard.html").read_text(encoding="utf-8")
     return HTMLResponse(html)
 
@@ -180,13 +276,36 @@ def brief_metrics(days: int = Query(default=7, ge=1, le=30)) -> dict:
         connection.close()
 
 
+def verify_signature(body: bytes, signature: str, timestamp: str, settings) -> bool:
+    """HMAC-SHA256 over ``"{timestamp}.{body}"``, rejected outside the tolerance window (replay protection).
+
+    Development also accepts the legacy body-only signature when no timestamp is sent.
+    """
+    secret = settings.webhook_secret.encode()
+    if timestamp:
+        try:
+            age = abs(time.time() - int(timestamp))
+        except ValueError:
+            return False
+        if age > settings.webhook_tolerance_seconds:
+            return False
+        signed = timestamp.encode() + b"." + body
+    elif settings.production:
+        return False
+    else:
+        signed = body
+    return hmac.compare_digest(hmac.new(secret, signed, hashlib.sha256).hexdigest(), signature)
+
+
 @app.post("/webhooks/payments", status_code=202)
-async def payment_webhook(request: Request, x_growthops_signature: str = Header(default="")) -> dict:
+async def payment_webhook(request: Request, x_growthops_signature: str = Header(default=""),
+                          x_growthops_timestamp: str = Header(default="")) -> dict:
     body = await request.body()
-    secret = os.getenv("GROWTHOPS_WEBHOOK_SECRET", "local-demo-secret").encode()
-    expected = hmac.new(secret, body, hashlib.sha256).hexdigest()
-    if not hmac.compare_digest(expected, x_growthops_signature):
-        raise HTTPException(status_code=401, detail="invalid signature")
+    settings = get_settings()
+    if not verify_signature(body, x_growthops_signature, x_growthops_timestamp, settings):
+        METRICS.increment("webhook_rejected")
+        raise HTTPException(status_code=401, detail="invalid or expired signature")
+    METRICS.increment("webhook_accepted")
     try:
         event = PaymentEvent.model_validate_json(body)
     except ValidationError as exc:
@@ -194,7 +313,7 @@ async def payment_webhook(request: Request, x_growthops_signature: str = Header(
     connection = connect(database_path())
     try:
         initialize(connection)
-        result = process_payment(connection, event)
+        result = process_payment(connection, event, adapters=build_adapters(settings))
     except EventConflict as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
     finally:
@@ -268,6 +387,18 @@ def narrative() -> dict:
     return narrate(_read(brief_findings))
 
 
+@app.get("/ask")
+def ask(q: str = Query(min_length=1, max_length=300)) -> dict:
+    """Keyless, retrieval-grounded question answering over the governed metrics (see growthops.ask_data)."""
+    return _read(ask_data, q)
+
+
+@app.get("/ops/ask-usage")
+def ask_usage(days: int = Query(default=7, ge=1, le=90)) -> dict:
+    """Questions asked by route (answered, defined, refused) and latency, from the audit log."""
+    return _read(ask_usage_summary, days)
+
+
 @app.get("/metrics/daily-update")
 def written_daily_update(day: date | None = None) -> dict:
     """Yesterday vs the trailing week, paid efficiency and what needs attention, as copy-ready text."""
@@ -328,12 +459,12 @@ def paid_without_access() -> list[dict]:
 @app.post("/ops/events/{event_id}/replay")
 def replay_event(event_id: str, x_growthops_ops_token: str = Header(default="")) -> dict:
     """Operator action (role-gated): retry a dead-lettered event with a fresh attempt budget."""
-    expected = os.getenv("GROWTHOPS_OPS_TOKEN", "")
+    expected = get_settings().ops_token
     if not expected or not hmac.compare_digest(expected, x_growthops_ops_token):
         raise HTTPException(status_code=403, detail="ops role required")
     connection = connect(database_path())
     try:
-        return replay_dead_letter(connection, event_id)
+        return replay_dead_letter(connection, event_id, adapters=build_adapters(get_settings()))
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except ValueError as exc:

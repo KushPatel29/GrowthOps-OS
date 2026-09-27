@@ -266,3 +266,10 @@ models:
     columns:
       - name: link_id
         data_tests: [unique, not_null]
+  - name: mart_paid_efficiency_daily
+    description: Paid campaign activity by UTC day (spend, delivery, leads, MQLs, booked calls, wins) for date-range efficiency metrics.
+    columns:
+      - name: day
+        data_tests: [not_null]
+      - name: campaign_id
+        data_tests: [not_null]

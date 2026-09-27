@@ -24,10 +24,25 @@ jobs:
       - run: python -m pip install -e ".[dev,warehouse]" -r requirements.txt
       - name: Lint
         run: python -m ruff check --isolated growthops tests streamlit_app.py
-      - name: Unit, invariant and ground-truth tests
-        run: python -m pytest -q
+      - name: Unit, invariant and ground-truth tests (coverage gate 80%)
+        run: |
+          python -m pip install pytest-cov
+          python -m pytest -q --cov=growthops --cov-report=term --cov-fail-under=80
+      - name: Dependency vulnerability audit
+        run: |
+          python -m pip install pip-audit
+          pip-audit -r requirements.txt --progress-spinner off --skip-editable
       - name: Narrative guardrail eval (30 labelled cases)
         run: python -m growthops.narrator --eval
+      - name: Cache the local embedding model (checksum-verified on load)
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/growthops/models
+          key: minilm-onnx-913d7300
+      - name: Ask-your-data question contract, keyword and hybrid (zero wrong answers)
+        run: |
+          python -m growthops.embeddings
+          python -m growthops.ask_data --eval
       - name: Streamlit app renders every view without an exception
         run: |
           python - <<'PY'
@@ -59,10 +74,28 @@ jobs:
 
   docker:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
-      - name: Build the API image and smoke-test it
+      - name: Compose file is valid
+        run: cp .env.example .env && docker compose config --quiet
+      - name: Build the image (downloads and verifies the embedding model)
+        run: docker build -t growthops-os .
+      - name: Production container refuses unsafe settings, then serves safely
         run: |
-          docker build -t growthops-os .
-          docker run --rm growthops-os python -c "from growthops.seed import seed; from growthops.warehouse import build; seed('/tmp/s.db', scale=0.2); build('/tmp/s.db'); print('ok')"
+          docker volume create gdata
+          docker run --rm -v gdata:/data growthops-os python -m growthops.seed --database /data/growthops.db --scale 0.2
+          if docker run --rm -v gdata:/data -e GROWTHOPS_ENV=production growthops-os \
+               python -c "from growthops.config import get_settings; get_settings().require_safe()"; then
+            echo "::error::production accepted unsafe defaults"; exit 1
+          fi
+          docker run -d --name api -p 8000:8000 -v gdata:/data --read-only --tmpfs /tmp \
+            -e GROWTHOPS_ENV=production -e GROWTHOPS_DATA_MODE=live \
+            -e GROWTHOPS_WEBHOOK_SECRET=$(openssl rand -hex 32) -e GROWTHOPS_API_KEYS=ci-key-0123456789abcdefghij \
+            -e GROWTHOPS_OPS_TOKEN=$(openssl rand -hex 16) growthops-os
+          for i in $(seq 1 30); do curl -fs localhost:8000/health && break; sleep 2; done
+          curl -fs localhost:8000/ready | python -c "import json,sys; body=json.load(sys.stdin); assert body['status']=='ready', body"
+          test "$(curl -s -o /dev/null -w '%{http_code}' localhost:8000/metrics/funnel)" = "401"
+          curl -fs -H "X-API-Key: ci-key-0123456789abcdefghij" "localhost:8000/ask?q=What%20does%20a%20lead%20cost%20on%20Google" \
+            | python -c "import json,sys; body=json.load(sys.stdin); assert body['retrieval_mode']=='hybrid' and body['route']=='metric', body"
+          docker logs api | tail -5

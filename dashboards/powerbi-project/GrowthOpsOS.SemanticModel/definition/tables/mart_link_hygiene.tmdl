@@ -1,0 +1,83 @@
+table mart_link_hygiene
+	lineageTag: 65eca8e4-a1fc-581b-856f-39c105b6fb96
+
+	column link_id
+		dataType: string
+		lineageTag: dd4e14eb-3452-5376-b88b-becfea9d043f
+		summarizeBy: none
+		sourceColumn: link_id
+
+	column channel
+		dataType: string
+		lineageTag: 512814cc-4e45-501c-9d6b-dbbe52143765
+		summarizeBy: none
+		sourceColumn: channel
+
+	column utm_source
+		dataType: string
+		lineageTag: 3bbb893c-60bb-5520-82fb-0e9807278b7c
+		summarizeBy: none
+		sourceColumn: utm_source
+
+	column utm_medium
+		dataType: string
+		lineageTag: aa14c1cc-a2c6-5eea-8c5f-cb72beadf7e0
+		summarizeBy: none
+		sourceColumn: utm_medium
+
+	column utm_campaign
+		dataType: string
+		lineageTag: 8235ac2a-2459-5a9c-a0ea-11788ef4a9f8
+		summarizeBy: none
+		sourceColumn: utm_campaign
+
+	column missing_utm
+		dataType: boolean
+		lineageTag: 2185a0e5-3cfc-5998-a023-2f7c9ee01aa4
+		summarizeBy: none
+		sourceColumn: missing_utm
+
+	column unregistered_campaign
+		dataType: boolean
+		lineageTag: 930b988b-becb-5d67-ad87-96d9ece42884
+		summarizeBy: none
+		sourceColumn: unregistered_campaign
+
+	column off_taxonomy
+		dataType: boolean
+		lineageTag: 2fdbbe37-918d-596c-bfbc-bef1a8b8561b
+		summarizeBy: none
+		sourceColumn: off_taxonomy
+
+	column clicks
+		dataType: int64
+		lineageTag: 81ac925e-7f1c-5fd2-bab8-495c6e13ff86
+		summarizeBy: none
+		sourceColumn: clicks
+
+	column recent_clicks
+		dataType: int64
+		lineageTag: 00d1fa05-d1bd-5ba4-96a0-4f949b246217
+		summarizeBy: none
+		sourceColumn: recent_clicks
+
+	/// Short links with missing, unregistered or off-taxonomy UTMs.
+	measure 'Links with defects' = COUNTROWS(FILTER('mart_link_hygiene', 'mart_link_hygiene'[missing_utm] || 'mart_link_hygiene'[unregistered_campaign] || 'mart_link_hygiene'[off_taxonomy]))
+		formatString: #,0
+		displayFolder: Tracking
+		lineageTag: 5c974b22-3f1f-547d-aea6-481ca045d81d
+
+	/// Share of last-30-day short-link clicks that land without a valid campaign.
+	measure 'Recent clicks on defective links share' = DIVIDE(CALCULATE(SUM('mart_link_hygiene'[recent_clicks]), FILTER('mart_link_hygiene', 'mart_link_hygiene'[missing_utm] || 'mart_link_hygiene'[unregistered_campaign] || 'mart_link_hygiene'[off_taxonomy])), SUM('mart_link_hygiene'[recent_clicks]))
+		formatString: 0%
+		displayFolder: Tracking
+		lineageTag: 5c6a0db9-87a9-5497-a609-e531c9025795
+
+	partition mart_link_hygiene = m
+		mode: import
+		source =
+				let
+				  Source = Table.FromRows(Json.Document(Binary.Decompress(Binary.FromText("tZPBboMwDIbfhXORAqHQvMDOO+xWVVEgLrWaJjSEor79Ega0dO2kTZqE/P/YMZ8ci+02wjou0USrCHXrRG3Fyfv5+bAdeHkTqr1Xus43XlhCot1qGymMleh0dfA5hfoIEvXStqZCoe5yvALDRXl68vGRmVA2xoDQKpYgpG8PNQ19q8A5sI8vptcgOZwEqkWJ9wBHdX2CmzQtkjGOvLpD+V+wnOapl4xuBlpjZCyaZmjxvhKtC05YpweQhT1YO1zgmOS3Y68YSUqKIITMDGiyZIF4n92vEOOK0mwdIkkHQA9ljPqCLpSmS/FJ1CLMABfQ7pbhtTW9O3DT/jBCRsiwFPY1wtXNS7maznXl0hlbC40Vv/gj5lbhe9Np6eeZel/RGCvCheUsm2hn+ifgmX5jPfxIGxbWTwtP2n0C", BinaryEncoding.Base64), Compression.Deflate)), let _t = ((type nullable text) meta [Serialized.Text = true]) in type table [link_id = nullable text, channel = nullable text, utm_source = nullable text, utm_medium = nullable text, utm_campaign = nullable text, missing_utm = nullable text, unregistered_campaign = nullable text, off_taxonomy = nullable text, clicks = nullable text, recent_clicks = nullable text]),
+				  #"Changed column type" = Table.TransformColumnTypes(Source, {{"link_id", type text}, {"channel", type text}, {"utm_source", type text}, {"utm_medium", type text}, {"utm_campaign", type text}, {"missing_utm", type logical}, {"unregistered_campaign", type logical}, {"off_taxonomy", type logical}, {"clicks", Int64.Type}, {"recent_clicks", Int64.Type}})
+				in
+				  #"Changed column type"
