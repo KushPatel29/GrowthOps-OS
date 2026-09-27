@@ -103,6 +103,10 @@ jobs:
           for i in $(seq 1 30); do curl -fs localhost:8000/health && break; sleep 2; done
           curl -fs localhost:8000/ready | python -c "import json,sys; body=json.load(sys.stdin); assert body['status']=='ready' and not body['stale_sources'], body"
           test "$(curl -s -o /dev/null -w '%{http_code}' localhost:8000/metrics/funnel)" = "401"
-          curl -fs -H "X-API-Key: ci-key-0123456789abcdefghij" "localhost:8000/ask?q=What%20does%20a%20lead%20cost%20on%20Google" \
+          # A question that has to go through retrieval, so this proves the image's MiniLM model is live.
+          # (A question whose details decide it, like "what does a lead cost on Google", skips retrieval.)
+          curl -fs -H "X-API-Key: ci-key-0123456789abcdefghij" "localhost:8000/ask?q=did%20anyone%20pay%20and%20not%20get%20into%20the%20community" \
             | python -c "import json,sys; body=json.load(sys.stdin); assert body['retrieval_mode']=='hybrid' and body['route']=='metric', body"
+          curl -fs -H "X-API-Key: ci-key-0123456789abcdefghij" "localhost:8000/ask?q=What%20does%20a%20lead%20cost%20on%20Google" \
+            | python -c "import json,sys; body=json.load(sys.stdin); assert body['metric_id']=='paid_efficiency' and body['answer'].startswith('Google,'), body"
           docker logs api | tail -5
