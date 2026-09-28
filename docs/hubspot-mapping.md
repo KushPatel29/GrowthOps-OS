@@ -1,7 +1,9 @@
 # HubSpot mapping
 
 GrowthOps OS keeps its own CRM tables, and `growthops/hubspot.py` maps them onto HubSpot's standard objects so the same
-analysis can run on a HubSpot portal export, or so a clean import can be prepared. **No HubSpot portal is connected**;
+analysis can run on a HubSpot portal export, or so a clean import can be prepared. This module itself connects to
+no portal (the live build is [`hubspot_portal.py`](../growthops/hubspot_portal.py), written up in
+[hubspot-portal.md](hubspot-portal.md));
 owner IDs are placeholders, and the search-response parser is tested against a fixture shaped like the CRM v3 API.
 
 ## Standard properties

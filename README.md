@@ -3,7 +3,7 @@
 **Marketing measurement, revenue reconciliation and lifecycle automation for a creator-led B2B business.**
 
 [![GrowthOps checks](https://github.com/KushPatel29/GrowthOps-OS/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/KushPatel29/GrowthOps-OS/actions/workflows/ci.yml)
-[![tests](https://img.shields.io/badge/tests-550%20passing-brightgreen)](tests)
+[![tests](https://img.shields.io/badge/tests-558%20passing-brightgreen)](tests)
 [![guardrail eval](https://img.shields.io/badge/guardrail%20eval-30%2F30-brightgreen)](evals/narrative_guardrail_cases.json)
 
 [**Live dashboard**](https://growthops-os.streamlit.app/) · [Power BI and Excel](docs/power-bi-handoff.md) · [Case study](docs/case-study.md) · [Metric catalog](docs/metric-catalog.md) · [API](docs/api-contracts.md)
@@ -45,7 +45,7 @@ if it ever stops doing so.
 | Paid media efficiency: CPM, CTR, CPC, CPL, cost per MQL, cost per booked call, net-cash ROAS, funnel conversion by channel | Acquisition and Funnel views; [`performance.py`](growthops/performance.py), [`report.py`](growthops/report.py), [`funnel.py`](growthops/funnel.py) |
 | Email analytics: delivery, bounce, human vs reported opens, CTR, click-to-open, unsubscribes, complaints, newsletter → pipeline, list source mix | Email & links view; [`email_analytics.py`](growthops/email_analytics.py), `mart_email_performance` |
 | Clear written daily updates | `python -m growthops.performance`, `GET /metrics/daily-update`, copy block in the Morning brief |
-| HubSpot-shaped CRM work: lifecycle, deal stage and owner mapping, custom-property definitions, import files, v3 search parsing, CRM hygiene audit | [`hubspot.py`](growthops/hubspot.py), [HubSpot mapping](docs/hubspot-mapping.md) (no portal connected) |
+| HubSpot, built live in a developer test account: 33 custom properties (UTM, content, funnel dates, tracking status, attribution), a funnel-stage deal pipeline, an Imports API load, a CRM API sync that writes only differences, lists, three published workflows, a CRM cleanup found through the search API, a four-report dashboard, and a read-back that reconciles the portal to the warehouse with zero differences | [`hubspot_portal.py`](growthops/hubspot_portal.py), [HubSpot portal build](docs/hubspot-portal.md), [`hubspot.py`](growthops/hubspot.py), [HubSpot mapping](docs/hubspot-mapping.md) |
 | Attribution: first touch, lead creation, last non-direct, U-shaped, linear, all conserving cash to the cent | [`attribution.py`](growthops/attribution.py) |
 | Reconciling ad platforms, CRM and payments after a migration | [`reconciliation.py`](growthops/reconciliation.py), [`migration.py`](growthops/migration.py) |
 | UTM and short-link governance, tracking-quality monitoring | [`campaign_links.py`](growthops/campaign_links.py), `mart_link_hygiene`, measurement health, [tracking plan](docs/tracking-plan.md) |
@@ -132,6 +132,8 @@ python -m growthops.narrator --eval                                # 30/30 guard
 python -m growthops.case_study                                     # regenerate docs/case-study.md
 python -m growthops.performance                                    # the written daily update
 python -m growthops.hubspot --output build/hubspot                 # HubSpot import files + CRM audit
+python -m growthops.hubspot_portal plan                             # what a HubSpot portal build would create (offline)
+python -m growthops.hubspot_portal apply                            # build + verify a HubSpot test account (HUBSPOT_ACCESS_TOKEN)
 python -m growthops.ask_data --eval                                # question contract, keyword + hybrid
 python -m growthops.ask_data "What does a lead cost on Google?"    # ask from the command line
 python -m growthops.worker --once                                  # retries, alerts, daily update
