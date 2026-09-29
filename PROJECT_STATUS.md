@@ -51,9 +51,14 @@ Live synthetic dashboard: https://growthops-os.streamlit.app/ · GitHub: https:/
   to pipeline, list source mix, and a short-link registry audit that finds exactly the four planted defects.
 - **HubSpot CRM layer** (`hubspot.py`, `hubspot_portal.py`): lifecycle, deal-stage and owner mapping,
   Properties API definitions, import-ready contacts/deals CSVs, a CRM v3 search request builder and response
-  parser, Original Traffic Source mismatch check and a CRM hygiene audit. A developer test portal holds 959
+  parser, Original Traffic Source mismatch check and a CRM hygiene audit. A prior developer test portal snapshot held 959
   synthetic contacts, 130 deals, 33 custom properties, six lists, three published workflows and a four-report
   dashboard; read-back reconciles the sample to the warehouse. See [portal evidence](docs/hubspot-portal.md).
+- **Live, read-only marketing audit** (`hubspot_marketing_audit.py`): a 2026-09-29 search returned 961
+  synthetic contacts, all marked non-marketable. It flagged 111 missing/off-taxonomy/blank tracking statuses,
+  89 blank original UTM sources and two active-stage contacts without owners. The inspected opt-out field is
+  blank for all 961, so eligibility remains unproven and no status change is recommended. See the
+  [portal audit](docs/hubspot-marketing-audit.md); it made zero portal writes.
 - **Attribution** (five models, exact-cent conservation), funnel timing and by-channel conversion, content to
   pipeline, renewal-risk queue, migration audit with logged safe repairs, allowlisted ask-your-data.
 - **Warehouse**: SQLite reference marts and a DuckDB dbt project (staging → intermediate → marts, schema and
@@ -90,8 +95,8 @@ Live synthetic dashboard: https://growthops-os.streamlit.app/ · GitHub: https:/
 
 ## Not implemented yet
 
-- The connected HubSpot developer portal has zero tickets as of 2026-09-29, including zero unresolved
-  high-priority tickets. A read-only live audit found all 33 baseline custom properties present with zero
+- The HubSpot connector returned zero tickets as of 2026-09-29, including zero unresolved
+  high-priority tickets; the separate private-app token lacks ticket-search scope. A read-only live audit found all 33 baseline custom properties present with zero
   definition drift; the five proposed v2.1 properties are still absent. No v2.1 property or record values
   have been written to it.
 

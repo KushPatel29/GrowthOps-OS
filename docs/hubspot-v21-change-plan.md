@@ -2,7 +2,7 @@
 
 **Portal:** HubSpot developer test account 247549241, containing the sampled synthetic ScaleLab data. **Prepared:** 2026-09-29. **State:** review only; no v2.1 portal changes applied.
 
-The connected portal has 959 synthetic contacts, 130 deals, 33 GrowthOps custom properties and three published GrowthOps workflows. A ticket search returned **0 tickets total**, so there are no unresolved high-priority tickets to triage. The local v2.1 control plane covers all 14,693 synthetic contacts; its counts must not be shown as portal counts.
+The prior portal snapshot had 959 synthetic contacts and 130 deals. A read-only contact search on 2026-09-29 returned **961 contacts**; the prior snapshot did not retain an ID list, so this change is a count difference only. The current property audit found 33 GrowthOps custom properties, and the prior build published three GrowthOps workflows. A HubSpot connector ticket search on 2026-09-29 returned **0 tickets total**, so there are no unresolved high-priority tickets to triage. The separate private-app token lacks ticket-search scope; ticket counts come from the connector. The local v2.1 control plane covers all 14,693 synthetic contacts; its counts must not be shown as portal counts. See the [current marketing-contact audit](hubspot-marketing-audit.md).
 
 ## Proposed schema additions
 
@@ -25,10 +25,10 @@ The checked schema-only command is `python -m growthops.hubspot_v21 plan`; `audi
 
 ## Gates before record changes
 
-1. Verify contact and deal identity mappings against the 959/130 portal sample. The local person key is the synthetic contact ID, while the portal deduplicated some contacts by email.
+1. Verify contact and deal identity mappings against the current 961-contact search and the prior 130-deal snapshot. The local person key is the synthetic contact ID, while the portal deduplicated some contacts by email.
 2. Record exact current and proposed values per object ID. Each `manage_crm_objects` batch is at most ten objects and needs a reviewed table of object type, ID, property, current value and new value.
 3. Do not copy local hash-based `synthetic_rep_assessment` into HubSpot as if a sales representative made the decision. Rep decisions need their own source and timestamp.
-4. Keep marketing-contact status unchanged without consent evidence. The local audit reports 14,693/14,693 eligibility unknown across the full synthetic scenario.
+4. Keep marketing-contact status unchanged without consent evidence. The connected portal's read-only audit cannot establish eligibility for any of its 961 sampled contacts from the inspected fields; the separate local audit reports 14,693/14,693 eligibility unknown across the full synthetic scenario.
 5. Recheck workflow triggers and owner routing before publishing a new workflow version. The local workflow registry is desired state, not live drift evidence.
 
 ## Local evidence ready now

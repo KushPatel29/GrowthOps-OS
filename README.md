@@ -3,10 +3,10 @@
 **Marketing measurement, revenue reconciliation and lifecycle automation for a creator-led B2B business.**
 
 [![GrowthOps checks](https://github.com/KushPatel29/GrowthOps-OS/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/KushPatel29/GrowthOps-OS/actions/workflows/ci.yml)
-[![tests](https://img.shields.io/badge/tests-576%20passing-brightgreen)](tests)
+[![tests](https://img.shields.io/badge/tests-578%20passing-brightgreen)](tests)
 [![guardrail eval](https://img.shields.io/badge/guardrail%20eval-30%2F30-brightgreen)](evals/narrative_guardrail_cases.json)
 
-[**Live dashboard**](https://growthops-os.streamlit.app/) · [Power BI and Excel](docs/power-bi-handoff.md) · [Case study](docs/case-study.md) · [Metric catalog](docs/metric-catalog.md) · [API](docs/api-contracts.md) · [v2.1 specification](docs/growthops-os-v2.1-engineering-spec.md) · [HubSpot v2.1 change plan](docs/hubspot-v21-change-plan.md)
+[**Live dashboard**](https://growthops-os.streamlit.app/) · [Power BI and Excel](docs/power-bi-handoff.md) · [Case study](docs/case-study.md) · [Metric catalog](docs/metric-catalog.md) · [API](docs/api-contracts.md) · [v2.1 specification](docs/growthops-os-v2.1-engineering-spec.md) · [HubSpot marketing audit](docs/hubspot-marketing-audit.md) · [HubSpot v2.1 change plan](docs/hubspot-v21-change-plan.md)
 
 ScaleLab is a fictional coaching and education company that moved from a legacy CRM six months ago. Since
 then nobody trusts the numbers: Meta, Google, LinkedIn, the CRM and the payment processor each report a
@@ -134,6 +134,7 @@ python -m growthops.performance                                    # the written
 python -m growthops.hubspot --output build/hubspot                 # HubSpot import files + CRM audit
 python -m growthops.hubspot_portal plan                             # what a HubSpot portal build would create (offline)
 python -m growthops.hubspot_v21 audit                                # read-only live property drift audit
+python -m growthops.hubspot_marketing_audit                           # read-only live marketing-contact audit
 python -m growthops.hubspot_v21 plan                                 # five-field v2.1 schema proposal (offline)
 python -m growthops.hubspot_portal apply                            # build + verify a HubSpot test account (HUBSPOT_ACCESS_TOKEN)
 python -m growthops.ask_data --eval                                # question contract, keyword + hybrid
