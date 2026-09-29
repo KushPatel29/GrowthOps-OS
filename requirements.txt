@@ -1,6 +1,7 @@
 # Streamlit Community Cloud installs from this file: deploy on Python 3.12, the version CI tests.
 # A change here makes Cloud rebuild and restart the app. .streamlit/config.toml also polls for changed
-# growthops modules, so a code-only push no longer leaves the process holding the old ones.
+# growthops modules, but that is not enough on its own: on 2026-09-30 a push reloaded streamlit_app.py while
+# growthops/ask_data.py stayed stale, so a release that changes growthops modules also touches this file.
 -e .
 streamlit>=1.64.0,<2
 pandas>=3.0.6,<4
