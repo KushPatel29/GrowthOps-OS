@@ -84,7 +84,9 @@ Live synthetic dashboard: https://growthops-os.streamlit.app/ · GitHub: https:/
 ## Not implemented yet
 
 - The connected HubSpot developer portal has zero tickets as of 2026-09-29, including zero unresolved
-  high-priority tickets. The v2.1 local control plane has not written new properties or values to it.
+  high-priority tickets. A read-only live audit found all 33 baseline custom properties present with zero
+  definition drift; the five proposed v2.1 properties are still absent. No v2.1 property or record values
+  have been written to it.
 
 - Live runtime integrations: the HubSpot developer test portal is built and verified, but the payment workflow's
   HubSpot and webhook adapters are tested against a fake HTTP transport rather than a real provider bridge.

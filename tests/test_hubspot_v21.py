@@ -2,7 +2,13 @@
 
 import pytest
 
-from growthops.hubspot_v21 import EXPECTED_PORTAL_ID, apply_schema, definitions
+from growthops.hubspot_portal import portal_properties
+from growthops.hubspot_v21 import (
+    EXPECTED_PORTAL_ID,
+    apply_schema,
+    audit_schema,
+    definitions,
+)
 
 
 class FakePortal:
@@ -50,3 +56,25 @@ def test_v21_schema_checks_conflicts_then_creates_and_reads_back():
     assert first["record_values_changed"] == 0
     assert apply_schema(clean, approved=True)["created"] == []
     assert len(clean.posts) == 5
+
+
+def test_read_only_schema_audit_separates_baseline_drift_from_proposals(connection):
+    baseline = portal_properties(connection)
+    existing = {kind: {prop["name"]: dict(prop) for prop in props}
+                for kind, props in baseline.items()}
+    portal = FakePortal(existing=existing)
+    clean = audit_schema(portal, connection)
+    assert clean["mode"] == "read_only" and clean["writes"] == 0
+    assert clean["baseline_expected"] == clean["baseline_present"] == 33
+    assert clean["baseline_issues"] == []
+    assert len(clean["proposed_additions"]) == 5
+    assert all(row["state"] == "not_created" for row in clean["proposed_additions"])
+    assert portal.posts == []
+
+    changed = baseline["contacts"][0]["name"]
+    portal.properties["contacts"][changed]["label"] = "Changed in portal"
+    del portal.properties["deals"][baseline["deals"][0]["name"]]
+    drift = audit_schema(portal, connection)
+    assert drift["baseline_present"] == 32
+    assert {row["issue"] for row in drift["baseline_issues"]} == {"missing", "label_mismatch"}
+    assert portal.posts == []

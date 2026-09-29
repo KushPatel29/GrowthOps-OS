@@ -9,6 +9,8 @@ The connected portal has 959 synthetic contacts, 130 deals, 33 GrowthOps custom 
 Each proposed internal name was checked through the HubSpot Properties tool on 2026-09-29 and was **absent**. These are empty schema fields. Creating them would not itself change lifecycle stage, marketing status, associations or attribution values.
 The create payloads specify both `type` and `fieldType`, as required by [HubSpot's CRM v3 property validation](https://developers.hubspot.com/changelog/crm-object-property-validattion).
 
+The read-only `python -m growthops.hubspot_v21 audit` check on 2026-09-29 found **33/33 baseline properties present with zero definition drift**. It confirmed that all five additions below remain absent; the audit made zero portal writes.
+
 | Object | Internal name | Current | Proposed type / values | Write eligibility |
 |---|---|---|---|---|
 | Contact | `growthops_person_key` | Absent | String, read-only external identity key | Populate only for verified portal contact ↔ person links after duplicate review |
@@ -19,7 +21,7 @@ The create payloads specify both `type` and `fieldType`, as required by [HubSpot
 
 **Proposed schema action:** create these five properties in the existing `growthops` group after approval, then read them back. No record-value update is included in this action. The local registry and API already describe the fields as **proposed additions**; the 33 existing fields remain the expected baseline.
 
-The checked schema-only command is `python -m growthops.hubspot_v21 plan`. The separate `apply` command requires an explicit `--approved-schema-only` flag, checks that portal ID 247549241 is a developer test account, compares all existing definitions before the first write, creates only missing fields, and reads all five back. It has not been run against the portal.
+The checked schema-only command is `python -m growthops.hubspot_v21 plan`; `audit` performs a read-only comparison with the live portal. The separate `apply` command requires an explicit `--approved-schema-only` flag, checks that portal ID 247549241 is a developer test account, compares all existing definitions before the first write, creates only missing fields, and reads all five back. It has not been run against the portal.
 
 ## Gates before record changes
 

@@ -3,7 +3,7 @@
 **Marketing measurement, revenue reconciliation and lifecycle automation for a creator-led B2B business.**
 
 [![GrowthOps checks](https://github.com/KushPatel29/GrowthOps-OS/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/KushPatel29/GrowthOps-OS/actions/workflows/ci.yml)
-[![tests](https://img.shields.io/badge/tests-566%20passing-brightgreen)](tests)
+[![tests](https://img.shields.io/badge/tests-567%20passing-brightgreen)](tests)
 [![guardrail eval](https://img.shields.io/badge/guardrail%20eval-30%2F30-brightgreen)](evals/narrative_guardrail_cases.json)
 
 [**Live dashboard**](https://growthops-os.streamlit.app/) · [Power BI and Excel](docs/power-bi-handoff.md) · [Case study](docs/case-study.md) · [Metric catalog](docs/metric-catalog.md) · [API](docs/api-contracts.md) · [v2.1 specification](docs/growthops-os-v2.1-engineering-spec.md) · [HubSpot v2.1 change plan](docs/hubspot-v21-change-plan.md)
@@ -133,6 +133,8 @@ python -m growthops.case_study                                     # regenerate 
 python -m growthops.performance                                    # the written daily update
 python -m growthops.hubspot --output build/hubspot                 # HubSpot import files + CRM audit
 python -m growthops.hubspot_portal plan                             # what a HubSpot portal build would create (offline)
+python -m growthops.hubspot_v21 audit                                # read-only live property drift audit
+python -m growthops.hubspot_v21 plan                                 # five-field v2.1 schema proposal (offline)
 python -m growthops.hubspot_portal apply                            # build + verify a HubSpot test account (HUBSPOT_ACCESS_TOKEN)
 python -m growthops.ask_data --eval                                # question contract, keyword + hybrid
 python -m growthops.ask_data "What does a lead cost on Google?"    # ask from the command line
