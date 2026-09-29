@@ -176,3 +176,51 @@ def test_a_comparison_of_two_months_uses_both_and_matches_the_mart(connection):
 def test_a_period_cut_at_the_end_says_so(connection):
     result = answer(connection, "revenue in 2026")
     assert "the latest complete day is" in result["answer"] and "the data starts" not in result["answer"]
+
+
+def test_v2_answers_state_the_figures_the_app_shows(connection):
+    """The Decision center and Growth lab read these functions; ask-your-data must state the same numbers."""
+    from growthops.ask_data import _usd
+    from growthops.control_plane import crm_health, qualified_pipeline, quality_queue
+    from growthops.growth_lab import customer_economics
+
+    pipe = qualified_pipeline(connection)
+    result = answer(connection, "How much open pipeline do we have?")
+    assert result["metric_id"] == "qualified_pipeline"
+    assert f"created {_usd(pipe['created_minor'])} of qualified pipeline: {_usd(pipe['open_minor'])} is still open" \
+        in result["answer"]
+    health = crm_health(connection)
+    result = answer(connection, "How many open data quality issues are there?")
+    assert result["metric_id"] == "crm_health" and f"CRM health is {health['score']}/100" in result["answer"]
+    assert f"{quality_queue(connection, limit=1)['total']:,} quality issues are open" in result["answer"]
+    econ = customer_economics(connection)
+    result = answer(connection, "What is our CAC?")
+    assert result["metric_id"] == "customer_economics"
+    assert f"Observed paid CAC is {_usd(econ['paid_cac_minor'])}" in result["answer"]
+    result = answer(connection, "What is our ARR?")
+    assert result["metric_id"] == "subscription_revenue"
+    assert f"{_usd(econ['contracted_arr_minor'])} of contracted ARR" in result["answer"]
+    assert f"({econ['observed_renewal_rate']:.1%})" in result["answer"]
+
+
+def test_attribution_reads_the_model_and_platform_named(connection):
+    from growthops.ask_data import _usd
+    from growthops.attribution import allocations
+
+    meta = {row[0] for row in connection.execute("SELECT campaign_id FROM campaigns WHERE platform='meta'")}
+    credited = sum(row["credited_cents"] for row in allocations(connection, "time_decay")
+                   if row["campaign_id"] in meta)
+    result = answer(connection, "How much cash does time decay attribution give Meta?")
+    assert result["metric_id"] == "attribution_models" and result["understood"] == "Meta · time decay"
+    assert result["answer"].startswith(f"Time decay credits Meta campaigns {_usd(credited)}, of ")
+    one = answer(connection, "Which campaign gets the most credit under time decay?")
+    assert one["answer"].startswith("Time decay (each touch counts half as much") and "linear" not in one["answer"]
+    every = answer(connection, "Compare attribution models")["answer"]
+    assert all(label in every for label in ("First touch", "lead creation", "last non-direct", "U-shaped", "linear",
+                                            "time decay"))
+
+
+def test_consent_is_refused_not_answered_from_another_metric(connection):
+    for question in ("How many people consented to SMS?", "how many contacts opted in to text messages"):
+        result = answer(connection, question)
+        assert result["route"] == "refused" and "consent is not measured" in result["answer"], question

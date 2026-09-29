@@ -15,6 +15,7 @@ from growthops.hubspot_portal import Portal, account, load_token
 from growthops.hubspot_v21 import EXPECTED_PORTAL_ID
 
 PROPERTIES = (
+    "growthops_contact_id",
     "hs_marketable_status",
     "hs_email_optout",
     "lifecyclestage",
@@ -35,6 +36,12 @@ def _value(row: dict, name: str) -> str:
 
 def _ids(rows: list[dict], limit: int = 5) -> list[str]:
     return [str(row["id"]) for row in rows[:limit]]
+
+
+def _queue(rows: list[dict]) -> dict:
+    """A review queue, with how many of its records are GrowthOps contacts rather than portal-created ones."""
+    return {"count": len(rows), "growthops_records": sum(1 for row in rows if _value(row, "growthops_contact_id")),
+            "sample_ids": _ids(rows)}
 
 
 def audit_marketing_contacts(portal: Portal, *, previous_snapshot_count: int | None = None) -> dict:
@@ -61,6 +68,8 @@ def audit_marketing_contacts(portal: Portal, *, previous_snapshot_count: int | N
                     or not _value(row, "growthops_tracking_status")]
     stale = [row for row in contacts if _value(row, "growthops_stale_lead") == "true"]
     closed_won = [row for row in contacts if _value(row, "growthops_has_closed_won") == "true"]
+    # A new HubSpot account creates its own sample contacts; they carry no GrowthOps ID or properties.
+    outside = [row for row in contacts if not _value(row, "growthops_contact_id")]
     delta = None if previous_snapshot_count is None else total - previous_snapshot_count
     return {
         "scope": "connected_synthetic_hubspot_sample",
@@ -76,13 +85,14 @@ def audit_marketing_contacts(portal: Portal, *, previous_snapshot_count: int | N
         "tracking_status": dict(sorted(tracking.items())),
         "consent_evidence": "not_established_by_these_fields",
         "marketing_eligibility_unknown": total,
+        "contacts_without_growthops_id": {"count": len(outside), "sample_ids": _ids(outside)},
         "review_queues": {
-            "missing_original_utm_source": {"count": len(missing_source), "sample_ids": _ids(missing_source)},
-            "missing_owner_all_stages": {"count": len(missing_owner), "sample_ids": _ids(missing_owner)},
-            "actionable_without_owner": {"count": len(unassigned), "sample_ids": _ids(unassigned)},
-            "tracking_defect_or_blank": {"count": len(bad_tracking), "sample_ids": _ids(bad_tracking)},
-            "stale_lead_flag": {"count": len(stale), "sample_ids": _ids(stale)},
-            "closed_won_flag": {"count": len(closed_won), "sample_ids": _ids(closed_won)},
+            "missing_original_utm_source": _queue(missing_source),
+            "missing_owner_all_stages": _queue(missing_owner),
+            "actionable_without_owner": _queue(unassigned),
+            "tracking_defect_or_blank": _queue(bad_tracking),
+            "stale_lead_flag": _queue(stale),
+            "closed_won_flag": _queue(closed_won),
         },
         "marketing_status_changes_recommended": 0,
         "writes": portal.writes,

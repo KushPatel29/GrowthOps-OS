@@ -60,6 +60,10 @@ PRIVATE = re.compile(r"\b(e-?mail address(es)?|phone numbers?|home address(es)?|
                      re.IGNORECASE)
 FORECAST = re.compile(r"\b(forecast|predict(ion)?|projection|project(ed)? (revenue|cash|sales)|next (month|quarter|year)|"
                       r"will (we|revenue|cash|sales|it) (be|hit|reach|grow))\b", re.IGNORECASE)
+# Consent is not measured: the scenario's consent rows are a synthetic fixture that gates the local conversion outbox,
+# and the HubSpot test portal's opt-out field is blank, so an opt-in count would be invented.
+CONSENT = re.compile(r"\b(consent\w*|sms|text messag\w*|a2p|opt(ed|s)?[- ]?in\w*\s+(to|for)\s+(sms|texts?|text "
+                     r"messag\w*|marketing))\b", re.IGNORECASE)
 DEFINITION = re.compile(r"\b(define|definition|meaning of|what does .+ mean|how (is|are|do you|do we) .*"
                         r"(calculated|computed|defined|measured|calculate|compute|define|measure)|"
                         r"what counts as|formula for)\b", re.IGNORECASE)
@@ -444,16 +448,125 @@ def _content(connection, ctx=None):
             "mart_content_performance")
 
 
-def _attribution(connection, ctx=None):
-    from growthops.attribution import MODELS, summary
+MODEL_LABELS = {"first_touch": "first touch", "lead_creation": "lead creation", "last_non_direct": "last non-direct",
+                "u_shaped": "U-shaped", "linear": "linear", "time_decay": "time decay"}
+MODEL_RULES = {"first_touch": "all credit to the first touch", "lead_creation": "all credit to the touch that created "
+               "the lead", "last_non_direct": "all credit to the last touch that is not direct",
+               "u_shaped": "40% to the first touch, 40% to lead creation and 20% across the touches between",
+               "linear": "equal credit to every touch",
+               "time_decay": "each touch counts half as much for every full week before the payment"}
 
+
+def _attribution(connection, ctx=None):
+    """Credit by campaign under each model; a named model or ad platform narrows the answer to it."""
+    from growthops.attribution import MODELS, summary
+    from growthops.performance import PLATFORM_LABELS
+
+    slots = ctx.slots if ctx else Slots()
+    models = slots.attribution_models or MODELS
+    platforms = slots.platforms or ((slots.platform,) if slots.platform else ())
+    closing = "Every model sums to the same net cash; the governed model is lead creation. Credit is descriptive, " \
+              "not incremental."
+    if platforms:
+        platform_of = {row[0]: row[1] for row in connection.execute("SELECT campaign_id, platform FROM campaigns")}
+        parts = []
+        for model in models:
+            rows = summary(connection, model)
+            credited = ", ".join(
+                f"{PLATFORM_LABELS[name]} campaigns "
+                f"{_usd(sum(r['net_cash_cents'] for r in rows if platform_of.get(r['campaign_id']) == name))}"
+                for name in platforms)
+            parts.append(f"{MODEL_LABELS[model]} credits {credited}")
+        total = sum(row["net_cash_cents"] for row in summary(connection, models[0]))
+        text = "; ".join(parts)
+        return (f"{text[0].upper() + text[1:]}, of {_usd(total)} net cash. {closing}", "attribution models, campaigns")
+    if len(models) == 1:
+        rows = summary(connection, models[0])
+        ranked = sorted((row for row in rows if row["campaign_id"]), key=lambda row: -row["net_cash_cents"])
+        untracked = sum(row["net_cash_cents"] for row in rows if not row["campaign_id"])
+        top = ", ".join(f"{row['campaign_id']} {_usd(row['net_cash_cents'])}" for row in ranked[:3])
+        label = MODEL_LABELS[models[0]]
+        return ((f"{label[0].upper() + label[1:]} ({MODEL_RULES[models[0]]}) credits most to {top}, of "
+                 f"{_usd(sum(row['net_cash_cents'] for row in rows))} net cash; {_usd(untracked)} has no campaign. "
+                 f"{closing}"), "attribution models")
     parts = []
-    for model in MODELS:
+    for model in models:
         rows = [row for row in summary(connection, model) if row["campaign_id"]]
         best = max(rows, key=lambda row: row["net_cash_cents"])
-        parts.append(f"{model.replace('_', ' ')} credits {best['campaign_id']} most ({_usd(best['net_cash_cents'])})")
-    return ("; ".join(parts) + ". Every model sums to the same net cash; the governed model is lead creation.",
-            "attribution models")
+        parts.append(f"{MODEL_LABELS[model]} credits {best['campaign_id']} most ({_usd(best['net_cash_cents'])})")
+    text = "; ".join(parts)
+    return f"{text[0].upper() + text[1:]}. {closing}", "attribution models"
+
+
+def _qualified_pipeline(connection, ctx=None):
+    from growthops.control_plane import qualified_pipeline
+
+    pipe = qualified_pipeline(connection)
+    campaigns = [row for row in pipe["by_campaign"] if row["campaign_id"]]
+    top = max(campaigns, key=lambda row: row["created_minor"]) if campaigns else None
+    lead = (f" {top['campaign_id']} created the most ({_usd(top['created_minor'])} from {top['qualified_deals']:,} "
+            "deals).") if top else ""
+    return ((f"{pipe['qualified_deals']:,} deals have an explicit qualification decision, for "
+             f"{pipe['qualified_people']:,} people. They created {_usd(pipe['created_minor'])} of qualified pipeline: "
+             f"{_usd(pipe['open_minor'])} is still open and {_usd(pipe['won_minor'])} was won.{lead} "
+             f"{pipe['unqualified_deals']:,} deals have no qualification decision and are left out. As of "
+             f"{pipe['as_of']}, all time. Pipeline is deal value, not bookings or cash, and the qualification "
+             "decisions in this scenario are synthetic."), "deals, deal qualifications (qualified pipeline)")
+
+
+CRM_COMPONENT_LABELS = {"actionable_owner": "actionable contacts with an owner", "source_present": "contacts with a "
+                        "source", "unique_email": "contacts with a unique email", "deal_campaign": "deals with a lead "
+                        "campaign"}
+
+
+def _crm_health(connection, ctx=None):
+    from growthops.control_plane import crm_health, quality_queue
+
+    health = crm_health(connection)
+    queue = quality_queue(connection, limit=1)
+    # Each rate from its own counts: the component's stored rate is already rounded to four places.
+    checks = ", ".join(f"{CRM_COMPONENT_LABELS.get(item['name'], item['name'].replace('_', ' '))} "
+                       f"{_pct(item['passing'] / item['eligible'] if item['eligible'] else None)} "
+                       f"({item['passing']:,} of {item['eligible']:,})"
+                       for item in health["components"])
+    rules = ", ".join(f"{row['rule_id'].replace('_', ' ')} {row['count']:,}" for row in queue["rule_counts"][:3])
+    return ((f"CRM health is {health['score']}/100, the equal-weighted mean of {len(health['components'])} checks: "
+             f"{checks}. {queue['total']:,} quality issues are open"
+             + (f"; the largest rules are {rules}." if rules else ".")
+             + f" As of {health['as_of']}."), "contacts, deals, quality_issues (CRM health)")
+
+
+def _customer_economics(connection, ctx=None):
+    from growthops.growth_lab import customer_economics
+
+    econ = customer_economics(connection)
+    parts = []
+    if econ["paid_cac_minor"] is not None:
+        parts.append(f"Observed paid CAC is {_usd(econ['paid_cac_minor'])}: {_usd(econ['paid_spend_minor'])} of paid "
+                     f"media over {econ['paid_acquired_buyers']:,} buyers whose lead came from a paid campaign, who "
+                     f"have returned {econ['paid_cohort_observed_cash_to_cac_ratio']}x that spend in net cash so far.")
+    if econ["observed_net_cash_per_customer_minor"] is not None:
+        parts.append(f"Net cash per customer so far is {_usd(econ['observed_net_cash_per_customer_minor'])} across "
+                     f"{econ['customers']:,} customers.")
+    parts.append(f"Projected lifetime value and CAC payback are not computed: the history is too short to support "
+                 f"them. As of {econ['as_of']}, all time.")
+    return " ".join(parts), "ad spend, payments, refunds (customer economics)"
+
+
+def _subscription_revenue(connection, ctx=None):
+    from growthops.growth_lab import customer_economics
+
+    econ = customer_economics(connection)
+    parts = [(f"{econ['active_annual_subscriptions']:,} active annual subscriptions give "
+              f"{_usd(econ['contracted_arr_minor'])} of contracted ARR ({_usd(econ['contracted_mrr_minor'])} MRR): "
+              "a run rate at list price, not cash.")]
+    if econ["observed_renewal_rate"] is not None:
+        parts.append(f"{econ['renewal_cohort_succeeded']:,} of the {econ['renewal_cohort_due']:,} subscriptions old "
+                     f"enough to renew have renewed ({econ['observed_renewal_rate']:.1%}).")
+    else:
+        parts.append("No subscription is old enough to renew yet, so there is no renewal rate.")
+    parts.append(f"NRR and GRR are not computed: the matured cohort is too small. As of {econ['as_of']}.")
+    return " ".join(parts), "subscriptions, renewal attempts, products (subscription revenue)"
 
 
 def _freshness(connection, ctx=None):
@@ -560,9 +673,36 @@ INTENTS = (
             "do mindset videos make money"),
            _content),
     Intent("attribution_models", "Attribution model comparison",
-           "Net cash credit by campaign under first touch, lead creation, last non-direct, U-shaped and linear models.",
-           ("Compare attribution models", "first touch versus linear credit", "how do the attribution models differ"),
+           "Net cash credit by campaign or ad platform under first touch, lead creation, last non-direct, U-shaped, "
+           "linear and time decay attribution models.",
+           ("Compare attribution models", "first touch versus linear credit", "how do the attribution models differ",
+            "how much cash does each model credit to Google"),
            _attribution),
+    Intent("qualified_pipeline", "Qualified pipeline",
+           "Qualified pipeline and opportunities: deals with an explicit qualification decision, the deal value of "
+           "pipeline they created, open pipeline still in play, won value, and which campaign created the most.",
+           ("What is our qualified pipeline?", "how much pipeline is still open", "qualified opportunities by campaign",
+            "sales pipeline value"),
+           _qualified_pipeline),
+    Intent("crm_health", "CRM health and quality issues",
+           "The CRM health score out of 100 and its checks (owners, sources, unique emails, deal campaigns), and the "
+           "queue of open data quality issues by rule.",
+           ("What is our CRM health score?", "how many quality issues are open", "open issues in the quality queue",
+            "CRM health checks"),
+           _crm_health),
+    Intent("customer_economics", "Customer acquisition cost",
+           "Unit economics per customer: customer acquisition cost (CAC) for paid media, net cash per customer, the "
+           "paid cohort's cash against its spend, and why lifetime value (LTV) and CAC payback are not computed.",
+           ("What is our customer acquisition cost?", "LTV to CAC", "net cash per customer",
+            "cost to acquire a buyer from ads"),
+           _customer_economics),
+    Intent("subscription_revenue", "Recurring revenue",
+           "Contracted annual recurring revenue (ARR) and monthly recurring revenue (MRR) from active annual "
+           "subscriptions at list price, the observed renewal rate, and why net and gross revenue retention (NRR, "
+           "GRR) are not computed.",
+           ("What is our ARR?", "monthly recurring revenue", "ARR and MRR", "renewal rate for the community",
+            "what percent renewed after a year"),
+           _subscription_revenue),
     Intent("data_freshness", "Data freshness", "Data freshness: whether the numbers are current and up to date, when each source (ads, payments, CRM, email) "
            "last synced or refreshed, and which are stale.",
            ("Is the data up to date?", "when was the data last refreshed", "are any sources stale"), _freshness),
@@ -605,6 +745,10 @@ FOLLOW_UPS: dict[str, tuple[str, ...]] = {
     "daily_update": ("What changed this week?", "How many leads did we get last week?"),
     "content_pipeline": ("Compare attribution models", "Where do new contacts come from?"),
     "attribution_models": ("Which paid campaigns are best?", "Which revenue number is right?"),
+    "qualified_pipeline": ("Which revenue number is right?", "What is our customer acquisition cost?"),
+    "crm_health": ("How clean is HubSpot?", "How clean is our tracking?"),
+    "customer_economics": ("What is our qualified pipeline?", "What is our ARR?"),
+    "subscription_revenue": ("Which renewals are at risk?", "What is our customer acquisition cost?"),
     "data_freshness": ("Give me the daily update", "What changed this week?"),
     "kpi_totals": ("What changed this week?", "What does a lead cost on Google?", "Which revenue number is right?"),
     "list_source_mix": ("Which videos drive buyers?", "How many leads did we get last week?"),
@@ -623,6 +767,8 @@ SUGGESTIONS: dict[str, tuple[str, ...]] = {
                            "Are our short links tagged correctly?", "How clean is our tracking?"),
     "Operations": ("What changed this week?", "Did every buyer get community access?",
                    "Which renewals are at risk?", "Is the data up to date?"),
+    "Pipeline and customers": ("What is our qualified pipeline?", "What is our customer acquisition cost?",
+                               "What is our ARR?", "What is our CRM health score?"),
     "Definitions": ("How is cost per MQL calculated?", "What does human open rate mean?",
                     "How is warehouse ROAS calculated?"),
 }
@@ -706,15 +852,23 @@ BREAKDOWN = re.compile(r"\b(which|best|worst|top|most|least|rank\w*|by (campaign
                        re.IGNORECASE)
 RECONCILE = re.compile(r"\b(right|correct|true|match|matches|claim|claims|disagree|differ|reconcil\w*|versus|vs)\b",
                        re.IGNORECASE)
+# Sales qualification of deals, not a marketing-qualified lead ("cost per qualified lead" is an MQL measure).
+QUALIFIED_DEALS = re.compile(r"\bqualif\w*\b.{0,30}\b(deals?|opportunit\w*|pipeline)\b|"
+                             r"\b(deals?|opportunit\w*|pipeline)\b.{0,30}\bqualif\w*\b", re.IGNORECASE)
 
 
 def _slot_route(text: str, slots: Slots) -> str | None:
     """The governed answer a question's details decide on their own, when they are unambiguous.
 
-    Two patterns only. A quantity question over a named period ("how many leads last week") is the windowed
-    totals. An efficiency figure for a named platform or campaign ("CPL on Google", "cost per MQL for
-    meta_broad_v17") is paid efficiency. Anything else is left to retrieval, which knows the other answers.
+    Three patterns only. A named attribution model ("time decay", "U-shaped") is the attribution comparison,
+    whatever else the question names. A quantity question over a named period ("how many leads last week") is
+    the windowed totals. An efficiency figure for a named platform or campaign ("CPL on Google", "cost per MQL
+    for meta_broad_v17") is paid efficiency. Anything else is left to retrieval, which knows the other answers.
     """
+    if slots.attribution_models:
+        return "attribution_models"
+    if QUALIFIED_DEALS.search(text):
+        return "qualified_pipeline"
     named = slots.platform or slots.campaign or slots.platforms
     # "Meta vs Google CPL" and "July vs August" compare; "vs" only means reconciliation beside a word like "claim".
     comparing = slots.platforms or (slots.window and slots.window["kind"] == "compare")
@@ -745,6 +899,9 @@ def route(question: str, mode: str | None = None) -> dict:
         return _refuse("Personal data is not available here; answers are aggregate metrics only.")
     if FORECAST.search(text):
         return _refuse("GrowthOps reports measured results; it does not forecast.")
+    if CONSENT.search(text) and not DEFINITION.search(text):
+        return _refuse("Marketing consent is not measured here: the scenario's consent records are a synthetic "
+                       "fixture that gates the local conversion outbox, and no connected source records opt-ins.")
     slots = parse(text)
     if slots.untracked_platform:
         return {**_refuse(f"{PLATFORM_NAMES.get(slots.untracked_platform, slots.untracked_platform.title())} ads are not bought or tracked here; paid media is "
@@ -833,6 +990,15 @@ def answer(connection: sqlite3.Connection, question: str, mode: str | None = Non
     # Say what was understood only where it shaped the answer; elsewhere it would imply a filter never applied.
     shaped = decision.get("target") in SLOT_AWARE and decision["route"] in ("certified", "metric")
     understood = slots.describe() if shaped else ""
+    if decision.get("target") == "attribution_models" and decision["route"] in ("certified", "metric"):
+        # Attribution reads the model and platform, never a period, so only those are said back.
+        from growthops.performance import PLATFORM_LABELS
+
+        names = [PLATFORM_LABELS[name] for name in slots.platforms or ((slots.platform,) if slots.platform else ())]
+        parts = [" vs ".join(names)] if names else []
+        if slots.attribution_models:
+            parts.append(", ".join(MODEL_LABELS[model] for model in slots.attribution_models))
+        understood = " · ".join(parts)
     if window and shaped:
         dates = window["label"] + (f", against {window['compare_with']['label']}" if window.get("compare_with") else "")
         understood = f"{understood} ({dates})" if understood else dates

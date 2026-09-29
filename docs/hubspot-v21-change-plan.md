@@ -2,7 +2,7 @@
 
 **Portal:** HubSpot developer test account 247549241, containing the sampled synthetic ScaleLab data. **Applied and verified:** 2026-09-29. **Scope:** five empty custom properties; no record values, associations, marketing statuses or workflows changed.
 
-The prior portal snapshot had 959 synthetic contacts and 130 deals. Read-only searches on 2026-09-29 returned **961 contacts and 130 deals**; the prior contact snapshot did not retain an ID list, so its two-count difference does not identify which records changed. The portal now has **38 GrowthOps custom properties**: all 33 baseline fields and the five v2.1 fields below. The prior build published three GrowthOps workflows. A HubSpot connector ticket search on 2026-09-29 returned **0 tickets total**, so there are no unresolved high-priority tickets to triage. The separate private-app token lacks ticket-search scope; ticket counts come from the connector. The local v2.1 control plane covers all 14,693 synthetic contacts; its counts must not be shown as portal counts. See the [current marketing-contact audit](hubspot-marketing-audit.md).
+The prior portal snapshot had 959 synthetic contacts and 130 deals. Read-only searches on 2026-09-29 returned **961 contacts and 130 deals**. A read-only ID comparison on 2026-09-30 found every one of the 959 GrowthOps contacts present once; the other two are sample contacts HubSpot creates with a new account (source `sample-contact`, no GrowthOps ID), so the portal and the warehouse sample still reconcile. The portal now has **38 GrowthOps custom properties**: all 33 baseline fields and the five v2.1 fields below. The prior build published three GrowthOps workflows. A HubSpot connector ticket search on 2026-09-29 returned **0 tickets total**, so there are no unresolved high-priority tickets to triage. The separate private-app token lacks ticket-search scope; ticket counts come from the connector. The local v2.1 control plane covers all 14,693 synthetic contacts; its counts must not be shown as portal counts. See the [current marketing-contact audit](hubspot-marketing-audit.md).
 
 ## Applied schema additions
 
@@ -23,7 +23,7 @@ The checked schema-only command is `python -m growthops.hubspot_v21 plan`; `audi
 
 ## Gates before record changes
 
-1. Verify contact and deal identity mappings against the current 961-contact and 130-deal searches. The local person key is the synthetic contact ID, while the portal deduplicated some contacts by email.
+1. Verify contact and deal identity mappings against the 959 GrowthOps contacts and 130 deals (the portal's other two contacts are HubSpot's own samples). The local person key is the synthetic contact ID, while the portal deduplicated some contacts by email.
 2. Record exact current and proposed values per object ID. Each `manage_crm_objects` batch is at most ten objects and needs a reviewed table of object type, ID, property, current value and new value.
 3. Do not copy local hash-based `synthetic_rep_assessment` into HubSpot as if a sales representative made the decision. Rep decisions need their own source and timestamp.
 4. Keep marketing-contact status unchanged without consent evidence. The connected portal's read-only audit cannot establish eligibility for any of its 961 sampled contacts from the inspected fields. The local v2.2 scenario plants explicit **synthetic** consent decisions for a small buyer sample to exercise gating; those decisions are not linked to or authoritative for portal contacts.

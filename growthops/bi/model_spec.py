@@ -35,7 +35,6 @@ TABLES: dict[str, dict] = {
     "mart_link_hygiene": {"kind": "snapshot"},
     "mart_renewal_risk": {"kind": "snapshot"},
     "mart_qualified_pipeline": {"kind": "snapshot"},
-    "mart_crm_health_v21": {"kind": "snapshot"},
     "quality_scorecard": {"kind": "snapshot"},
     "incident_register": {"kind": "reference"},
 }
@@ -89,7 +88,6 @@ UNRELATED: dict[str, str] = {
     "mart_migration_summary": "One row: the legacy-to-new CRM migration audit.",
     "mart_link_hygiene": "One row per short link, checked against the campaign registry.",
     "mart_renewal_risk": "Subscriptions due from the as-of date forward; the calendar ends at the as-of date.",
-    "mart_crm_health_v21": "One row per CRM health component, with its own denominator.",
     "quality_scorecard": "One row per data-quality check, from the single-row health and migration marts.",
     "incident_register": "One row per logged incident; read as a list, not filtered by the calendar.",
 }
@@ -463,6 +461,10 @@ MEASURES += [
     ("Net collected caption",
      '"after " & FORMAT([Refunds (all time)] / 1000, "$#,0") & "K of refunds"', "", "10 Captions",
      "Tile caption: refunds taken out of gross."),
+    ("Qualified pipeline caption",
+     ('FORMAT([Qualified opportunities], "#,0") & " qualified deals; " & FORMAT([Open qualified pipeline] / 1000, '
+      '"$#,0") & "K still open"'), "", "10 Captions",
+     "Tile caption: the deals behind qualified pipeline and the part still open."),
     ("Refund caption", 'FORMAT([Refund rate], "0.0%") & " of gross collected"', "", "10 Captions",
      "Tile caption: refund rate."),
     ("Unattributed caption",

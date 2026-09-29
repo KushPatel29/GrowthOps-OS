@@ -91,6 +91,20 @@ MEASURE_LABELS = {
     "gross_collected": "gross cash", "crm_booked": "CRM bookings", "net_cash": "net cash", "spend": "ad spend",
 }
 
+# Attribution models by name. "Linear" and "lead creation" are ordinary words too, so they count only beside a word
+# that makes them a model ("linear attribution", "credit under lead creation"); the others are unambiguous. "Last
+# touch" and "last click" read as the house last-touch model, last non-direct, and the answer names it so.
+ATTRIBUTION_MODELS: tuple[tuple[str, str], ...] = (
+    ("first_touch", r"\bfirst[- ](touch|click)\b"),
+    ("lead_creation", (r"\blead[- ]creation\b(?=.*\b(attribut\w*|credit\w*|model)\b)|"
+                       r"\b(attribut\w*|credit\w*|model)\b.*\blead[- ]creation\b")),
+    ("last_non_direct", r"\blast[- ](non[- ]direct|touch|click)\b"),
+    ("u_shaped", r"\bu[- ]?shaped\b"),
+    ("linear", (r"\blinear\b(?=.*\b(attribut\w*|credit\w*|model|give|gives|get|gets)\b)|"
+                r"\b(attribut\w*|credit\w*|model)\b.*\blinear\b")),
+    ("time_decay", r"\btime[- ]decay\b"),
+)
+
 CAMPAIGN_IDS = tuple(campaign.campaign_id for campaign in CAMPAIGNS)
 
 
@@ -114,6 +128,7 @@ class Slots:
     untracked_platform: str | None = None
     campaign: str | None = None
     measure: str | None = None
+    attribution_models: tuple[str, ...] = ()  # models named, in the order they are listed in ATTRIBUTION_MODELS
     notes: tuple[str, ...] = field(default_factory=tuple)
 
     def describe(self) -> str:
@@ -384,6 +399,7 @@ def parse(text: str) -> Slots:
     untracked = re.search(UNTRACKED_PLATFORMS, t)
     campaign = next((campaign_id for campaign_id, pattern in CAMPAIGN_PATTERNS.items() if pattern.search(t)), None)
     measure = next((name for name, pattern in MEASURES if re.search(pattern, t)), None)
+    models = tuple(name for name, pattern in ATTRIBUTION_MODELS if re.search(pattern, t))
     return Slots(window=parse_window(t), platform=platform, platforms=tuple(named) if len(named) > 1 else (),
                  untracked_platform=untracked.group(0) if untracked and not named else None,
-                 campaign=campaign, measure=measure)
+                 campaign=campaign, measure=measure, attribution_models=models)

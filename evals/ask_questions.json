@@ -1041,6 +1041,168 @@
     "measure": "leads",
     "window": "previous_week"
    }
+  },
+  {
+   "question": "what's our qualified pipeline worth",
+   "expect": "qualified_pipeline",
+   "split": "dev"
+  },
+  {
+   "question": "How much open pipeline do we have?",
+   "expect": "qualified_pipeline",
+   "split": "dev"
+  },
+  {
+   "question": "What is our CAC?",
+   "expect": "customer_economics",
+   "split": "dev"
+  },
+  {
+   "question": "What is customer acquisition cost for paid?",
+   "expect": "customer_economics",
+   "split": "dev"
+  },
+  {
+   "question": "What is our LTV?",
+   "expect": "customer_economics",
+   "split": "dev"
+  },
+  {
+   "question": "what's the ARR right now",
+   "expect": "subscription_revenue",
+   "split": "dev"
+  },
+  {
+   "question": "What is the renewal rate?",
+   "expect": "subscription_revenue",
+   "split": "dev"
+  },
+  {
+   "question": "How many open data quality issues are there?",
+   "expect": "crm_health",
+   "split": "dev"
+  },
+  {
+   "question": "what score does the CRM get",
+   "expect": "crm_health",
+   "split": "dev"
+  },
+  {
+   "question": "Which campaign gets the most credit under time decay?",
+   "expect": "attribution_models",
+   "split": "dev"
+  },
+  {
+   "question": "How much cash does time decay attribution give Meta?",
+   "expect": "attribution_models",
+   "split": "dev",
+   "expect_slots": {
+    "platform": "meta"
+   }
+  },
+  {
+   "question": "u-shaped credit for LinkedIn vs Google",
+   "expect": "attribution_models",
+   "split": "dev",
+   "expect_slots": {
+    "platforms": [
+     "google",
+     "linkedin"
+    ]
+   }
+  },
+  {
+   "question": "How many subscriptions were cancelled last month?",
+   "expect": "renewal_risk",
+   "split": "dev"
+  },
+  {
+   "question": "How many people consented to SMS?",
+   "expect": "refuse",
+   "split": "dev"
+  },
+  {
+   "question": "how is paid CAC calculated",
+   "expect": "metric:paid_cac_v2_2",
+   "split": "dev"
+  },
+  {
+   "question": "how much pipeline did qualified deals create",
+   "expect": "qualified_pipeline",
+   "split": "holdout"
+  },
+  {
+   "question": "value of opportunities that are still open",
+   "expect": "qualified_pipeline",
+   "split": "holdout"
+  },
+  {
+   "question": "which campaign created the most qualified pipeline",
+   "expect": "qualified_pipeline",
+   "split": "holdout"
+  },
+  {
+   "question": "how many deals were qualified",
+   "expect": "qualified_pipeline",
+   "split": "holdout"
+  },
+  {
+   "question": "what does it cost us to acquire a paying customer",
+   "expect": "customer_economics",
+   "split": "holdout"
+  },
+  {
+   "question": "annual recurring revenue",
+   "expect": "subscription_revenue",
+   "split": "holdout"
+  },
+  {
+   "question": "what share of renewals actually renewed",
+   "expect": "subscription_revenue",
+   "split": "holdout"
+  },
+  {
+   "question": "lifetime value of a customer",
+   "expect": "customer_economics",
+   "split": "holdout"
+  },
+  {
+   "question": "MRR from subscriptions",
+   "expect": "subscription_revenue",
+   "split": "holdout"
+  },
+  {
+   "question": "how healthy is the CRM",
+   "expect": [
+    "crm_health",
+    "crm_hubspot_audit"
+   ],
+   "split": "holdout"
+  },
+  {
+   "question": "how big is the data quality issue queue",
+   "expect": "crm_health",
+   "split": "holdout"
+  },
+  {
+   "question": "open CRM issues by rule",
+   "expect": "crm_health",
+   "split": "holdout"
+  },
+  {
+   "question": "time decay credit by campaign",
+   "expect": "attribution_models",
+   "split": "holdout"
+  },
+  {
+   "question": "how much does linear attribution give LinkedIn",
+   "expect": "attribution_models",
+   "split": "holdout"
+  },
+  {
+   "question": "how many contacts opted in to text messages",
+   "expect": "refuse",
+   "split": "holdout"
   }
  ],
  "first_holdout_scoring": {
@@ -1081,6 +1243,10 @@
   {
    "date": "2026-09-28",
    "change": "Two named periods compared ('compare July and August', 'August vs July') now answer the later period against the earlier one instead of the first period alone; 'last calendar week' reads Monday to Sunday while 'last week' stays the rolling seven days of the morning brief. Four dev cases added; no existing expectation was changed."
+  },
+  {
+   "date": "2026-09-30",
+   "change": "The v2.1/v2.2 measures shown in the app had no governed answer, and questions about them reached a wrong one instead of a refusal: 'qualified pipeline' and 'open pipeline' got content cash by topic, 'CRM health score' and 'open data quality issues' got tracking health, 'renewal rate' got the renewal-risk queue, 'customer acquisition cost for paid' got cost per lead, and 'how much does time decay give Meta' got the revenue bridge. Four governed answers added (qualified_pipeline, crm_health, customer_economics, subscription_revenue); attribution_models now reads a named model and ad platform; a named model routes to attribution and sales qualification to qualified pipeline; consent questions are refused because consent is a synthetic fixture here. Fifteen dev cases added; no existing expectation was changed."
   }
  ],
  "second_holdout_scoring": {
@@ -1125,6 +1291,39 @@
     "question": "leads on 30 February",
     "cause": "an impossible date was refused when answering but not when routing, which is what the contract scores; it is now refused at routing."
    }
+  ]
+ },
+ "fourth_holdout_scoring": {
+  "date": "2026-09-30",
+  "note": "15 holdout questions for qualified pipeline, CRM health, customer economics, recurring revenue, attribution by model and platform, and consent, written before the new answers existed and recorded here on first scoring before any fix. Three expectations were renamed from customer_economics to subscription_revenue when that answer was split in two, before the set was scored.",
+  "hybrid": {
+   "right": 12,
+   "wrong": 3,
+   "refused": 0
+  },
+  "keyword": {
+   "right": 12,
+   "wrong": 0,
+   "refused": 3
+  },
+  "wrong_before_fix": [
+   {
+    "question": "how many deals were qualified",
+    "cause": "'how many deals' pulled it to the windowed totals; sales qualification of a deal, opportunity or pipeline now routes to qualified pipeline by rule."
+   },
+   {
+    "question": "MRR from subscriptions",
+    "cause": "'subscriptions' outweighed 'MRR', so the renewal-risk queue won; the recurring-revenue answer now names subscriptions and MRR."
+   },
+   {
+    "question": "how many contacts opted in to text messages",
+    "cause": "'how many contacts' reached tracking health; consent, SMS and opt-in questions are now refused, since no measured consent source exists."
+   }
+  ],
+  "refused_before_fix_keyword": [
+   "how many deals were qualified",
+   "MRR from subscriptions",
+   "how healthy is the CRM"
   ]
  }
 }

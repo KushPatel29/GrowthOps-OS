@@ -21,18 +21,20 @@ Live synthetic dashboard: https://growthops-os.streamlit.app/ · GitHub: https:/
   set. The narrative is deterministic; the validator guards any other draft.
 - **Keyless ask-your-data** (`ask_data.py`, `retrieval.py`, `embeddings.py`): the Ask Your Data design, with
   no language model or API key. Guard, then certified phrases, then hybrid BM25 + local MiniLM retrieval over
-  20 governed answers and the metric catalog, then a governed answer, a cited definition or a refusal.
+  24 governed answers and the metric catalog, then a governed answer, a cited definition or a refusal.
   `ask_slots.py` reads the period ("last week", "in August", "since 1 September", "between July and August",
   "Q2", "the first half of 2026", "the week before last", "July vs August", resolved against the data's as-of date), the ad
-  platform or platforms compared, the campaign and the measure (including refund rate), so an answer is the one
-  asked for; windowed totals compare with the period before, or with the other period named; an untracked ad platform, an impossible date or a
+  platform or platforms compared, the campaign, the measure (including refund rate) and an attribution model, so an
+  answer is the one asked for; the v2.1/v2.2 measures (qualified pipeline, CRM health and its issue queue, paid CAC,
+  contracted ARR and the observed renewal rate) each have a governed answer that states the figures the app shows,
+  and consent questions are refused because consent here is a synthetic fixture; windowed totals compare with the period before, or with the other period named; an untracked ad platform, an impossible date or a
   period outside the data is refused, and an answer that cannot be cut by period says so. Themed
   suggested questions and per-answer follow-ups are each held by a test to reach a governed answer. On the
-  152-question contract, which also fails an answer that read the wrong platform, measure or period, hybrid and
-  keyword-only both score 152 right, 0 wrong, 0 refused. A second test runs every contract question through the
-  full answer and recomputes the stated figure of each period and platform answer from the mart. All three holdout sets' first scorings (30 questions,
-  then 15 for the details a question names: 13/1/1, then 15 for dates, ranges and comparisons: 13/2/0) are kept
-  in the file with the cause of each miss. Every question is audited in `ask_log`.
+  182-question contract, which also fails an answer that read the wrong platform, measure or period, hybrid scores
+  182 right, 0 wrong, 0 refused and keyword-only 179 right, 0 wrong, 3 refused. A second test runs every contract question through the
+  full answer and recomputes the stated figure of each period and platform answer from the mart. All four holdout sets' first scorings (30 questions,
+  then 15 for the details a question names: 13/1/1, then 15 for dates, ranges and comparisons: 13/2/0, then 15
+  for the v2.1/v2.2 measures: 12/3/0 hybrid) are kept in the file with the cause of each miss. Every question is audited in `ask_log`.
 - **Production runtime**: fail-fast settings (`config.py`); API keys; replay-safe signed webhooks; request IDs,
   JSON logs and security headers; `/ready` and Prometheus `/metrics`; versioned migrations; verified backups and
   restore (`ops.py`); per-source freshness.
@@ -56,11 +58,14 @@ Live synthetic dashboard: https://growthops-os.streamlit.app/ · GitHub: https:/
   dashboard; read-back reconciles the sample to the warehouse. See [portal evidence](docs/hubspot-portal.md).
 - **v2.1 HubSpot schema** (`hubspot_v21.py`): five additional custom properties were created in the same
   developer test portal on 2026-09-29. Read-back verified all 38 definitions with zero drift. Current searches
-  returned 961 contacts and 130 deals, with zero populated values in the five new fields. No marketing status,
+  returned 961 contacts and 130 deals, with zero populated values in the five new fields; a read-only ID
+  comparison found all 959 GrowthOps contacts present once, and the other two are HubSpot's own sample contacts. No marketing status,
   lifecycle stage, owner, association or workflow was changed. See the [change record](docs/hubspot-v21-change-plan.md).
 - **Live, read-only marketing audit** (`hubspot_marketing_audit.py`): a 2026-09-29 search returned 961
-  synthetic contacts, all marked non-marketable. It flagged 111 missing/off-taxonomy/blank tracking statuses,
-  89 blank original UTM sources and two active-stage contacts without owners. The inspected opt-out field is
+  contacts, all marked non-marketable: 959 GrowthOps contacts and two sample contacts HubSpot creates itself,
+  which the audit now reports separately. Among GrowthOps contacts it flagged 109 missing or off-taxonomy
+  tracking statuses and 87 blank original UTM sources; no active-stage GrowthOps contact lacks an owner (the
+  two that did are HubSpot's samples). The inspected opt-out field is
   blank for all 961, so eligibility remains unproven and no status change is recommended. See the
   [portal audit](docs/hubspot-marketing-audit.md); it made zero portal writes.
 - **Attribution** (six models, including weekly time decay, exact-cent conservation), funnel timing and by-channel conversion, content to
@@ -70,11 +75,11 @@ Live synthetic dashboard: https://growthops-os.streamlit.app/ · GitHub: https:/
 - **BI**: twelve-view Streamlit app (password gate and configured database in a deployment) (light and dark),
   FastAPI Executive Pulse page, and a governed BI snapshot (`export_bi`: 16 marts plus `dim_date`,
   `dim_campaign`, payment-grain cash attribution and a quality scorecard) read by two generated deliverables.
-  **Power BI** (`growthops/bi`): 22 tables, 8 relationships, 214 described measures, 7 pages and 121 visuals
+  **Power BI** (`growthops/bi`): 21 tables, 8 relationships, 215 described measures, 7 pages and 121 visuals
   with SVG KPI tiles, dynamic headers, page navigation, a bookmark filter panel, conditional colours and a
   DAX-written executive summary; parsed by Desktop's TMDL serializer, validated with zero errors by
-  Microsoft's report validator, opened, refreshed and queried in Power BI Desktop 2.157 for the earlier baseline.
-  The v2.1 regenerated project passes structural tests and Python/dbt parity but has not yet been reopened in Desktop.
+  Microsoft's report validator, and opened, refreshed and queried in Power BI Desktop 2.157 (the v2.1 project again
+  on 2026-09-30: every table's row count equals its CSV and all 262 measures evaluate).
   **Excel**: one window control drives a dashboard with KPI tiles
   and formula-written findings, a campaign scorecard, email health, revenue truth, funnel and test, data
   quality, 14 zero-difference audit checks and named-range formulas; calculated in Excel and held to Python
@@ -89,7 +94,7 @@ Live synthetic dashboard: https://growthops-os.streamlit.app/ · GitHub: https:/
   and a discoverable failed-workflow queue,
   six new staging models, two intermediate models, two marts and regenerated PBIP. The qualification
   decisions are synthetic fixtures, not imported HubSpot judgments. The new UI and semantic model pass
-  local structural and parity tests; the regenerated PBIP has not yet been reopened in Desktop.
+  local structural and parity tests, and the regenerated PBIP was reopened, refreshed and queried in Desktop.
 - **v2.1 local lifecycle actions**: a signed canonical webhook records subscription upgrades,
   downgrades, cancellations and refunds in the shared event ledger. Version 6 permits nonpayment
   events without invented payment IDs and adds subscription-grain entitlements and an action audit;

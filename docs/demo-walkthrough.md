@@ -5,13 +5,16 @@ live provider traffic. The public app is at <https://growthops-os.streamlit.app/
 
 ## Story 1 — marketing measurement (about three minutes)
 
-1. Open the Decision Center in **Operations console**. Read the four separate values: platform-reported
-   revenue, qualified pipeline, CRM bookings and net collected cash. Open the bridge to see why the totals
-   differ and confirm the reconciliation residual is zero.
+1. Open **Decision center** in **Operations console**. Read the four separate values: qualified pipeline
+   created, open qualified pipeline, CRM bookings and net collected cash. Then open **Which number is right?**
+   for what the ad platforms claim and the two bridges that explain why the totals differ, each with a zero
+   residual.
 2. Show **Acquisition** and **Funnel**. Inspect the broad Meta campaign's lead quality and the lead-to-cash
    progression. Explain that qualification decisions in this demo are explicit synthetic fixtures.
-3. In **Data quality**, inspect the planted UTM defect and campaign QA. Use **Customer 360** to trace one
-   pseudonymous person from touch through CRM stage and payment.
+3. In **Data quality**, inspect the planted UTM defect: completeness drops after the `/webinar` release. In
+   **Email & links**, the short-link check names the four links with broken tags, and **Quality queue** in
+   **Operations console** lists the open CRM issues by rule. Use **Customer 360** to trace one pseudonymous
+   person from touch through CRM stage and payment.
 4. In **Growth lab**, switch cohort grouping from month to campaign, inspect paid CAC and the unsupported
    lifetime metrics, then change one scenario assumption. Say that the calculator is arithmetic, not a forecast.
 5. Close with **Ask your data** and a governed question; show the time window and citation rather than reading

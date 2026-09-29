@@ -410,7 +410,7 @@ with tabs[2]:
         width="stretch")
     compare = pd.DataFrame({m: {row["campaign_id"] or "(untracked)": row["net_cash_cents"] / 100
                                 for row in case["attribution"][m]} for m in MODELS}).fillna(0)
-    with st.expander("All five models side by side (every column sums to the same net cash)"):
+    with st.expander(f"All {len(MODELS)} models side by side (every column sums to the same net cash)"):
         st.dataframe(compare.style.format("${:,.0f}"), width="stretch")
 
 with tabs[3]:

@@ -17,6 +17,12 @@ All timestamps are UTC. A report must show its time range, cohort basis, data-as
 | Open qualified pipeline (v2.1) | Sum current amount of qualified deals whose current stage is open | As-of snapshot, not a cash or closed-won metric |
 | Qualified people (v2.1) | Distinct resolved person keys attached to qualified deals | One person may have more than one qualified deal |
 | CRM health component (v2.1) | Passing eligible records / eligible records for the named rule | Actionable owner, source present, unique email candidate, and deal campaign each expose a denominator; the displayed score weights them equally |
+| CRM health score (v2.1) | 100 × the equal-weighted mean of the CRM health component rates | As-of snapshot of contacts and deals; a component's denominator is its eligible records, not all records |
+| Open quality issues (v2.1) | Distinct open issues in the quality queue, one per rule and record | Counted by rule and severity at the as-of build; the local system proposes repairs but does not yet close issues |
+| Paid CAC (v2.2) | All-time paid media spend / distinct buyers whose lead-creation touch is a paid campaign | Observed, not incremental; spend that produced no buyer yet is still in the numerator |
+| Net cash per customer (v2.2) | Net collected cash / distinct customers | Observed to date; not lifetime value, which the history is too short to project |
+| Contracted ARR / MRR (v2.2) | Active annual subscriptions × annual list price; ARR / 12 | Run rate at the as-of date, not cash; excludes one-off programs |
+| Observed renewal rate (v2.2) | Subscriptions at least a year old with a succeeded renewal / subscriptions at least a year old | Small matured cohort; NRR and GRR are not computed |
 | Customer | Distinct person with a successful payment and valid product entitlement | Local workflow uses payment plus access state |
 | Spend | Sum paid-media daily spend | Local slice is campaign/day; excludes agency fee |
 | Gross collected | Sum successful captured payment amounts | Payment event date, gross of refunds |
@@ -61,7 +67,7 @@ All timestamps are UTC. A report must show its time range, cohort basis, data-as
 
 ## Attribution rules
 
-Use one row per net payment allocation and preserve unassigned cash. First touch, lead-creation touch, last non-direct, U-shaped and linear models are separate model versions. U-shaped assigns 40% to first, 40% to lead-creation, and 20% across middle touches; when touch positions collapse to one event, it receives 100%. Refunds inherit the original payment's allocation. Each model must satisfy: **allocated net cash + unassigned net cash = total net collected cash** within rounding tolerance. Platform-reported revenue is a comparison series, never added to warehouse cash.
+Use one row per net payment allocation and preserve unassigned cash. First touch, lead-creation touch, last non-direct, U-shaped, linear and time decay models are separate model versions. U-shaped assigns 40% to first, 40% to lead-creation, and 20% across middle touches; when touch positions collapse to one event, it receives 100%. Time decay halves a touch's weight for every full week between it and the payment. Refunds inherit the original payment's allocation. Each model must satisfy: **allocated net cash + unassigned net cash = total net collected cash** within rounding tolerance. Platform-reported revenue is a comparison series, never added to warehouse cash.
 
 ## Metric governance
 

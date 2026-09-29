@@ -1318,6 +1318,11 @@ table _Measures
 		lineageTag: 00164a59-5f7b-5ea6-a4bb-ff70bbac9396
 		displayFolder: 10 Captions
 
+	/// Tile caption: the deals behind qualified pipeline and the part still open.
+	measure 'Qualified pipeline caption' = FORMAT([Qualified opportunities], "#,0") & " qualified deals; " & FORMAT([Open qualified pipeline] / 1000, "$#,0") & "K still open"
+		lineageTag: b3a06ba1-9fc8-5845-b188-420aeb900ccf
+		displayFolder: 10 Captions
+
 	/// Tile caption: refund rate.
 	measure 'Refund caption' = FORMAT([Refund rate], "0.0%") & " of gross collected"
 		lineageTag: 091ac2e7-62fa-5b5c-9d5c-70da943dc77a
@@ -1548,10 +1553,10 @@ table _Measures
 		dataCategory: ImageUrl
 		displayFolder: Report UI
 
-	measure 'KPI SVG Qualified pipeline created | Qualified pipeline @310' =
+	measure 'KPI SVG Qualified pipeline created | Qualified pipeline caption | Qualified pipeline @310' =
 			VAR vValue = [Qualified pipeline created]
 			VAR vShown = IF(ISBLANK(vValue), "—", IF(ABS(vValue) >= 1000000, FORMAT(vValue / 1000000, "\$#,0.00") & "M", FORMAT(vValue, "\$#,0")))
-			VAR vCaptionRaw = ""
+			VAR vCaptionRaw = SUBSTITUTE(SUBSTITUTE(COALESCE([Qualified pipeline caption], ""), "&", "&amp;"), "<", "&lt;")
 			VAR vCaption = IF(LEN(vCaptionRaw) > 61, LEFT(vCaptionRaw, 59) & "…", vCaptionRaw)
 			VAR vTone = "#7d7d85"
 			VAR vArrow = ""
@@ -1565,7 +1570,7 @@ table _Measures
 			        & "</svg>"
 			RETURN
 			    "data:image/svg+xml;utf8," & SUBSTITUTE(SUBSTITUTE(vSvg, "%", "%25"), "#", "%23")
-		lineageTag: 75ad60d4-f81c-5632-abe9-927bc757ee7e
+		lineageTag: 6413dde3-d3d6-53c0-bee5-268c7f85ffbc
 		dataCategory: ImageUrl
 		displayFolder: Report UI
 

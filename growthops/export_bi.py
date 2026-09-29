@@ -24,7 +24,7 @@ MARTS = (
     "mart_content_performance", "mart_measurement_health", "mart_migration_summary",
     "mart_experiment_variants", "mart_renewal_risk", "mart_revenue_bridge", "mart_platform_comparison",
     "mart_paid_efficiency_daily", "mart_email_performance", "mart_link_hygiene",
-    "mart_qualified_pipeline", "mart_crm_health_v21",
+    "mart_qualified_pipeline",
 )
 ORDER_BY = {
     "mart_growth_daily": "day",
@@ -39,7 +39,6 @@ ORDER_BY = {
     "mart_email_performance": "sent_date, email_id",
     "mart_link_hygiene": "link_id",
     "mart_qualified_pipeline": "campaign_id, currency",
-    "mart_crm_health_v21": "component",
 }
 # Marts that need a readable label or an ordering key for a report axis. The added
 # columns go last, so every column the Excel workbook addresses by letter stays put.

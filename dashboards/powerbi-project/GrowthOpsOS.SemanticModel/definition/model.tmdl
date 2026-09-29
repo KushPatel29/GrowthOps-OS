@@ -6,7 +6,7 @@ model Model
 		legacyRedirects
 		returnErrorValuesAsNull
 
-annotation PBI_QueryOrder = ["dim_date", "dim_campaign", "mart_growth_daily", "mart_paid_efficiency_daily", "fact_cash_attribution", "mart_email_performance", "mart_campaign_performance", "mart_revenue", "mart_revenue_bridge", "mart_platform_comparison", "mart_funnel", "mart_experiment_variants", "mart_content_performance", "mart_measurement_health", "mart_migration_summary", "mart_link_hygiene", "mart_renewal_risk", "mart_qualified_pipeline", "mart_crm_health_v21", "quality_scorecard", "incident_register", "_Measures"]
+annotation PBI_QueryOrder = ["dim_date", "dim_campaign", "mart_growth_daily", "mart_paid_efficiency_daily", "fact_cash_attribution", "mart_email_performance", "mart_campaign_performance", "mart_revenue", "mart_revenue_bridge", "mart_platform_comparison", "mart_funnel", "mart_experiment_variants", "mart_content_performance", "mart_measurement_health", "mart_migration_summary", "mart_link_hygiene", "mart_renewal_risk", "mart_qualified_pipeline", "quality_scorecard", "incident_register", "_Measures"]
 
 annotation __PBI_TimeIntelligenceEnabled = 0
 
@@ -30,7 +30,6 @@ ref table mart_migration_summary
 ref table mart_link_hygiene
 ref table mart_renewal_risk
 ref table mart_qualified_pipeline
-ref table mart_crm_health_v21
 ref table quality_scorecard
 ref table incident_register
 ref table _Measures

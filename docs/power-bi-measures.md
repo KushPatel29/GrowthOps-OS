@@ -1,7 +1,7 @@
 # Power BI measures
 
 Generated from `growthops/bi/model_spec.py` by `python -m growthops.bi.build_pbip`; do not edit by hand.
-214 business measures in 14 display folders. The report's own SVG tile, header and button measures live in the *Report UI* folder and are not listed.
+215 business measures in 14 display folders. The report's own SVG tile, header and button measures live in the *Report UI* folder and are not listed.
 
 
 ## 00 Calendar
@@ -535,6 +535,7 @@ Generated from `growthops/bi/model_spec.py` by `python -m growthops.bi.build_pbi
 | Platform claim caption | Tile caption: how far platform claims exceed cash. | `text` | `FORMAT([Claim multiple], "0.00") & "x the cash the warehouse can find"` |
 | CRM booked caption | Tile caption: how far bookings run ahead of cash. | `text` | `FORMAT(DIVIDE([Booked (CRM, all time)], [Net collected (all time)]) - 1, "+0.0%") & " over net collected cash"` |
 | Net collected caption | Tile caption: refunds taken out of gross. | `text` | `"after " & FORMAT([Refunds (all time)] / 1000, "$#,0") & "K of refunds"` |
+| Qualified pipeline caption | Tile caption: the deals behind qualified pipeline and the part still open. | `text` | `FORMAT([Qualified opportunities], "#,0") & " qualified deals; " & FORMAT([Open qualified pipeline] / 1000, "$#,0") & "K still open"` |
 | Refund caption | Tile caption: refund rate. | `text` | `FORMAT([Refund rate], "0.0%") & " of gross collected"` |
 | Unattributed caption | Tile caption: cash no campaign can claim. | `text` | `FORMAT([Unattributed net cash] / 1000, "$#,0") & "K with no creating touch"` |
 | Content caption | Tile caption: views against buyers. | `text` | `FORMAT([Content customers], "#,0") & " buyers from " & FORMAT([Content views] / 1000, "#,0") & "K views"` |

@@ -111,3 +111,15 @@ def test_two_named_periods_compare_the_later_with_the_earlier(question, answer_s
 def test_a_range_is_not_a_comparison():
     assert parse("revenue between July and August").window["kind"] == "span"
     assert resolve_window(parse("compare leads in June 2025 and July 2025").window, AS_OF, FIRST) is None
+
+
+@pytest.mark.parametrize("question, models", [
+    ("which campaign gets credit under time decay", ("time_decay",)),
+    ("how does credit change between u-shaped and last touch", ("last_non_direct", "u_shaped")),
+    ("linear attribution by campaign", ("linear",)),
+    ("first touch versus linear credit", ("first_touch", "linear")),
+    ("is lead growth linear", ()),
+    ("cost of lead creation on Meta", ()),
+])
+def test_attribution_models_are_read_only_where_they_mean_a_model(question, models):
+    assert parse(question).attribution_models == models

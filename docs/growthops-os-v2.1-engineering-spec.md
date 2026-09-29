@@ -11,7 +11,7 @@ The product boundary is deliberate: HubSpot remains the CRM, Stripe remains paym
 | Area | Running today | v2.1 increment |
 |---|---|---|
 | Data | Deterministic 15-month ScaleLab scenario, SQLite operational store, DuckDB/dbt marts | Anonymous-to-contact identity evidence, explicit SQL/qualified pipeline, event/media and consent fixtures |
-| CRM | 33 baseline custom properties, five empty v2.1 fields, a GrowthOps deal pipeline, six lists, three workflows and 961 synthetic contacts in a HubSpot developer test portal as of 2026-09-29; CRM audit and sync code | Versioned property/workflow registries, lifecycle policy, CRM Health Center, drift checks and proposed repairs |
+| CRM | 33 baseline custom properties, five empty v2.1 fields, a GrowthOps deal pipeline, six lists, three workflows and 959 synthetic contacts (plus two HubSpot sample contacts) in a HubSpot developer test portal as of 2026-09-29; CRM audit and sync code | Versioned property/workflow registries, lifecycle policy, CRM Health Center, drift checks and proposed repairs |
 | Revenue | Platform/CRM/cash bridges, payment/refund attribution, five attribution models | Qualified pipeline as a separate value, customer-level reconciliation and operator-facing exception queue |
 | Automation | Signed payment webhook, idempotent new/installment/renewal flows, retries, step traces, DLQ and replay | Cancel/refund/upgrade/downgrade policies, event envelope, correlation IDs, outbox, action audit and Customer 360 |
 | Decision | Streamlit, FastAPI, seven-page Power BI project, morning brief, governed ask-your-data and guardrail evals | One Decision Center route, role-specific investigations, classification pipeline and versioned LLM evals |

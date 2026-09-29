@@ -123,7 +123,8 @@ PAGES: list[dict] = [
                      "Meta, Google and LinkedIn claim.", subtitle="[Platform claim caption]",
                      label="Ad platforms claim"),
                 tile("[Qualified pipeline created]", "Card. Qualified pipeline created: deal value at "
-                     "an explicit qualification decision.", label="Qualified pipeline"),
+                     "an explicit qualification decision.", subtitle="[Qualified pipeline caption]",
+                     label="Qualified pipeline"),
                 tile("[Booked (CRM, all time)]", "Card. Booked (CRM, all time): closed-won deal value in "
                      "the CRM.", subtitle="[CRM booked caption]", label="The CRM books"),
                 tile("[Net collected (all time)]", "Card. Net collected (all time): payments minus "
@@ -338,9 +339,11 @@ PAGES: list[dict] = [
                 tile("[Renewals at risk]", "Card. Renewals at risk: renewals due within 14 days, overdue or with a "
                      "failed card attempt.", subtitle="[Renewals caption]"),
             ),
+            # Thirteen checks: a smaller axis and label font keeps every name readable under its column (bars
+            # would need about 20px each and hide five checks behind a scrollbar at this height).
             {"type": "column", "x": "quality_scorecard[check_name]", "y": ["[Check rate]"],
              "color": "[Check colour]", "sort": ("quality_scorecard[check_name]", "Ascending"),
-             "y_start": 0.85,
+             "y_start": 0.85, "axis_font": 8,
              "title": "Data-quality checks, axis from 85% (red: under target)",
              "pos": (20, ROW1_Y, 500, 272),
              "alt": "Column chart titled Data-quality checks. Plots Check rate by check name; checks under "

@@ -602,7 +602,16 @@ def visual_json(spec: dict, index: int) -> dict:
 
     objects: dict[str, list] = {}
     if kind in CARTESIAN:
-        objects["categoryAxis"] = [{"properties": {"showAxisTitle": literal(False)}}]
+        category_axis = {"showAxisTitle": literal(False)}
+        if "category_width" in spec:
+            # Thinner bars so every category fits the visual instead of behind a scrollbar.
+            category_axis["preferredCategoryWidth"] = literal(spec["category_width"])
+            # An integer property: "L", not the "D" that literal() writes for numeric ones.
+            category_axis["innerPadding"] = {"expr": {"Literal": {"Value": f"{int(spec.get('inner_padding', 20))}L"}}}
+        if "axis_font" in spec:
+            # A bar's minimum height follows its label's font, so a long category list needs a smaller one.
+            category_axis["fontSize"] = literal(spec["axis_font"])
+        objects["categoryAxis"] = [{"properties": category_axis}]
         value_axis = {"showAxisTitle": literal(False)}
         if "y_start" in spec:
             # Rates that all sit between 90% and 100% look identical from zero.
@@ -611,6 +620,8 @@ def visual_json(spec: dict, index: int) -> dict:
     if kind in ("bar", "column") and len(spec["y"]) == 1 and not spec.get("series"):
         # Labels on one series only: on two, every month carries two overlapping numbers.
         objects["labels"] = [{"properties": {"show": literal(True)}}]
+        if "axis_font" in spec:
+            objects["labels"][0]["properties"]["fontSize"] = literal(spec["axis_font"])
     if kind == "waterfall":
         # Thousands (1000): the steps are tens of thousands, and on auto units a
         # $4,800 step reads "$0.00M".
