@@ -10,6 +10,7 @@ bridges when configured; see `growthops/adapters.py`).
 |---|---|
 | `/health`, `/ready` | Open (probes) |
 | `POST /webhooks/payments` | Signed request (below) |
+| `POST /v2/webhooks/lifecycle` | Same bounded HMAC signature; no API key needed for the webhook path |
 | `/metrics/*`, `/metrics` (Prometheus), `/ops/*`, `/crm/*`, `/v2/*`, `/ask`, `/campaign-links`, `/docs`, `/openapi.json` | `X-API-Key: <key>` or `Authorization: Bearer <key>`: always in production, and in development whenever `GROWTHOPS_API_KEYS` is set |
 | `POST /ops/events/{id}/replay` | API key plus `X-GrowthOps-Ops-Token` |
 | `POST /v2/ops/events/{id}/replay` | API key, `X-GrowthOps-Ops-Token`, `X-GrowthOps-Actor`, `Idempotency-Key`, and a JSON reason of 5–500 characters; action audited and duplicate key absorbed |
@@ -43,9 +44,25 @@ Returns HTTP 202 with `event_id`, `status` (`completed`, `failed`, or `dead_lett
 
 Workflow by `payment_type`: `new` runs record payment → update CRM → grant access → send onboarding; `installment` runs the first two; `renewal` runs the first three. Each completed step is persisted with `(event_id, step_name)` uniqueness and every attempt, successful or not, is logged in `workflow_step_attempts` with its duration and error. A failed step schedules a retry with exponential backoff (5, 10, 20, 40 minutes); `growthops.workflow.run_due` is the retry worker. After five attempts the event moves to the dead-letter queue. Provider redeliveries increment `deliveries`; internal retries do not.
 
+## `POST /v2/webhooks/lifecycle`
+
+This signed canonical **test-bridge** route accepts `subscription.upgraded`, `subscription.downgraded`, `subscription.cancelled` and `refund.created`. It uses the payment webhook's timestamped HMAC and 128 KiB body limit. It does not verify Stripe signatures or change HubSpot records. A production Stripe bridge would verify the provider signature and translate events before calling this route.
+
+```json
+{
+  "event_id": "evt_cancel_001",
+  "event_type": "subscription.cancelled",
+  "customer_id": "c-00001",
+  "subscription_id": "sub_001",
+  "occurred_at": "2026-09-29T12:00:00Z"
+}
+```
+
+Tier changes also require `new_tier`. A refund requires `payment_id`, `refund_id` and positive `amount_cents`; its subscription is derived from the captured payment. Refunds cannot exceed captured cash. The shared `processed_events` ledger stores these events with a null `payment_id` for nonpayment actions. The local subscription, refund and entitlement projections commit once; a subscription-scoped community action goes through the outbox with a stable provider idempotency key. Retries and audited replay use the existing workflow worker and incident trace. A partial refund records cash without revoking access; full subscription net cash reaching zero triggers a scoped revoke. Other active subscriptions keep customer access active. Older subscriptions without verified product access are marked `legacy_unverified` when first encountered, until evidence arrives.
+
 ## `GET /ops/customers/{customer_id}`
 
-Returns CRM state, recorded payments, access state, and recent workflow attempts for that customer. It is read-only and needs an API key.
+Returns CRM state, recorded payments, customer and subscription access state, and recent workflow attempts for that customer. It is read-only and needs an API key.
 
 ## `POST /campaign-links`
 
@@ -112,7 +129,7 @@ as-of date. They are local demonstration contracts, not claims about the connect
 | `POST /v2/quality/issues/{id}/propose-repair` | Read-only dry-run diagnosis and evidence; never guesses or writes a missing value |
 | `GET /v2/registries/{kind}/versions` | Versioned campaign, lifecycle, instrumentation, expected 33-property portal schema and three expected workflow definitions; definitions are local desired state, not a live drift read-back |
 | `GET /v2/people/{person_key}/journey` | Pseudonymous identity evidence, touches, lifecycle, deals and payments |
-| `GET /v2/ops/customers/{person_key}` | Journey plus existing payment-to-access customer trace |
+| `GET /v2/ops/customers/{person_key}` | Journey plus payment-to-access trace and subscription-grain entitlement states |
 | `GET /v2/ops/incidents?limit=20` | Pseudonymous failed/dead-letter workflow queue, ordered for investigation; 1–100 results and total count |
 | `GET /v2/ops/events/{event_id}` | Existing attempt trace plus envelope metadata and outbox delivery states |
 | `POST /v2/ops/events/{event_id}/replay` | Audited, idempotent dead-letter replay with the headers above |

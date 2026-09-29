@@ -225,7 +225,7 @@ CREATE TABLE IF NOT EXISTS processed_events (
   correlation_id TEXT,
   idempotency_key TEXT,
   payload_ref TEXT,
-  payment_id TEXT NOT NULL,
+  payment_id TEXT,
   customer_id TEXT NOT NULL,
   payload_sha256 TEXT NOT NULL,
   status TEXT NOT NULL CHECK (status IN ('received','processing','completed','failed','dead_letter')),
@@ -427,6 +427,48 @@ MIGRATIONS: tuple[tuple[int, str], ...] = (
     CREATE INDEX IF NOT EXISTS idx_engagement_person_time
       ON engagement_events(person_key, occurred_at);
     """),
+    (6, """
+    CREATE TABLE IF NOT EXISTS subscription_entitlements (
+      subscription_id TEXT PRIMARY KEY,
+      customer_id TEXT NOT NULL REFERENCES contacts(contact_id),
+      product_id TEXT,
+      tier TEXT,
+      status TEXT NOT NULL CHECK (status IN ('active','revoked','legacy_unverified')),
+      granted_at TEXT,
+      changed_at TEXT NOT NULL,
+      source_event_id TEXT NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_subscription_entitlements_customer
+      ON subscription_entitlements(customer_id, status);
+    CREATE TABLE IF NOT EXISTS lifecycle_action_log (
+      event_id TEXT PRIMARY KEY REFERENCES processed_events(event_id),
+      subscription_id TEXT,
+      action TEXT NOT NULL,
+      before_json TEXT NOT NULL,
+      after_json TEXT NOT NULL,
+      applied_at TEXT NOT NULL
+    );
+    """),
+    (7, """
+    INSERT OR IGNORE INTO subscription_entitlements
+      (subscription_id, customer_id, product_id, tier, status, granted_at,
+       changed_at, source_event_id)
+    SELECT subscription_id, customer_id, product_id, NULL, 'active', completed_at,
+           completed_at, event_id
+    FROM (
+      SELECT p.subscription_id, p.customer_id, p.product_id, w.completed_at,
+             e.event_id,
+             ROW_NUMBER() OVER (PARTITION BY p.subscription_id
+                                ORDER BY w.completed_at DESC, e.event_id DESC) AS rn
+      FROM payments p
+      JOIN processed_events e ON e.payment_id=p.payment_id
+      JOIN workflow_steps w ON w.event_id=e.event_id AND w.step_name='grant_access'
+      JOIN subscriptions s ON s.subscription_id=p.subscription_id
+                           AND s.customer_id=p.customer_id AND s.status='active'
+      JOIN access_entitlements a ON a.customer_id=p.customer_id AND a.status='active'
+      WHERE p.subscription_id IS NOT NULL AND p.status='succeeded'
+    ) WHERE rn=1;
+    """),
 )
 SCHEMA_VERSION = MIGRATIONS[-1][0]
 
@@ -490,6 +532,73 @@ def _upgrade_legacy_columns(connection: sqlite3.Connection) -> None:
         raise
 
 
+def _upgrade_processed_events_nullable_payment(connection: sqlite3.Connection) -> None:
+    """Rebuild only the legacy event table so nonpayment events have no fake payment ID."""
+    payment = next((row for row in connection.execute("PRAGMA table_info(processed_events)")
+                    if row["name"] == "payment_id"), None)
+    if payment is None or not payment["notnull"]:
+        return
+    columns = (
+        "event_id", "event_type", "source", "source_event_id", "schema_version",
+        "entity_type", "entity_id", "correlation_id", "idempotency_key", "payload_ref",
+        "payment_id", "customer_id", "payload_sha256", "status", "attempts", "last_error",
+        "received_at", "claimed_at", "completed_at", "trace_id", "payload_json",
+        "next_attempt_at", "deliveries",
+    )
+    names = ", ".join(columns)
+    connection.execute("PRAGMA foreign_keys = OFF")
+    connection.execute("BEGIN IMMEDIATE")
+    try:
+        # A second API/worker process may have completed the rebuild while this
+        # connection waited for the write lock.
+        current = next(row for row in connection.execute("PRAGMA table_info(processed_events)")
+                       if row["name"] == "payment_id")
+        if not current["notnull"]:
+            connection.commit()
+            return
+        connection.execute("""CREATE TABLE processed_events_v6 (
+          event_id TEXT PRIMARY KEY,
+          event_type TEXT NOT NULL,
+          source TEXT NOT NULL DEFAULT 'growthops_internal',
+          source_event_id TEXT,
+          schema_version TEXT NOT NULL DEFAULT '1',
+          entity_type TEXT,
+          entity_id TEXT,
+          correlation_id TEXT,
+          idempotency_key TEXT,
+          payload_ref TEXT,
+          payment_id TEXT,
+          customer_id TEXT NOT NULL,
+          payload_sha256 TEXT NOT NULL,
+          status TEXT NOT NULL CHECK (status IN ('received','processing','completed','failed','dead_letter')),
+          attempts INTEGER NOT NULL DEFAULT 0,
+          last_error TEXT,
+          received_at TEXT NOT NULL,
+          claimed_at TEXT,
+          completed_at TEXT,
+          trace_id TEXT,
+          payload_json TEXT,
+          next_attempt_at TEXT,
+          deliveries INTEGER NOT NULL DEFAULT 1
+        )""")
+        connection.execute(f"INSERT INTO processed_events_v6 ({names}) SELECT {names} FROM processed_events")
+        connection.execute("DROP TABLE processed_events")
+        connection.execute("ALTER TABLE processed_events_v6 RENAME TO processed_events")
+        connection.execute("CREATE INDEX idx_processed_status ON processed_events(status, next_attempt_at)")
+        connection.execute("CREATE UNIQUE INDEX idx_processed_payment ON processed_events(payment_id)")
+        connection.execute("""CREATE UNIQUE INDEX idx_event_source_id
+          ON processed_events(source, source_event_id) WHERE source_event_id IS NOT NULL""")
+        violations = connection.execute("PRAGMA foreign_key_check").fetchall()
+        if violations:
+            raise RuntimeError(f"event migration foreign-key violations: {len(violations)}")
+        connection.commit()
+    except Exception:
+        connection.rollback()
+        raise
+    finally:
+        connection.execute("PRAGMA foreign_keys = ON")
+
+
 def connect(path: str | Path) -> sqlite3.Connection:
     """Open the operational store with durable, concurrent-safe settings.
 
@@ -539,6 +648,8 @@ def initialize(connection: sqlite3.Connection) -> None:
     for version, sql in MIGRATIONS:
         if version in applied:
             continue
+        if version == 6:
+            _upgrade_processed_events_nullable_payment(connection)
         connection.executescript(
             f"BEGIN IMMEDIATE;\n{sql}\nINSERT OR IGNORE INTO schema_migrations VALUES ({version}, '{now}');\nCOMMIT;"
         )

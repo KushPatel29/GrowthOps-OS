@@ -29,6 +29,7 @@ from urllib import error, request
 from growthops.config import ConfigError, Settings
 
 if TYPE_CHECKING:
+    from growthops.lifecycle import LifecycleEvent
     from growthops.workflow import PaymentEvent
 
 HUBSPOT_API = "https://api.hubapi.com"
@@ -66,6 +67,10 @@ class CRMAdapter(Protocol):
 class AccessAdapter(Protocol):
     def grant(self, event: PaymentEvent) -> None: ...
 
+    def change_tier(self, event: LifecycleEvent) -> None: ...
+
+    def revoke_subscription(self, event: LifecycleEvent) -> None: ...
+
 
 class MessagingAdapter(Protocol):
     def send_onboarding(self, event: PaymentEvent) -> None: ...
@@ -78,6 +83,12 @@ class SimulatedCRM:
 
 class SimulatedAccess:
     def grant(self, event: PaymentEvent) -> None:
+        return None
+
+    def change_tier(self, event: LifecycleEvent) -> None:
+        return None
+
+    def revoke_subscription(self, event: LifecycleEvent) -> None:
         return None
 
 
@@ -117,9 +128,12 @@ class SignedWebhook:
     transport: Transport = urllib_transport
     clock: Callable[[], float] = field(default=time.time)
 
-    def post(self, event: PaymentEvent, action: str) -> None:
+    def post(self, event: PaymentEvent | LifecycleEvent, action: str) -> None:
         body = json.dumps({"action": action, "event_id": event.event_id, "customer_id": event.customer_id,
-                           "product_id": event.product_id, "payment_id": event.payment_id},
+                           "product_id": getattr(event, "product_id", None),
+                           "payment_id": event.payment_id,
+                           "subscription_id": event.subscription_id,
+                           "new_tier": getattr(event, "new_tier", None)},
                           sort_keys=True).encode()
         timestamp = str(int(self.clock()))
         signature = hmac.new(self.secret.encode(), timestamp.encode() + b"." + body, hashlib.sha256).hexdigest()
@@ -130,6 +144,12 @@ class SignedWebhook:
 
     def grant(self, event: PaymentEvent) -> None:
         self.post(event, "grant_access")
+
+    def change_tier(self, event: LifecycleEvent) -> None:
+        self.post(event, "change_tier")
+
+    def revoke_subscription(self, event: LifecycleEvent) -> None:
+        self.post(event, "revoke_subscription")
 
     def send_onboarding(self, event: PaymentEvent) -> None:
         self.post(event, "send_onboarding")

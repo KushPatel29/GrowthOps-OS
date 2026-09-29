@@ -63,6 +63,7 @@ from growthops.freshness import check as freshness_check
 from growthops.funnel import funnel
 from growthops.hubspot import audit as hubspot_audit
 from growthops.hubspot import property_definitions
+from growthops.lifecycle import LifecycleEvent, process_lifecycle
 from growthops.migration import audit as migration_audit
 from growthops.narrator import narrate
 from growthops.observability import (
@@ -148,7 +149,8 @@ async def request_context(request: Request, call_next):
     started = time.perf_counter()
     settings = get_settings()
     try:
-        protected = request.url.path.startswith(PROTECTED_PREFIXES)
+        protected = (request.url.path.startswith(PROTECTED_PREFIXES)
+                     and request.url.path != "/v2/webhooks/lifecycle")
         # Lifespan normally blocks an unsafe production start. Keep the same
         # fail-closed behavior if a server disables ASGI lifespan or settings
         # change while the process is running.
@@ -359,9 +361,7 @@ def verify_signature(body: bytes, signature: str, timestamp: str, settings) -> b
     return hmac.compare_digest(hmac.new(secret, signed, hashlib.sha256).hexdigest(), signature)
 
 
-@app.post("/webhooks/payments", status_code=202)
-async def payment_webhook(request: Request, x_growthops_signature: str = Header(default=""),
-                          x_growthops_timestamp: str = Header(default="")) -> dict:
+async def _verified_webhook_body(request: Request, signature: str, timestamp: str) -> bytes:
     # Read in bounded chunks: Content-Length is optional and cannot be trusted
     # as the sole limit. This caps memory and HMAC work before parsing JSON.
     length = request.headers.get("content-length", "")
@@ -374,10 +374,18 @@ async def payment_webhook(request: Request, x_growthops_signature: str = Header(
         payload.extend(chunk)
     body = bytes(payload)
     settings = get_settings()
-    if not verify_signature(body, x_growthops_signature, x_growthops_timestamp, settings):
+    if not verify_signature(body, signature, timestamp, settings):
         METRICS.increment("webhook_rejected")
         raise HTTPException(status_code=401, detail="invalid or expired signature")
     METRICS.increment("webhook_accepted")
+    return body
+
+
+@app.post("/webhooks/payments", status_code=202)
+async def payment_webhook(request: Request, x_growthops_signature: str = Header(default=""),
+                          x_growthops_timestamp: str = Header(default="")) -> dict:
+    body = await _verified_webhook_body(request, x_growthops_signature, x_growthops_timestamp)
+    settings = get_settings()
     try:
         event = PaymentEvent.model_validate_json(body)
     except ValidationError as exc:
@@ -386,6 +394,26 @@ async def payment_webhook(request: Request, x_growthops_signature: str = Header(
     try:
         initialize(connection)
         result = process_payment(connection, event, adapters=build_adapters(settings))
+    except EventConflict as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    finally:
+        connection.close()
+    return result
+
+
+@app.post("/v2/webhooks/lifecycle", status_code=202)
+async def lifecycle_webhook(request: Request, x_growthops_signature: str = Header(default=""),
+                            x_growthops_timestamp: str = Header(default="")) -> dict:
+    """Accept canonical signed test events; no direct Stripe or HubSpot mutation."""
+    body = await _verified_webhook_body(request, x_growthops_signature, x_growthops_timestamp)
+    try:
+        event = LifecycleEvent.model_validate_json(body)
+    except ValidationError as exc:
+        raise HTTPException(status_code=422, detail=exc.errors()) from exc
+    connection = connect(database_path())
+    try:
+        initialize(connection)
+        result = process_lifecycle(connection, event, adapters=build_adapters(get_settings()))
     except EventConflict as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
     finally:
@@ -407,6 +435,11 @@ def customer_lookup(customer_id: str) -> dict:
         access = connection.execute(
             "SELECT status, granted_at FROM access_entitlements WHERE customer_id=?", (customer_id,)
         ).fetchone()
+        subscriptions = connection.execute(
+            """SELECT subscription_id, product_id, tier, status, changed_at
+               FROM subscription_entitlements WHERE customer_id=? ORDER BY subscription_id""",
+            (customer_id,),
+        ).fetchall()
         workflows = connection.execute(
             """SELECT event_id, status, attempts, last_error
                FROM processed_events WHERE customer_id=? ORDER BY received_at DESC""",
@@ -414,14 +447,21 @@ def customer_lookup(customer_id: str) -> dict:
         ).fetchall()
         paid_new = any(row["status"] == "succeeded" for row in payments)
         stuck = [row["event_id"] for row in workflows if row["status"] == "dead_letter"]
-        diagnosis = ("Paid but no community access: replay " + ", ".join(stuck)) if paid_new and not access and stuck \
-            else "Paid but no community access: investigate" if paid_new and not access \
+        active_subscription = connection.execute(
+            "SELECT 1 FROM subscriptions WHERE customer_id=? AND status='active' LIMIT 1",
+            (customer_id,),
+        ).fetchone()
+        no_access = not access or access["status"] != "active"
+        diagnosis = "Access revoked after subscription cancellation" if access and no_access and not active_subscription \
+            else ("Paid but no community access: replay " + ", ".join(stuck)) if paid_new and no_access and stuck \
+            else "Paid but no community access: investigate" if paid_new and no_access \
             else "OK" if contact else "Unknown customer"
         return {
             "customer_id": customer_id,
             "crm": dict(contact) if contact else None,
             "payments": [dict(row) for row in payments],
             "access": dict(access) if access else None,
+            "subscription_entitlements": [dict(row) for row in subscriptions],
             "workflows": [dict(row) for row in workflows],
             "diagnosis": diagnosis,
         }
@@ -685,8 +725,9 @@ def growthops_event_trace(event_id: str) -> dict:
     trace = event_trace(event_id)
     metadata = _read(
         lambda c: c.execute(
-            """SELECT source, source_event_id, schema_version, correlation_id,
-                      idempotency_key, payload_ref FROM processed_events WHERE event_id=?""",
+            """SELECT source, source_event_id, schema_version, entity_type, entity_id,
+                      correlation_id, idempotency_key, payload_ref
+               FROM processed_events WHERE event_id=?""",
             (event_id,),
         ).fetchone(),
     )

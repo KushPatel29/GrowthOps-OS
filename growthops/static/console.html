@@ -199,6 +199,11 @@
       line(state,'Last access grant',date(o.access?.granted_at));
       state.append(node('p',o.diagnosis==='OK'?'note':'error',o.diagnosis));
       grid.append(identity,state); target.append(grid);
+      section(target,'Subscription access',o.subscription_entitlements || [],row=>{
+        const card=node('div','record'); card.append(node('strong','',row.subscription_id),pill(row.status),
+          node('p','note',`${row.product_id || 'Product unknown'} · ${row.tier || 'Tier unknown'} · Changed ${date(row.changed_at)}`));
+        return card;
+      });
       section(target,'Lifecycle history',j.lifecycle,row=>{
         const card=node('div','record');
         card.append(node('strong','',`${label(row.from_stage || 'Start')} → ${label(row.to_stage)}`),

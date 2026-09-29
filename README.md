@@ -3,7 +3,7 @@
 **Marketing measurement, revenue reconciliation and lifecycle automation for a creator-led B2B business.**
 
 [![GrowthOps checks](https://github.com/KushPatel29/GrowthOps-OS/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/KushPatel29/GrowthOps-OS/actions/workflows/ci.yml)
-[![tests](https://img.shields.io/badge/tests-567%20passing-brightgreen)](tests)
+[![tests](https://img.shields.io/badge/tests-576%20passing-brightgreen)](tests)
 [![guardrail eval](https://img.shields.io/badge/guardrail%20eval-30%2F30-brightgreen)](evals/narrative_guardrail_cases.json)
 
 [**Live dashboard**](https://growthops-os.streamlit.app/) · [Power BI and Excel](docs/power-bi-handoff.md) · [Case study](docs/case-study.md) · [Metric catalog](docs/metric-catalog.md) · [API](docs/api-contracts.md) · [v2.1 specification](docs/growthops-os-v2.1-engineering-spec.md) · [HubSpot v2.1 change plan](docs/hubspot-v21-change-plan.md)
@@ -148,7 +148,7 @@ Useful endpoints: `/metrics/brief`, `/metrics/daily-update`, `/metrics/paid-effi
 `/v2/console`, `/v2/decision-center`, `/v2/crm/health`, `/v2/crm/marketing-contacts/audit`,
 `/v2/campaigns/qa`, `/v2/instrumentation/validate`, `/v2/quality/issues`,
 `/v2/metrics/qualified-pipeline`, `/v2/ops/incidents`, `/v2/ops/customers/{person_key}`,
-`/v2/ops/events/{event_id}`, `/ready`, `/metrics` (Prometheus).
+`/v2/ops/events/{event_id}`, signed `/v2/webhooks/lifecycle`, `/ready`, `/metrics` (Prometheus).
 Production: `cp .env.example .env`, fill in the secrets, then `docker compose up -d` (see the
 [runbook](docs/production-runbook.md)). Local embeddings need `pip install -e ".[rag]"`; without them ask-your-data
 runs keyword-only and says so.

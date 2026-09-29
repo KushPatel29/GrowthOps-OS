@@ -80,6 +80,13 @@ Live synthetic dashboard: https://growthops-os.streamlit.app/ · GitHub: https:/
   six new staging models, two intermediate models, two marts and regenerated PBIP. The qualification
   decisions are synthetic fixtures, not imported HubSpot judgments. The new UI and semantic model pass
   local structural and parity tests; the regenerated PBIP has not yet been reopened in Desktop.
+- **v2.1 local lifecycle actions**: a signed canonical webhook records subscription upgrades,
+  downgrades, cancellations and refunds in the shared event ledger. Version 6 permits nonpayment
+  events without invented payment IDs and adds subscription-grain entitlements and an action audit;
+  version 7 backfills only access supported by a completed grant trace (25 subscriptions locally).
+  Refund bounds, scoped revocation, concurrent subscriptions, duplicate delivery and community
+  retry/replay are covered by tests. The existing 92 payment traces survived the local migration
+  with zero foreign-key violations. This is a simulated provider path, not live Stripe ingestion.
 
 ## Not implemented yet
 
@@ -99,6 +106,6 @@ Live synthetic dashboard: https://growthops-os.streamlit.app/ · GitHub: https:/
 
 ## Next increment
 
-Continue the [v2.1 engineering specification](docs/growthops-os-v2.1-engineering-spec.md) with lifecycle
-event policies beyond successful payments, a provider test bridge, and held-out AI evaluation. The Stripe
-test-mode bridge, ad/email ingestion and Power BI Service publication remain later integrations.
+Continue the [v2.1 engineering specification](docs/growthops-os-v2.1-engineering-spec.md) with a
+Stripe test-mode bridge, provider-level subscription read-back, and held-out AI evaluation. Ad/email
+ingestion and Power BI Service publication remain later integrations.

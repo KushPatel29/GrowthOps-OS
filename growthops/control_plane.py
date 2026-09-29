@@ -12,13 +12,22 @@ import json
 import sqlite3
 from collections import defaultdict
 from datetime import UTC, datetime, timedelta
+from typing import TypedDict
 
 from growthops.scenario import AS_OF
 
 VERSION = "2.1"
 STAGES = ("subscriber", "lead", "mql", "sql", "opportunity", "customer")
 DEMO_HASH_KEY = b"growthops-synthetic-identity-v1"
-EVENT_CONTRACTS = {
+
+
+class EventContract(TypedDict):
+    trigger: str
+    required: list[str]
+    conversion: bool
+
+
+EVENT_CONTRACTS: dict[str, EventContract] = {
     "page_view": {"trigger": "web", "required": ["page_path", "anonymous_id"], "conversion": False},
     "video_start": {"trigger": "web", "required": ["content_id", "anonymous_id"], "conversion": False},
     "lead_form_submit": {"trigger": "form", "required": ["form_id", "submission_id", "anonymous_id"],

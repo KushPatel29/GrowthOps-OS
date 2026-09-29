@@ -205,6 +205,12 @@ Keep existing 152-question ask contract and 30 guardrail cases. Add a held-out, 
 | **M5: intelligence (P1)** | Conversation classifier, evidence-bound brief and new eval suite | Gates above pass; keyless fallback remains usable |
 | **M6: optional depth (P2)** | Renewal actions, media adapters, conversion routing, customer economics and GCP deployment | Each feature has a source contract, test fixture and independent demo |
 
+**M3 implementation note (2026-09-29):** the local signed canonical route now handles
+upgrade, downgrade, cancellation and refund events on the shared ledger with scoped
+subscription entitlements, refund bounds, provider idempotency, retry and trace. The
+community adapter remains simulated by default. A real Stripe test-mode signature
+bridge, source subscription read-back and live provider verification remain open.
+
 Start with M0–M4. Markov attribution, a Chrome extension, large RAG corpus, many live integrations and forecasting remain deferred until the two end-to-end demos work. A server-side conversion router, when added, uses consent and provider policy checks, stable conversion IDs and deduplication; it never sends synthetic events to a live ad account.
 
 ### Demonstration acceptance

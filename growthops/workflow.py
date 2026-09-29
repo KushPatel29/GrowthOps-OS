@@ -130,6 +130,18 @@ def _apply_step(connection: sqlite3.Connection, step: str, event: PaymentEvent, 
         connection.execute(
             "UPDATE access_entitlements SET status='active' WHERE customer_id=?", (event.customer_id,)
         )
+        if event.subscription_id:
+            connection.execute(
+                """INSERT INTO subscription_entitlements
+                   (subscription_id, customer_id, product_id, tier, status, granted_at,
+                    changed_at, source_event_id)
+                   VALUES (?, ?, ?, NULL, 'active', ?, ?, ?)
+                   ON CONFLICT(subscription_id) DO UPDATE SET
+                     status='active', product_id=COALESCE(excluded.product_id, product_id),
+                     changed_at=excluded.changed_at, source_event_id=excluded.source_event_id""",
+                (event.subscription_id, event.customer_id, event.product_id,
+                 at_text, at_text, event.event_id),
+            )
         if event.payment_type == "new":
             connection.execute(
                 "INSERT OR IGNORE INTO lifecycle_events VALUES (?, ?, 'activated', ?)",
@@ -333,15 +345,24 @@ def run_due(
 ) -> list[dict]:
     """Retry worker: resume every failed event whose backoff has elapsed."""
     rows = connection.execute(
-        """SELECT payload_json FROM processed_events
-           WHERE status='failed' AND next_attempt_at<=? ORDER BY next_attempt_at, event_id LIMIT ?""",
-        (now.isoformat(), limit),
+        """SELECT event_type, payload_json FROM processed_events
+           WHERE (status='failed' AND next_attempt_at<=?)
+              OR (status='processing' AND claimed_at<=?)
+           ORDER BY COALESCE(next_attempt_at, claimed_at), event_id LIMIT ?""",
+        (now.isoformat(), (now - CLAIM_TTL).isoformat(), limit),
     ).fetchall()
     results = []
     for row in rows:
-        event = PaymentEvent.model_validate_json(row["payload_json"])
-        results.append(process_payment(connection, event, now=now, faults=faults, latency=latency, delivery=False,
-                                       adapters=adapters))
+        if row["event_type"] == "payment.succeeded":
+            event = PaymentEvent.model_validate_json(row["payload_json"])
+            results.append(process_payment(connection, event, now=now, faults=faults, latency=latency,
+                                           delivery=False, adapters=adapters))
+        else:
+            from growthops.lifecycle import LifecycleEvent, process_lifecycle
+
+            event_v21 = LifecycleEvent.model_validate_json(row["payload_json"])
+            results.append(process_lifecycle(connection, event_v21, now=now, delivery=False,
+                                             adapters=adapters))
     return results
 
 
@@ -349,7 +370,7 @@ def replay_dead_letter(connection: sqlite3.Connection, event_id: str, now: datet
                        adapters: Adapters | None = None) -> dict:
     """Operator action: give a dead-lettered event a fresh retry budget and run it now."""
     row = connection.execute(
-        "SELECT status, payload_json FROM processed_events WHERE event_id=?", (event_id,)
+        "SELECT status, event_type, payload_json FROM processed_events WHERE event_id=?", (event_id,)
     ).fetchone()
     if row is None:
         raise LookupError("event not found")
@@ -359,8 +380,13 @@ def replay_dead_letter(connection: sqlite3.Connection, event_id: str, now: datet
         "UPDATE processed_events SET status='failed', attempts=0, next_attempt_at=NULL WHERE event_id=?",
         (event_id,),
     )
-    return process_payment(connection, PaymentEvent.model_validate_json(row["payload_json"]), now=now, delivery=False,
-                           adapters=adapters)
+    if row["event_type"] == "payment.succeeded":
+        return process_payment(connection, PaymentEvent.model_validate_json(row["payload_json"]),
+                               now=now, delivery=False, adapters=adapters)
+    from growthops.lifecycle import LifecycleEvent, process_lifecycle
+
+    return process_lifecycle(connection, LifecycleEvent.model_validate_json(row["payload_json"]),
+                             now=now, delivery=False, adapters=adapters)
 
 
 def _percentile(values: list[float], share: float) -> float | None:
