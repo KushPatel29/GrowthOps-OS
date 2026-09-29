@@ -1,6 +1,6 @@
 # Connected HubSpot marketing audit
 
-**Scope:** synthetic sample in developer test portal 247549241. **Observed:** 2026-09-29 12:21 UTC. **Method:** read-only CRM property and contact search; zero portal writes. Run again with `python -m growthops.hubspot_marketing_audit` to refresh the counts. The command checks the portal ID and required property names before reporting.
+**Scope:** synthetic sample in developer test portal 247549241. **Observed:** 2026-09-29 13:13 UTC. **Method:** read-only CRM property and contact search; zero portal writes. Run again with `python -m growthops.hubspot_marketing_audit` to refresh the counts. The command checks the portal ID and required property names before reporting.
 
 The current search returned **961 contacts**, two more than the prior 959-contact snapshot. The snapshot was a count, not an ID list, so the audit does not identify which records changed.
 
@@ -20,4 +20,4 @@ The current search returned **961 contacts**, two more than the prior 959-contac
 
 The inspected fields do not establish consent or marketing eligibility for any of these 961 contacts. The audit recommends **zero marketing-status changes** and performs none. It also does not delete, suppress, email, or reassign anyone. The output includes a small sample of opaque HubSpot IDs for each review queue, so an operator can inspect underlying records before proposing a change.
 
-The portal's five proposed v2.1 custom fields remain a separate [schema-only change plan](hubspot-v21-change-plan.md). The local full-scenario marketing audit covers 14,693 synthetic contacts; its totals must not be presented as live portal totals.
+The portal's five empty v2.1 custom fields are documented in the separate [schema change record](hubspot-v21-change-plan.md). The local full-scenario marketing audit covers 14,693 synthetic contacts; its totals must not be presented as live portal totals.

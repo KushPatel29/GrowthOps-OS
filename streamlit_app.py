@@ -19,6 +19,12 @@ from growthops.attribution import MODELS
 from growthops.attribution import summary as attribution_summary
 from growthops.brief import period_brief
 from growthops.campaign_links import audit_short_links
+from growthops.control_plane import (
+    decision_center,
+    person_journey,
+    quality_queue,
+    repair_proposal,
+)
 from growthops.db import connect_readonly
 from growthops.diagnostics import detect, incident_recall
 from growthops.diagnostics import series as metric_series
@@ -155,6 +161,23 @@ def load_case(database: str) -> dict:
         connection.close()
 
 
+@st.cache_data(show_spinner="Preparing the operations view…", ttl=120)
+def load_operations_snapshot(database: str) -> dict:
+    """Read the v2.1 decision snapshot and incident queue from the same local database."""
+    connection = connect_readonly(database)
+    try:
+        snapshot = decision_center(connection)
+        incidents = [dict(row) for row in connection.execute(
+            """SELECT event_id, customer_id person_key, status, attempts, last_error
+               FROM processed_events WHERE status IN ('failed', 'dead_letter')
+               ORDER BY CASE status WHEN 'dead_letter' THEN 0 ELSE 1 END,
+                        received_at DESC, event_id LIMIT 100"""
+        )]
+        return {"decision": snapshot, "incidents": incidents}
+    finally:
+        connection.close()
+
+
 def usd(cents: float | None, digits: int = 0) -> str:
     if cents is None:
         return "—"
@@ -221,7 +244,8 @@ st.caption("Acquisition → CRM → cash → access → renewal for a fictional 
            "Fifteen months of generated data with planted incidents; the analytics have to find them.")
 
 tabs = st.tabs(["Morning brief", "Which number is right?", "Acquisition", "Email & links", "Funnel & content",
-                "Diagnostics", "Experiment", "Automation & renewals", "Data quality", "Ask your data"])
+                "Diagnostics", "Experiment", "Automation & renewals", "Data quality", "Ask your data",
+                "Operations console"])
 
 with tabs[0]:
     brief = case["brief"]
@@ -589,8 +613,8 @@ with tabs[8]:
     cols[2].metric("Won deal, stage not customer", crm["closed_won_contacts_not_customer"])
     cols[3].metric("Stale leads (non-marketing candidates)", f"{crm['stale_leads_non_marketing_candidates']:,}")
     st.caption("Mapped to HubSpot's lifecyclestage, dealstage and hubspot_owner_id values; `python -m growthops.hubspot` "
-               "writes import-ready contacts and deals CSVs and the custom-property definitions. No HubSpot portal is "
-               f"connected. Stale rule: {crm['stale_rule']}.")
+               "writes import-ready contacts and deals CSVs and the custom-property definitions. This public "
+               f"demo does not read the connected HubSpot test portal. Stale rule: {crm['stale_rule']}.")
 
 with tabs[9]:
     st.subheader("Ask your data")
@@ -645,6 +669,117 @@ with tabs[9]:
             with st.expander("What retrieval considered"):
                 st.dataframe(pd.DataFrame(response["retrieved"]), hide_index=True, width="stretch")
 
+with tabs[10]:
+    st.subheader("Operations console")
+    st.caption("Read-only control plane for the synthetic scenario. Qualification is an explicit synthetic "
+               "assessment; no live CRM values or customer messages are changed here.")
+    view = load_operations_snapshot(database)
+    decision = view["decision"]
+    revenue = decision["revenue_truth"]
+    pipeline = decision["pipeline"]
+    health = decision["crm_health"]
+    ops_tabs = st.tabs(["Decision center", "Customer 360", "Incident trace", "Quality queue"])
+
+    with ops_tabs[0]:
+        cols = st.columns(4)
+        cols[0].metric("Qualified pipeline created", usd(revenue["qualified_pipeline_created_minor"]))
+        cols[1].metric("Qualified open pipeline", usd(pipeline["open_minor"]))
+        cols[2].metric("CRM booked", usd(revenue["crm_booked_minor"]))
+        cols[3].metric("Net collected", usd(revenue["net_collected_minor"]))
+        st.caption("These are separate measures. Pipeline is deal value, bookings are CRM closed-won value, "
+                   "and net collected is payment cash after refunds.")
+        cols = st.columns(4)
+        cols[0].metric("CRM health", f"{health['score']:.1f}/100")
+        cols[1].metric("Open quality issues", f"{health['open_issues']:,}")
+        cols[2].metric("Dead-letter events", decision["operations"]["dead_letter"])
+        cols[3].metric("Broken short links", decision["campaign_qa"]["short_links_with_issues"])
+        st.caption("Marketing eligibility: " + health["marketing_eligibility"])
+        st.markdown("#### What to act on")
+        for finding in decision["brief"]["findings"]:
+            with st.container(border=True):
+                st.markdown(f"**{finding['finding']}**".replace("$", r"\$"))
+                st.write(f"Evidence: {finding['evidence']}")
+                st.write(f"Next: {finding['action']}")
+                st.caption(f"Source: {finding['source']}")
+
+    with ops_tabs[1]:
+        person_key = st.text_input("Synthetic person key", value="c-000789", key="ops-person")
+        if person_key:
+            connection = connect_readonly(database)
+            try:
+                journey = person_journey(connection, person_key.strip())
+            finally:
+                connection.close()
+            if journey is None:
+                st.info("No person with that key in this scenario.")
+            else:
+                crm = journey["crm"]
+                st.write(f"**Stage:** {crm['current_stage']} · **Owner:** {crm['owner_id'] or 'unassigned'} "
+                         f"· **Original source:** {crm['original_source'] or 'unknown'}")
+                for title, key in (("Identity evidence", "identity_evidence"), ("Campaign touches", "touches"),
+                                   ("Lifecycle", "lifecycle"), ("Deals and qualification", "deals"),
+                                   ("Payments", "payments")):
+                    with st.expander(f"{title} ({len(journey[key])})"):
+                        if journey[key]:
+                            st.dataframe(pd.DataFrame(journey[key]), hide_index=True, width="stretch")
+                        else:
+                            st.caption("No records")
+                if journey["touches_truncated"]:
+                    st.caption("Showing the first 100 touches.")
+
+    with ops_tabs[2]:
+        incidents = view["incidents"]
+        st.metric("Failed or dead-letter events", len(incidents))
+        if incidents:
+            st.dataframe(pd.DataFrame(incidents), hide_index=True, width="stretch")
+            event_id = st.selectbox("Inspect an event", [row["event_id"] for row in incidents],
+                                    key="ops-event")
+            connection = connect_readonly(database)
+            try:
+                incident = workflow_trace(connection, event_id)
+            finally:
+                connection.close()
+            st.write(f"**Status:** {incident['status']} · **Attempts:** {incident['attempts']} "
+                     f"· **Person:** {incident['customer_id']}")
+            st.caption(incident["last_error"] or "No error recorded")
+            st.markdown("#### Step attempts")
+            st.dataframe(pd.DataFrame(incident["attempts_log"]), hide_index=True, width="stretch")
+            st.markdown("#### Delivery outbox")
+            st.dataframe(pd.DataFrame(incident["outbox"]), hide_index=True, width="stretch")
+            st.caption("The public view is read-only. Replay requires an authenticated operator in the local API.")
+        else:
+            st.success("No failed events in this database.")
+
+    with ops_tabs[3]:
+        rules = ["All"] + [item["rule_id"] for item in decision["quality_preview"]["rule_counts"]]
+        selected_rule = st.selectbox("Issue rule", rules, key="ops-rule")
+        connection = connect_readonly(database)
+        try:
+            queue = quality_queue(connection, limit=50,
+                                  rule=None if selected_rule == "All" else selected_rule)
+        finally:
+            connection.close()
+        st.metric("Open issues matching filter", f"{queue['total']:,}")
+        if queue["results"]:
+            st.dataframe(pd.DataFrame([{key: row[key] for key in
+                                        ("issue_id", "rule_id", "entity_type", "entity_id", "severity")}
+                                       for row in queue["results"]]), hide_index=True, width="stretch")
+            issue_id = st.selectbox("Review an issue", [row["issue_id"] for row in queue["results"]],
+                                    key="ops-issue")
+            connection = connect_readonly(database)
+            try:
+                proposal = repair_proposal(connection, issue_id)
+            finally:
+                connection.close()
+            if proposal:
+                st.write(f"**Suggested review:** {proposal['instruction']}")
+                st.json(proposal["evidence"])
+                st.caption("Diagnosis only. No CRM value is guessed or written.")
+            if queue["total"] > len(queue["results"]):
+                st.caption(f"Showing the first {len(queue['results'])} matching issues.")
+        else:
+            st.success("No open issues for this rule.")
+
 st.divider()
-st.caption("All business data is synthetic and generated for this demonstration. No HubSpot, Stripe, ad account or "
-           "live CRM is connected. Source: github.com/KushPatel29/GrowthOps-OS")
+st.caption("All business data shown here is synthetic. This public dashboard does not read live HubSpot, Stripe "
+           "or ad accounts. Source: github.com/KushPatel29/GrowthOps-OS")

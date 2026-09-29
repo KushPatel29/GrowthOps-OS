@@ -85,6 +85,7 @@ from growthops.report import executive_brief
 from growthops.stripe_test_bridge import (
     StripeEventError,
     normalize_stripe_test_event,
+    settled_business_duplicate,
     verify_stripe_signature,
 )
 from growthops.warehouse import build as build_warehouse
@@ -446,10 +447,12 @@ async def stripe_test_webhook(request: Request, stripe_signature: str = Header(d
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     METRICS.increment("webhook_accepted")
     if event is None:
-        return {"status": "ignored", "reason": "event type is not allowlisted"}
+        return {"status": "ignored", "reason": "event type or state is not actionable"}
     connection = connect(database_path())
     try:
         initialize(connection)
+        if duplicate := settled_business_duplicate(connection, event):
+            return duplicate
         if isinstance(event, PaymentEvent):
             return process_payment(connection, event, adapters=build_adapters(settings))
         return process_lifecycle(connection, event, adapters=build_adapters(settings))

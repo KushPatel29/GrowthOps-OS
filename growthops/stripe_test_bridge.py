@@ -9,11 +9,12 @@ from __future__ import annotations
 import hashlib
 import hmac
 import json
+import sqlite3
 from datetime import UTC, datetime
 from typing import Literal
 
 from growthops.lifecycle import LifecycleEvent
-from growthops.workflow import PaymentEvent
+from growthops.workflow import EventConflict, PaymentEvent
 
 SIGNATURE_TOLERANCE_SECONDS = 300
 
@@ -25,7 +26,7 @@ class StripeEventError(ValueError):
 def verify_stripe_signature(body: bytes, header: str, secret: str, *,
                             now: datetime | None = None) -> bool:
     """Verify Stripe's t/v1 HMAC over the exact raw payload within five minutes."""
-    if not secret.startswith("whsec_") or len(secret) < 32:
+    if not secret.startswith("whsec_") or len(secret) < 32 or len(header) > 8192:
         return False
     parts: dict[str, list[str]] = {}
     for item in header.split(","):
@@ -34,7 +35,8 @@ def verify_stripe_signature(body: bytes, header: str, secret: str, *,
             parts.setdefault(key, []).append(value)
     timestamps = parts.get("t", [])
     signatures = parts.get("v1", [])
-    if len(timestamps) != 1 or not timestamps[0].isdecimal() or not signatures:
+    if (len(timestamps) != 1 or len(timestamps[0]) > 13 or
+            not timestamps[0].isdecimal() or not signatures or len(signatures) > 8):
         return False
     timestamp = int(timestamps[0])
     present = int((now or datetime.now(UTC)).timestamp())
@@ -87,7 +89,7 @@ def normalize_stripe_test_event(body: bytes) -> PaymentEvent | LifecycleEvent | 
     at = datetime.fromtimestamp(created, UTC)
     event_type = envelope.get("type")
     allowed = {"payment_intent.succeeded", "customer.subscription.updated",
-               "customer.subscription.deleted", "refund.created"}
+               "customer.subscription.deleted", "refund.created", "refund.updated"}
     if event_type not in allowed:
         return None
     data = envelope.get("data")
@@ -114,11 +116,11 @@ def normalize_stripe_test_event(body: bytes) -> PaymentEvent | LifecycleEvent | 
             subscription_id=metadata.get("growthops_subscription_id") or None,
             product_id=metadata.get("growthops_product_id") or None,
         )
-    if event_type == "refund.created":
+    if event_type in {"refund.created", "refund.updated"}:
         if obj.get("object") != "refund":
             raise StripeEventError("a Refund object is required")
         if obj.get("status") != "succeeded":
-            raise StripeEventError("refund is not succeeded; wait for verified settlement")
+            return None  # A later refund.updated snapshot can establish settlement.
         _usd(obj)
         metadata = obj.get("metadata")
         if not isinstance(metadata, dict):
@@ -153,3 +155,50 @@ def normalize_stripe_test_event(body: bytes) -> PaymentEvent | LifecycleEvent | 
     return LifecycleEvent(event_id=event_id, event_type=lifecycle_type,
                           customer_id=customer_id, subscription_id=subscription_id,
                           new_tier=_metadata(obj, "growthops_new_tier"), occurred_at=at)
+
+
+def settled_business_duplicate(connection: sqlite3.Connection,
+                               event: PaymentEvent | LifecycleEvent) -> dict | None:
+    """Absorb a second Stripe Event for a completed underlying payment/refund.
+
+    The first event remains the durable trace and retry owner. A conflicting
+    amount or identity is never treated as a duplicate.
+    """
+    if isinstance(event, PaymentEvent):
+        original = connection.execute(
+            "SELECT event_id, status, payload_json FROM processed_events WHERE payment_id=?",
+            (event.payment_id,),
+        ).fetchone()
+        if original is None or original["event_id"] == event.event_id:
+            return None
+        prior = PaymentEvent.model_validate_json(original["payload_json"])
+        matching = all(getattr(prior, name) == getattr(event, name) for name in (
+            "payment_id", "customer_id", "deal_id", "amount_cents", "payment_type",
+            "subscription_id", "product_id",
+        ))
+        if not matching:
+            raise EventConflict("Stripe payment object conflicts with its first event")
+    elif event.event_type == "refund.created":
+        refund = connection.execute(
+            """SELECT r.payment_id, r.amount_cents, p.customer_id FROM refunds r
+               JOIN payments p ON p.payment_id=r.payment_id WHERE r.refund_id=?""",
+            (event.refund_id,),
+        ).fetchone()
+        if refund is None:
+            return None
+        if (refund["payment_id"] != event.payment_id or
+                refund["amount_cents"] != event.amount_cents or
+                refund["customer_id"] != event.customer_id):
+            raise EventConflict("Stripe refund object conflicts with recorded cash")
+        original = connection.execute(
+            """SELECT event_id, status FROM processed_events
+               WHERE event_type='refund.created' AND json_extract(payload_json, '$.refund_id')=?
+               ORDER BY received_at LIMIT 1""",
+            (event.refund_id,),
+        ).fetchone()
+        if original is None or original["event_id"] == event.event_id:
+            return None
+    else:
+        return None
+    return {"event_id": event.event_id, "status": original["status"], "duplicate": True,
+            "original_event_id": original["event_id"]}

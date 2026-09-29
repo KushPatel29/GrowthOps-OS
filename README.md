@@ -3,10 +3,13 @@
 **Marketing measurement, revenue reconciliation and lifecycle automation for a creator-led B2B business.**
 
 [![GrowthOps checks](https://github.com/KushPatel29/GrowthOps-OS/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/KushPatel29/GrowthOps-OS/actions/workflows/ci.yml)
-[![tests](https://img.shields.io/badge/tests-584%20passing-brightgreen)](tests)
+[![tests](https://img.shields.io/badge/tests-587%20passing-brightgreen)](tests)
 [![guardrail eval](https://img.shields.io/badge/guardrail%20eval-30%2F30-brightgreen)](evals/narrative_guardrail_cases.json)
 
-[**Live dashboard**](https://growthops-os.streamlit.app/) · [Power BI and Excel](docs/power-bi-handoff.md) · [Case study](docs/case-study.md) · [Metric catalog](docs/metric-catalog.md) · [API](docs/api-contracts.md) · [v2.1 specification](docs/growthops-os-v2.1-engineering-spec.md) · [HubSpot marketing audit](docs/hubspot-marketing-audit.md) · [HubSpot v2.1 change plan](docs/hubspot-v21-change-plan.md)
+[**Live dashboard**](https://growthops-os.streamlit.app/) · [Power BI and Excel](docs/power-bi-handoff.md) · [Case study](docs/case-study.md) · [Metric catalog](docs/metric-catalog.md) · [API](docs/api-contracts.md) · [v2.1 specification](docs/growthops-os-v2.1-engineering-spec.md) · [HubSpot marketing audit](docs/hubspot-marketing-audit.md) · [HubSpot v2.1 schema record](docs/hubspot-v21-change-plan.md)
+
+The live dashboard includes a read-only **Operations console** with a decision center, synthetic Customer 360,
+incident traces and a quality queue. It does not read or change the connected HubSpot developer test portal.
 
 ScaleLab is a fictional coaching and education company that moved from a legacy CRM six months ago. Since
 then nobody trusts the numbers: Meta, Google, LinkedIn, the CRM and the payment processor each report a
@@ -45,7 +48,7 @@ if it ever stops doing so.
 | Paid media efficiency: CPM, CTR, CPC, CPL, cost per MQL, cost per booked call, net-cash ROAS, funnel conversion by channel | Acquisition and Funnel views; [`performance.py`](growthops/performance.py), [`report.py`](growthops/report.py), [`funnel.py`](growthops/funnel.py) |
 | Email analytics: delivery, bounce, human vs reported opens, CTR, click-to-open, unsubscribes, complaints, newsletter → pipeline, list source mix | Email & links view; [`email_analytics.py`](growthops/email_analytics.py), `mart_email_performance` |
 | Clear written daily updates | `python -m growthops.performance`, `GET /metrics/daily-update`, copy block in the Morning brief |
-| HubSpot, built live in a developer test account: 33 custom properties (UTM, content, funnel dates, tracking status, attribution), a funnel-stage deal pipeline, an Imports API load, a CRM API sync that writes only differences, lists, three published workflows, a CRM cleanup found through the search API, a four-report dashboard, and a read-back that reconciles the portal to the warehouse with zero differences | [`hubspot_portal.py`](growthops/hubspot_portal.py), [HubSpot portal build](docs/hubspot-portal.md), [`hubspot.py`](growthops/hubspot.py), [HubSpot mapping](docs/hubspot-mapping.md) |
+| HubSpot, built live in a developer test account: 33 baseline custom properties (UTM, content, funnel dates, tracking status, attribution) and five empty v2.1 identity/qualification fields, a funnel-stage deal pipeline, an Imports API load, a CRM API sync that writes only differences, lists, three published workflows, a CRM cleanup found through the search API, a four-report dashboard, and a read-back that reconciles the baseline sample to the warehouse with zero differences | [`hubspot_portal.py`](growthops/hubspot_portal.py), [HubSpot portal build](docs/hubspot-portal.md), [v2.1 schema record](docs/hubspot-v21-change-plan.md), [`hubspot.py`](growthops/hubspot.py) |
 | Attribution: first touch, lead creation, last non-direct, U-shaped, linear, all conserving cash to the cent | [`attribution.py`](growthops/attribution.py) |
 | Reconciling ad platforms, CRM and payments after a migration | [`reconciliation.py`](growthops/reconciliation.py), [`migration.py`](growthops/migration.py) |
 | UTM and short-link governance, tracking-quality monitoring | [`campaign_links.py`](growthops/campaign_links.py), `mart_link_hygiene`, measurement health, [tracking plan](docs/tracking-plan.md) |

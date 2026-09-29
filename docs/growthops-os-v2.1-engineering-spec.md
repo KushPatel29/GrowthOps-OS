@@ -11,7 +11,7 @@ The product boundary is deliberate: HubSpot remains the CRM, Stripe remains paym
 | Area | Running today | v2.1 increment |
 |---|---|---|
 | Data | Deterministic 15-month ScaleLab scenario, SQLite operational store, DuckDB/dbt marts | Anonymous-to-contact identity evidence, explicit SQL/qualified pipeline, event/media and consent fixtures |
-| CRM | 33 custom properties, a GrowthOps deal pipeline, six lists, three workflows and 959 synthetic contacts in a HubSpot developer test portal; CRM audit and sync code | Versioned property/workflow registries, lifecycle policy, CRM Health Center, drift checks and proposed repairs |
+| CRM | 33 baseline custom properties, five empty v2.1 fields, a GrowthOps deal pipeline, six lists, three workflows and 961 synthetic contacts in a HubSpot developer test portal as of 2026-09-29; CRM audit and sync code | Versioned property/workflow registries, lifecycle policy, CRM Health Center, drift checks and proposed repairs |
 | Revenue | Platform/CRM/cash bridges, payment/refund attribution, five attribution models | Qualified pipeline as a separate value, customer-level reconciliation and operator-facing exception queue |
 | Automation | Signed payment webhook, idempotent new/installment/renewal flows, retries, step traces, DLQ and replay | Cancel/refund/upgrade/downgrade policies, event envelope, correlation IDs, outbox, action audit and Customer 360 |
 | Decision | Streamlit, FastAPI, seven-page Power BI project, morning brief, governed ask-your-data and guardrail evals | One Decision Center route, role-specific investigations, classification pipeline and versioned LLM evals |
@@ -110,15 +110,15 @@ For every event: validate signature and timestamp; persist the inbox row and int
 
 ## 4. HubSpot CRM contract
 
-The existing [developer portal build](hubspot-portal.md) is the test fixture. It has a GrowthOps sales pipeline, 33 custom properties, six lists and three workflows. It is not a production marketing portal; all imported test contacts are non-marketing and HubSpot reports their original traffic source as Offline. The custom source/UTM fields retain the synthetic registry values. The portal has no tickets, campaigns or capture forms. No bulk marketing-contact change, attribution overwrite or retroactive lead-source claim is allowed without consent and source evidence.
+The existing [developer portal build](hubspot-portal.md) is the test fixture. It has a GrowthOps sales pipeline, 33 baseline custom properties, five [v2.1 schema fields](hubspot-v21-change-plan.md), six lists and three workflows. It is not a production marketing portal; all imported test contacts are non-marketing and HubSpot reports their original traffic source as Offline. The custom source/UTM fields retain the synthetic registry values. The portal has no tickets, campaigns or capture forms. No bulk marketing-contact change, attribution overwrite or retroactive lead-source claim is allowed without consent and source evidence.
 
-| Object | Existing mapping | v2.1 proposed additions / rule |
+| Object | Existing mapping | v2.1 field / rule |
 |---|---|---|
 | Contact | `growthops_contact_id`, original/latest UTM, first/lead/last campaign, tracking status, owner, content and funnel dates | `growthops_person_key` for tested identity links; `growthops_sql_date` only on evidence; consent remains in restricted ledger and HubSpot eligibility is checked before any marketing-status action |
 | Deal | GrowthOps sales pipeline, contact association, amount, first/lead campaign and product | `growthops_qualification_status`, `growthops_qualified_at`, `growthops_qualification_reason`; qualified pipeline reads these, with open-stage and currency rules |
 | Campaign | Custom campaign strings on contacts/deals; zero HubSpot Campaign objects | Versioned registry maps campaign IDs/UTMs to future HubSpot Campaign objects; creating objects and associations is a separate approved operation |
 | Workflow | Three published test workflows | Registry records trigger, target, owner, version, enabled state, last verification and drift; changes use a plan → approval → apply → read-back path |
-| Property | 33 custom properties | Registry stores type, enum set, source of truth, owner, PII class, requiredness and change history; detect schema drift before sync |
+| Property | 33 baseline custom properties and five empty v2.1 fields | Registry stores type, enum set, source of truth, owner, PII class, requiredness and change history; detect schema drift before sync |
 
 The CRM Health Center reports **counts and denominators**, not only a score: owner completeness for actionable leads, source/UTM completeness, contact/deal association coverage, duplicate candidates, invalid stage transitions, open deals without activity, deals lacking campaign and marketing-contact eligibility evidence. A score may be shown as a weighted rollup only if the weights and exclusions are visible; each defect links to evidence and a proposed repair. Sample contacts and developer-portal limits are labeled.
 

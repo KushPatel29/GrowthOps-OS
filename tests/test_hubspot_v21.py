@@ -67,6 +67,7 @@ def test_read_only_schema_audit_separates_baseline_drift_from_proposals(connecti
     assert clean["mode"] == "read_only" and clean["writes"] == 0
     assert clean["baseline_expected"] == clean["baseline_present"] == 33
     assert clean["baseline_issues"] == []
+    assert clean["proposed_issues"] == []
     assert len(clean["proposed_additions"]) == 5
     assert all(row["state"] == "not_created" for row in clean["proposed_additions"])
     assert portal.posts == []
@@ -78,3 +79,36 @@ def test_read_only_schema_audit_separates_baseline_drift_from_proposals(connecti
     assert drift["baseline_present"] == 32
     assert {row["issue"] for row in drift["baseline_issues"]} == {"missing", "label_mismatch"}
     assert portal.posts == []
+
+
+def test_proposed_field_readback_detects_definition_drift(connection):
+    baseline = portal_properties(connection)
+    existing = {kind: {prop["name"]: dict(prop) for prop in props}
+                for kind, props in baseline.items()}
+    portal = FakePortal(existing=existing)
+    assert apply_schema(portal, approved=True)["verified_properties"] == 5
+    assert audit_schema(portal, connection)["proposed_issues"] == []
+
+    name = "growthops_qualification_status"
+    portal.properties["deals"][name]["options"][0]["value"] = "changed"
+    audit = audit_schema(portal, connection)
+    assert audit["proposed_issues"] == [{
+        "object": "deals", "property": name, "issue": "options_mismatch",
+        "expected": ["qualified", "unqualified", "unknown"],
+        "observed": ["changed", "unqualified", "unknown"],
+    }]
+
+
+def test_schema_apply_rejects_incorrect_readback():
+    class DriftPortal(FakePortal):
+        def get(self, path):
+            response = super().get(path)
+            if self.posts and path == "/crm/v3/properties/deals":
+                response["results"] = [
+                    {**prop, "label": "Unexpected"} if prop["name"] == "growthops_qualified_at" else prop
+                    for prop in response["results"]
+                ]
+            return response
+
+    with pytest.raises(RuntimeError, match="read-back mismatch"):
+        apply_schema(DriftPortal(), approved=True)

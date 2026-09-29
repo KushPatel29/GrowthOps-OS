@@ -23,6 +23,22 @@ from growthops.hubspot_portal import (
 EXPECTED_PORTAL_ID = "247549241"
 
 
+def _definition_issues(object_type: str, expected: dict, current: dict) -> list[dict]:
+    issues = []
+    for field in ("label", "groupName", "type", "fieldType", "hasUniqueValue"):
+        if field in expected and current.get(field) != expected[field]:
+            issues.append({"object": object_type, "property": expected["name"],
+                           "issue": f"{field}_mismatch", "expected": expected[field],
+                           "observed": current.get(field)})
+    if "options" in expected:
+        wanted = [item["value"] for item in expected["options"]]
+        observed = [item["value"] for item in current.get("options", []) if not item.get("hidden")]
+        if observed != wanted:
+            issues.append({"object": object_type, "property": expected["name"],
+                           "issue": "options_mismatch", "expected": wanted, "observed": observed})
+    return issues
+
+
 def definitions() -> dict[str, list[dict]]:
     group = GROUP
     return {
@@ -66,6 +82,7 @@ def audit_schema(portal: Portal, connection: sqlite3.Connection) -> dict:
     baseline = portal_properties(connection)
     proposed = definitions()
     issues: list[dict] = []
+    proposed_issues: list[dict] = []
     additions: list[dict] = []
     present = 0
     for object_type in baseline:
@@ -79,27 +96,17 @@ def audit_schema(portal: Portal, connection: sqlite3.Connection) -> dict:
                                "issue": "missing"})
                 continue
             present += 1
-            for field in ("label", "groupName", "type", "fieldType", "hasUniqueValue"):
-                if field in expected and current.get(field) != expected[field]:
-                    issues.append({"object": object_type, "property": expected["name"],
-                                   "issue": f"{field}_mismatch", "expected": expected[field],
-                                   "observed": current.get(field)})
-            if "options" in expected:
-                wanted = [item["value"] for item in expected["options"]]
-                observed = [item["value"] for item in current.get("options", [])
-                            if not item.get("hidden")]
-                if observed != wanted:
-                    issues.append({"object": object_type, "property": expected["name"],
-                                   "issue": "options_mismatch", "expected": wanted,
-                                   "observed": observed})
+            issues.extend(_definition_issues(object_type, expected, current))
         for expected in proposed[object_type]:
             current = actual.get(expected["name"])
             additions.append({"object": object_type, "property": expected["name"],
                               "state": "present" if current else "not_created"})
+            if current:
+                proposed_issues.extend(_definition_issues(object_type, expected, current))
     return {"portal_id": found["portal_id"], "mode": "read_only",
             "baseline_expected": sum(map(len, baseline.values())),
             "baseline_present": present, "baseline_issues": issues,
-            "proposed_additions": additions, "writes": 0}
+            "proposed_additions": additions, "proposed_issues": proposed_issues, "writes": 0}
 
 
 def apply_schema(portal: Portal, *, approved: bool = False) -> dict:
@@ -140,9 +147,16 @@ def apply_schema(portal: Portal, *, approved: bool = False) -> dict:
         readback = {prop["name"]: prop for prop in portal.get(
             f"/crm/v3/properties/{object_type}"
         ).get("results", [])}
-        missing = [prop["name"] for prop in properties if prop["name"] not in readback]
-        if missing:
-            raise RuntimeError(f"HubSpot read-back missing {object_type}: {missing}")
+        readback_issues = []
+        for prop in properties:
+            current = readback.get(prop["name"])
+            if current is None:
+                readback_issues.append({"object": object_type, "property": prop["name"],
+                                        "issue": "missing"})
+            else:
+                readback_issues.extend(_definition_issues(object_type, prop, current))
+        if readback_issues:
+            raise RuntimeError(f"HubSpot schema read-back mismatch: {readback_issues}")
     return {"portal_id": found["portal_id"], "created": created,
             "verified_properties": sum(map(len, wanted.values())), "record_values_changed": 0}
 

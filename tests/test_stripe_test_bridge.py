@@ -40,6 +40,7 @@ def test_stripe_signature_requires_raw_body_v1_and_recent_timestamp():
     assert not verify_stripe_signature(body, header.replace("v1=", "v0="), SECRET, now=now)
     assert not verify_stripe_signature(body, signature(body, 1_780_145_699), SECRET, now=now)
     assert not verify_stripe_signature(body, header, "short", now=now)
+    assert not verify_stripe_signature(body, "t=" + "9" * 5000 + ",v1=abc", SECRET, now=now)
 
 
 def test_stripe_normalizer_requires_test_mode_mapping_and_settled_refund():
@@ -57,8 +58,11 @@ def test_stripe_normalizer_requires_test_mode_mapping_and_settled_refund():
     refund = {"id": "re_test_1", "object": "refund", "status": "pending",
               "payment_intent": "pi_test_1", "currency": "usd", "amount": 100,
               "metadata": {"growthops_customer_id": "c-000001"}}
-    with pytest.raises(StripeEventError, match="not succeeded"):
-        normalize_stripe_test_event(stripe_event("evt_pending", "refund.created", refund))
+    assert normalize_stripe_test_event(stripe_event("evt_pending", "refund.created", refund)) is None
+    settled = normalize_stripe_test_event(stripe_event(
+        "evt_settled", "refund.updated", {**refund, "status": "succeeded"},
+    ))
+    assert settled.refund_id == "re_test_1" and settled.amount_cents == 100
     assert normalize_stripe_test_event(stripe_event("evt_other", "customer.created", {})) is None
 
 
@@ -96,6 +100,15 @@ def test_signed_stripe_test_route_processes_payment_once(db_path, monkeypatch):
         assert accepted.status_code == 202 and accepted.json()["status"] == "completed"
         repeated = client.post("/v2/webhooks/stripe-test", content=body, headers=headers)
         assert repeated.status_code == 202 and repeated.json()["duplicate"]
+        second_event = stripe_event("evt_test_bridge_second", "payment_intent.succeeded", payment)
+        second_headers = {"Stripe-Signature": signature(second_event, now)}
+        second = client.post("/v2/webhooks/stripe-test", content=second_event, headers=second_headers)
+        assert second.status_code == 202 and second.json()["original_event_id"] == "evt_test_bridge"
+        changed_payment = stripe_event("evt_test_bridge_conflict", "payment_intent.succeeded",
+                                       {**payment, "amount_received": 1300})
+        conflict = client.post("/v2/webhooks/stripe-test", content=changed_payment,
+                               headers={"Stripe-Signature": signature(changed_payment, now)})
+        assert conflict.status_code == 409
         refund = {"id": "re_test_bridge", "object": "refund", "status": "succeeded",
                   "payment_intent": "pi_test_bridge", "currency": "usd", "amount": 100,
                   "metadata": {"growthops_customer_id": "c-000001"}}
@@ -105,10 +118,43 @@ def test_signed_stripe_test_route_processes_payment_once(db_path, monkeypatch):
         assert settled.status_code == 202 and settled.json()["status"] == "completed"
         assert client.post("/v2/webhooks/stripe-test", content=refund_body,
                            headers=refund_headers).json()["duplicate"]
+        refund_update = stripe_event("evt_test_refund_updated", "refund.updated", refund)
+        updated = client.post("/v2/webhooks/stripe-test", content=refund_update,
+                              headers={"Stripe-Signature": signature(refund_update, now)})
+        assert updated.status_code == 202 and updated.json()["original_event_id"] == "evt_test_refund"
     connection = connect(db_path)
     try:
         assert connection.execute("SELECT COUNT(*) FROM payments WHERE payment_id='pi_test_bridge'").fetchone()[0] == 1
         assert connection.execute("SELECT amount_cents FROM refunds WHERE refund_id='re_test_bridge'").fetchone()[0] == 100
+    finally:
+        connection.close()
+
+
+def test_stripe_refund_can_retry_after_payment_arrives(db_path, monkeypatch):
+    monkeypatch.setenv("GROWTHOPS_DATABASE", str(db_path))
+    monkeypatch.setenv("GROWTHOPS_STRIPE_TEST_WEBHOOK_SECRET", SECRET)
+    now = int(datetime.now(UTC).timestamp())
+    payment = {"id": "pi_late_payment", "object": "payment_intent", "status": "succeeded",
+               "currency": "usd", "amount_received": 500,
+               "metadata": {"growthops_customer_id": "c-000001"}}
+    refund = {"id": "re_early_refund", "object": "refund", "status": "succeeded",
+              "payment_intent": "pi_late_payment", "currency": "usd", "amount": 100,
+              "metadata": {"growthops_customer_id": "c-000001"}}
+    payment_body = stripe_event("evt_late_payment", "payment_intent.succeeded", payment)
+    refund_body = stripe_event("evt_early_refund", "refund.updated", refund)
+    payment_headers = {"Stripe-Signature": signature(payment_body, now)}
+    refund_headers = {"Stripe-Signature": signature(refund_body, now)}
+    with TestClient(app) as client:
+        assert client.post("/v2/webhooks/stripe-test", content=refund_body,
+                           headers=refund_headers).status_code == 409
+        assert client.post("/v2/webhooks/stripe-test", content=payment_body,
+                           headers=payment_headers).status_code == 202
+        settled = client.post("/v2/webhooks/stripe-test", content=refund_body,
+                              headers=refund_headers)
+        assert settled.status_code == 202 and settled.json()["status"] == "completed"
+    connection = connect(db_path)
+    try:
+        assert connection.execute("SELECT COUNT(*) FROM refunds WHERE refund_id='re_early_refund'").fetchone()[0] == 1
     finally:
         connection.close()
 

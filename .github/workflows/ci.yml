@@ -49,7 +49,8 @@ jobs:
           from streamlit.testing.v1 import AppTest
           app = AppTest.from_file("streamlit_app.py").run(timeout=180)
           assert not app.exception, app.exception
-          assert len(app.tabs) == 10
+          assert len(app.tabs) == 15  # 11 top-level views plus four operations sections
+          assert any(tab.label == "Operations console" for tab in app.tabs)
           app.text_input[0].input("Which revenue number is right?").run(timeout=60)
           assert not app.exception, app.exception
           # A suggested question and its first follow-up both answer, with no exception.

@@ -52,8 +52,12 @@ Live synthetic dashboard: https://growthops-os.streamlit.app/ · GitHub: https:/
 - **HubSpot CRM layer** (`hubspot.py`, `hubspot_portal.py`): lifecycle, deal-stage and owner mapping,
   Properties API definitions, import-ready contacts/deals CSVs, a CRM v3 search request builder and response
   parser, Original Traffic Source mismatch check and a CRM hygiene audit. A prior developer test portal snapshot held 959
-  synthetic contacts, 130 deals, 33 custom properties, six lists, three published workflows and a four-report
+  synthetic contacts, 130 deals, 33 baseline custom properties, six lists, three published workflows and a four-report
   dashboard; read-back reconciles the sample to the warehouse. See [portal evidence](docs/hubspot-portal.md).
+- **v2.1 HubSpot schema** (`hubspot_v21.py`): five additional custom properties were created in the same
+  developer test portal on 2026-09-29. Read-back verified all 38 definitions with zero drift. Current searches
+  returned 961 contacts and 130 deals, with zero populated values in the five new fields. No marketing status,
+  lifecycle stage, owner, association or workflow was changed. See the [change record](docs/hubspot-v21-change-plan.md).
 - **Live, read-only marketing audit** (`hubspot_marketing_audit.py`): a 2026-09-29 search returned 961
   synthetic contacts, all marked non-marketable. It flagged 111 missing/off-taxonomy/blank tracking statuses,
   89 blank original UTM sources and two active-stage contacts without owners. The inspected opt-out field is
@@ -63,7 +67,7 @@ Live synthetic dashboard: https://growthops-os.streamlit.app/ · GitHub: https:/
   pipeline, renewal-risk queue, migration audit with logged safe repairs, allowlisted ask-your-data.
 - **Warehouse**: SQLite reference marts and a DuckDB dbt project (staging → intermediate → marts, schema and
   singular tests, including bridge tie-out, email and link-hygiene marts) verified against the Python reference.
-- **BI**: ten-view Streamlit app (password gate and configured database in a deployment) (light and dark),
+- **BI**: eleven-view Streamlit app (password gate and configured database in a deployment) (light and dark),
   FastAPI Executive Pulse page, and a governed BI snapshot (`export_bi`: 16 marts plus `dim_date`,
   `dim_campaign`, payment-grain cash attribution and a quality scorecard) read by two generated deliverables.
   **Power BI** (`growthops/bi`): 22 tables, 8 relationships, 214 described measures, 7 pages and 121 visuals
@@ -77,10 +81,11 @@ Live synthetic dashboard: https://growthops-os.streamlit.app/ · GitHub: https:/
   figures in the tests. The two agree to the cent. Both are regenerated and drift-checked in CI.
 - **Quality gates**: Ruff, pytest (unit, invariant, ground-truth, API, BI and case-study drift tests), the
   guardrail eval, a Streamlit render test, dbt build and parity, and a Docker build in GitHub Actions.
-- **v2.1 local control plane**: person and identity evidence, explicit synthetic deal qualification,
+- **v2.1 control plane**: person and identity evidence, explicit synthetic deal qualification,
   CRM quality issues, marketing-contact governance, campaign QA and instrumentation contracts,
   four-value Revenue Truth, outbox trace,
-  audited replay, a four-view local console with readable Customer 360 and incident timelines,
+  audited replay, a four-view local console and a read-only public Streamlit operations view with readable
+  Customer 360 and incident timelines,
   and a discoverable failed-workflow queue,
   six new staging models, two intermediate models, two marts and regenerated PBIP. The qualification
   decisions are synthetic fixtures, not imported HubSpot judgments. The new UI and semantic model pass
@@ -95,15 +100,16 @@ Live synthetic dashboard: https://growthops-os.streamlit.app/ · GitHub: https:/
 - **Stripe test snapshot bridge** (`stripe_test_bridge.py`): a development-only route verifies Stripe's raw-body
   `t`/`v1` signature and five-minute freshness, rejects live-mode events, and maps allowlisted USD payments,
   tier changes, cancellations and succeeded refunds with explicit local identity metadata into the ledger.
+  A second Stripe Event for an already-recorded payment or refund is absorbed only after matching amount and
+  identity; an early refund can succeed on a later delivery after its payment arrives.
   It is disabled without a separate `whsec_` secret and disabled in production. Tests use Stripe-shaped
   fixtures; no connected Stripe account, provider read-back or live ingestion has been verified.
 
 ## Not implemented yet
 
 - The HubSpot connector returned zero tickets as of 2026-09-29, including zero unresolved
-  high-priority tickets; the separate private-app token lacks ticket-search scope. A read-only live audit found all 33 baseline custom properties present with zero
-  definition drift; the five proposed v2.1 properties are still absent. No v2.1 property or record values
-  have been written to it.
+  high-priority tickets; the separate private-app token lacks ticket-search scope. The five new schema fields
+  are empty pending verified identity links and actual sales qualification decisions.
 
 - Live runtime integrations: the HubSpot developer test portal is built and verified, but the payment workflow's
   HubSpot and webhook adapters are tested against a fake HTTP transport rather than a real provider bridge.
