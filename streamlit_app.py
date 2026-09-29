@@ -700,8 +700,8 @@ with tabs[10]:
         for finding in decision["brief"]["findings"]:
             with st.container(border=True):
                 st.markdown(f"**{finding['finding']}**".replace("$", r"\$"))
-                st.write(f"Evidence: {finding['evidence']}")
-                st.write(f"Next: {finding['action']}")
+                st.write(f"Evidence: {finding['evidence']}".replace("$", r"\$"))
+                st.write(f"Next: {finding['action']}".replace("$", r"\$"))
                 st.caption(f"Source: {finding['source']}")
 
     with ops_tabs[1]:
