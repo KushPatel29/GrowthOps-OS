@@ -69,7 +69,7 @@ st.markdown("""<style>
 
 
 @st.cache_resource(show_spinner="Preparing the data…")
-def demo_database() -> str:
+def demo_database(schema_version: str) -> str:
     """The configured database in a deployment; a freshly generated synthetic scenario for the public demo."""
     configured = os.getenv("GROWTHOPS_DASHBOARD_DATABASE")
     if configured:
@@ -234,7 +234,9 @@ def trend(points: list[dict], label: str, fmt: str) -> alt.LayerChart:
 
 
 require_password()
-database = demo_database()
+# The cache key changes when a new synthetic schema is required. Existing
+# Streamlit Cloud processes can retain a pre-upgrade generated database.
+database = demo_database("v2.1-control-plane")
 case = load_case(database)
 kpis, quality = case["summary"]["metrics"], case["summary"]["measurement_health"]
 
