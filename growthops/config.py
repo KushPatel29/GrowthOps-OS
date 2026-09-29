@@ -46,6 +46,7 @@ class Settings(BaseModel):
     log_format: Literal["json", "text"] = "json"
 
     webhook_secret: str = DEMO_WEBHOOK_SECRET
+    stripe_test_webhook_secret: str = ""
     webhook_tolerance_seconds: int = Field(default=300, ge=30, le=3600)
     api_keys: list[str] = []
     ops_token: str = ""
@@ -125,7 +126,7 @@ class Settings(BaseModel):
 
     def redacted(self) -> dict:
         """Settings for logs and `ops check-config`, with secrets masked."""
-        secret = {"webhook_secret", "api_keys", "ops_token", "hubspot_access_token",
+        secret = {"webhook_secret", "stripe_test_webhook_secret", "api_keys", "ops_token", "hubspot_access_token",
                   "access_webhook_secret", "messaging_webhook_secret"}
         data = self.model_dump(mode="json")
         for key in secret:
@@ -151,6 +152,7 @@ def get_settings() -> Settings:
         "log_level": env.get("GROWTHOPS_LOG_LEVEL", "INFO").upper(),
         "log_format": env.get("GROWTHOPS_LOG_FORMAT", "json"),
         "webhook_secret": env.get("GROWTHOPS_WEBHOOK_SECRET", DEMO_WEBHOOK_SECRET),
+        "stripe_test_webhook_secret": env.get("GROWTHOPS_STRIPE_TEST_WEBHOOK_SECRET", ""),
         "webhook_tolerance_seconds": env.get("GROWTHOPS_WEBHOOK_TOLERANCE_SECONDS", 300),
         "api_keys": _list("GROWTHOPS_API_KEYS"),
         "ops_token": env.get("GROWTHOPS_OPS_TOKEN", ""),

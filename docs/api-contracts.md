@@ -1,7 +1,7 @@
 # API contracts v0.3
 
-The payment webhook uses an internal, Stripe-like contract; a provider bridge translates the real provider's
-event into it. Side effects go through provider adapters (simulated by default; HubSpot and signed webhook
+The payment webhook uses an internal, Stripe-like contract. A development-only Stripe snapshot bridge
+translates an allowlisted set of signed test events into the same ledger. Side effects go through provider adapters (simulated by default; HubSpot and signed webhook
 bridges when configured; see `growthops/adapters.py`).
 
 ## Authentication
@@ -11,6 +11,7 @@ bridges when configured; see `growthops/adapters.py`).
 | `/health`, `/ready` | Open (probes) |
 | `POST /webhooks/payments` | Signed request (below) |
 | `POST /v2/webhooks/lifecycle` | Same bounded HMAC signature; no API key needed for the webhook path |
+| `POST /v2/webhooks/stripe-test` | Stripe's `Stripe-Signature` with a separate test endpoint secret; development only |
 | `/metrics/*`, `/metrics` (Prometheus), `/ops/*`, `/crm/*`, `/v2/*`, `/ask`, `/campaign-links`, `/docs`, `/openapi.json` | `X-API-Key: <key>` or `Authorization: Bearer <key>`: always in production, and in development whenever `GROWTHOPS_API_KEYS` is set |
 | `POST /ops/events/{id}/replay` | API key plus `X-GrowthOps-Ops-Token` |
 | `POST /v2/ops/events/{id}/replay` | API key, `X-GrowthOps-Ops-Token`, `X-GrowthOps-Actor`, `Idempotency-Key`, and a JSON reason of 5–500 characters; action audited and duplicate key absorbed |
@@ -59,6 +60,14 @@ This signed canonical **test-bridge** route accepts `subscription.upgraded`, `su
 ```
 
 Tier changes also require `new_tier`. A refund requires `payment_id`, `refund_id` and positive `amount_cents`; its subscription is derived from the captured payment. Refunds cannot exceed captured cash. The shared `processed_events` ledger stores these events with a null `payment_id` for nonpayment actions. The local subscription, refund and entitlement projections commit once; a subscription-scoped community action goes through the outbox with a stable provider idempotency key. Retries and audited replay use the existing workflow worker and incident trace. A partial refund records cash without revoking access; full subscription net cash reaching zero triggers a scoped revoke. Other active subscriptions keep customer access active. Older subscriptions without verified product access are marked `legacy_unverified` when first encountered, until evidence arrives.
+
+## `POST /v2/webhooks/stripe-test`
+
+Set `GROWTHOPS_STRIPE_TEST_WEBHOOK_SECRET` to the separate `whsec_...` value for a Stripe CLI or Dashboard **test** endpoint. The route is unavailable without it and always unavailable in production. It verifies the raw request body against Stripe's `t` and `v1` header values with a five-minute tolerance, rejects `livemode=true`, and caps the body at 128 KiB. [Stripe documents the signature format and raw-body requirement](https://docs.stripe.com/webhooks#verify-signature).
+
+Accepted snapshot event types are `payment_intent.succeeded`, `customer.subscription.updated`, `customer.subscription.deleted`, and `refund.created`. Other types return `202 ignored`. Payment and refund amounts must be USD integer cents. A succeeded PaymentIntent needs `metadata.growthops_customer_id`; the optional `growthops_payment_type`, `growthops_subscription_id`, `growthops_product_id`, and `growthops_deal_id` map to the canonical payment event. Subscription events require `metadata.growthops_customer_id` and `metadata.growthops_subscription_id` matching existing local records. A tier update additionally needs changed `items`, active status, `growthops_tier_change` (`upgrade` or `downgrade`), and `growthops_new_tier`. A refund must already report `status=succeeded`, include `payment_intent`, and have `metadata.growthops_customer_id`; pending refunds are rejected. Missing mappings, live-mode payloads and unsupported currency cannot change local data.
+
+The bridge is a **local test integration**. It has not been exercised against a connected Stripe account, does not retrieve source objects, and does not reconcile out-of-order provider events or separate Stripe Event objects for one underlying object. [Stripe warns that delivery order is not guaranteed and duplicate events can occur](https://docs.stripe.com/webhooks#event-delivery-behaviors). Provider read-back and a durable asynchronous ingress queue remain required before a production claim.
 
 ## `GET /ops/customers/{customer_id}`
 

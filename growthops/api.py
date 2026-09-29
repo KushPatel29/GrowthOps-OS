@@ -82,6 +82,11 @@ from growthops.reconciliation import (
 )
 from growthops.renewals import monitor as renewal_monitor
 from growthops.report import executive_brief
+from growthops.stripe_test_bridge import (
+    StripeEventError,
+    normalize_stripe_test_event,
+    verify_stripe_signature,
+)
 from growthops.warehouse import build as build_warehouse
 from growthops.workflow import (
     EventConflict,
@@ -150,7 +155,7 @@ async def request_context(request: Request, call_next):
     settings = get_settings()
     try:
         protected = (request.url.path.startswith(PROTECTED_PREFIXES)
-                     and request.url.path != "/v2/webhooks/lifecycle")
+                     and request.url.path not in ("/v2/webhooks/lifecycle", "/v2/webhooks/stripe-test"))
         # Lifespan normally blocks an unsafe production start. Keep the same
         # fail-closed behavior if a server disables ASGI lifespan or settings
         # change while the process is running.
@@ -361,7 +366,7 @@ def verify_signature(body: bytes, signature: str, timestamp: str, settings) -> b
     return hmac.compare_digest(hmac.new(secret, signed, hashlib.sha256).hexdigest(), signature)
 
 
-async def _verified_webhook_body(request: Request, signature: str, timestamp: str) -> bytes:
+async def _bounded_webhook_body(request: Request) -> bytes:
     # Read in bounded chunks: Content-Length is optional and cannot be trusted
     # as the sole limit. This caps memory and HMAC work before parsing JSON.
     length = request.headers.get("content-length", "")
@@ -372,7 +377,11 @@ async def _verified_webhook_body(request: Request, signature: str, timestamp: st
         if len(payload) + len(chunk) > MAX_WEBHOOK_BYTES:
             raise HTTPException(status_code=413, detail="webhook payload too large")
         payload.extend(chunk)
-    body = bytes(payload)
+    return bytes(payload)
+
+
+async def _verified_webhook_body(request: Request, signature: str, timestamp: str) -> bytes:
+    body = await _bounded_webhook_body(request)
     settings = get_settings()
     if not verify_signature(body, signature, timestamp, settings):
         METRICS.increment("webhook_rejected")
@@ -419,6 +428,35 @@ async def lifecycle_webhook(request: Request, x_growthops_signature: str = Heade
     finally:
         connection.close()
     return result
+
+
+@app.post("/v2/webhooks/stripe-test", status_code=202)
+async def stripe_test_webhook(request: Request, stripe_signature: str = Header(default="")) -> dict:
+    """Bridge verified Stripe snapshot test events into the local workflow ledger."""
+    settings = get_settings()
+    if settings.production or not settings.stripe_test_webhook_secret:
+        raise HTTPException(status_code=404, detail="Stripe test bridge unavailable")
+    body = await _bounded_webhook_body(request)
+    if not verify_stripe_signature(body, stripe_signature, settings.stripe_test_webhook_secret):
+        METRICS.increment("webhook_rejected")
+        raise HTTPException(status_code=401, detail="invalid or expired Stripe signature")
+    try:
+        event = normalize_stripe_test_event(body)
+    except (StripeEventError, ValidationError, OverflowError) as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    METRICS.increment("webhook_accepted")
+    if event is None:
+        return {"status": "ignored", "reason": "event type is not allowlisted"}
+    connection = connect(database_path())
+    try:
+        initialize(connection)
+        if isinstance(event, PaymentEvent):
+            return process_payment(connection, event, adapters=build_adapters(settings))
+        return process_lifecycle(connection, event, adapters=build_adapters(settings))
+    except EventConflict as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    finally:
+        connection.close()
 
 
 @app.get("/ops/customers/{customer_id}")

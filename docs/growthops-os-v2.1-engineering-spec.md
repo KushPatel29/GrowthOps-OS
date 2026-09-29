@@ -58,7 +58,7 @@ flowchart LR
 | Analytics and trust | dbt models, metric definitions, attribution, reconciliation and quality tests | Operational/raw data → certified marts | Mutating source systems |
 | Decision and AI | Briefs, grounded answers, classification, evals and operator UI | Certified marts and evidence IDs → explanations and proposals | Unreviewed external actions |
 
-Adapters have typed interfaces for CRM, payment, community access and messaging. The community interface is `grant_access(person_key, product_id, idempotency_key)`, `change_tier(...)` and `revoke_access(...)`; the local implementation is a mock. A Mighty Networks adapter is a later option. Stripe-style input uses test fixtures until a real test-mode bridge is implemented.
+Adapters have typed interfaces for CRM, payment, community access and messaging. The community interface is `grant_access(person_key, product_id, idempotency_key)`, `change_tier(...)` and `revoke_access(...)`; the local implementation is a mock. A Mighty Networks adapter is a later option. A development-only Stripe snapshot bridge now verifies test signatures and translates allowlisted events with explicit local ID metadata; it has been tested with fixtures, not a connected Stripe account.
 
 ## 3. Data contracts and migration path
 
@@ -208,8 +208,9 @@ Keep existing 152-question ask contract and 30 guardrail cases. Add a held-out, 
 **M3 implementation note (2026-09-29):** the local signed canonical route now handles
 upgrade, downgrade, cancellation and refund events on the shared ledger with scoped
 subscription entitlements, refund bounds, provider idempotency, retry and trace. The
-community adapter remains simulated by default. A real Stripe test-mode signature
-bridge, source subscription read-back and live provider verification remain open.
+community adapter remains simulated by default. A development-only Stripe test
+snapshot route verifies the provider's signature and maps allowlisted events;
+connected test-account delivery, source subscription read-back and live provider verification remain open.
 
 Start with M0–M4. Markov attribution, a Chrome extension, large RAG corpus, many live integrations and forecasting remain deferred until the two end-to-end demos work. A server-side conversion router, when added, uses consent and provider policy checks, stable conversion IDs and deduplication; it never sends synthetic events to a live ad account.
 

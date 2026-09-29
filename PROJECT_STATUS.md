@@ -92,6 +92,11 @@ Live synthetic dashboard: https://growthops-os.streamlit.app/ · GitHub: https:/
   Refund bounds, scoped revocation, concurrent subscriptions, duplicate delivery and community
   retry/replay are covered by tests. The existing 92 payment traces survived the local migration
   with zero foreign-key violations. This is a simulated provider path, not live Stripe ingestion.
+- **Stripe test snapshot bridge** (`stripe_test_bridge.py`): a development-only route verifies Stripe's raw-body
+  `t`/`v1` signature and five-minute freshness, rejects live-mode events, and maps allowlisted USD payments,
+  tier changes, cancellations and succeeded refunds with explicit local identity metadata into the ledger.
+  It is disabled without a separate `whsec_` secret and disabled in production. Tests use Stripe-shaped
+  fixtures; no connected Stripe account, provider read-back or live ingestion has been verified.
 
 ## Not implemented yet
 
@@ -111,6 +116,6 @@ Live synthetic dashboard: https://growthops-os.streamlit.app/ · GitHub: https:/
 
 ## Next increment
 
-Continue the [v2.1 engineering specification](docs/growthops-os-v2.1-engineering-spec.md) with a
-Stripe test-mode bridge, provider-level subscription read-back, and held-out AI evaluation. Ad/email
+Continue the [v2.1 engineering specification](docs/growthops-os-v2.1-engineering-spec.md) with
+connected Stripe test-mode verification, provider-level subscription read-back, and held-out AI evaluation. Ad/email
 ingestion and Power BI Service publication remain later integrations.
