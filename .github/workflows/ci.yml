@@ -110,6 +110,7 @@ jobs:
         run: |
           docker volume create gdata
           docker run --rm -v gdata:/data growthops-os python -m growthops.seed --database /data/growthops.db --scale 0.2
+          docker run --rm -v gdata:/data growthops-os python -c "from growthops.db import connect; from growthops.readiness import origin_problem; c=connect('/data/growthops.db'); assert 'synthetic' in origin_problem(c)"
           if docker run --rm -v gdata:/data -e GROWTHOPS_ENV=production growthops-os \
                python -c "from growthops.config import get_settings; get_settings().require_safe()"; then
             echo "::error::production accepted unsafe defaults"; exit 1

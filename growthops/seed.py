@@ -685,6 +685,10 @@ def seed(database: str, *, seed_value: int = 29, scale: float = 1.0) -> dict[str
     seed_consent(connection)
     seed_conversations(connection)
     batch_classify(connection)
+    connection.execute(
+        "INSERT INTO dataset_origin VALUES (1, 'synthetic_fixture', 'growthops.seed:deterministic_scenario', ?)",
+        (END.isoformat(),),
+    )
     counts = {table: connection.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0]
               for table in reversed(TABLES)}
     connection.close()

@@ -34,9 +34,28 @@ SAFE = {
 }
 
 
-def _production(monkeypatch, db_path, **extra):
+def _production(monkeypatch, db_path, *, verified_fixture=True, **extra):
     for name, value in {**SAFE, "GROWTHOPS_DATABASE": str(db_path), **extra}.items():
         monkeypatch.setenv(name, value)
+    if verified_fixture:
+        # Stand-in for a provider-backed ingestion. It exercises API security,
+        # not the truth of the synthetic scenario as real source evidence.
+        connection = connect(db_path)
+        connection.execute(
+            "UPDATE dataset_origin SET origin='live_verified', evidence_ref='test:provider_ingestion'",
+        )
+        connection.close()
+
+
+def test_production_rejects_synthetic_or_unmarked_data(monkeypatch, db_path):
+    _production(monkeypatch, db_path, verified_fixture=False)
+    with pytest.raises(ConfigError, match="synthetic"), TestClient(app):
+        pass
+    connection = connect(db_path)
+    connection.execute("DELETE FROM dataset_origin")
+    connection.close()
+    with pytest.raises(ConfigError, match="unverified"), TestClient(app):
+        pass
 
 
 def test_production_refuses_unsafe_defaults(monkeypatch, db_path):
@@ -91,8 +110,14 @@ def test_production_api_requires_keys_and_reports_readiness(monkeypatch, db_path
         assert ok.headers["X-Content-Type-Options"] == "nosniff"
         assert client.get("/metrics/funnel", headers={"Authorization": f"Bearer {'j' * 32}"}).status_code == 200
         assert client.get("/dashboard").status_code == 404
-        ready = client.get("/ready").json()
-        assert ready["status"] == "ready" and ready["schema_version"] == SCHEMA_VERSION
+        person_url = "/v2/people/c-000002/journey"
+        assert client.get(person_url, headers={"X-API-Key": KEY}).status_code == 403
+        operator_headers = {"X-API-Key": KEY, "X-GrowthOps-Ops-Token": SAFE["GROWTHOPS_OPS_TOKEN"]}
+        assert client.get(person_url, headers=operator_headers).status_code == 200
+        response = client.get("/ready")
+        ready = response.json()
+        assert response.status_code == 503 and ready["status"] == "stale_sources"
+        assert ready["schema_version"] == SCHEMA_VERSION and ready["origin_verified"] is True
         assert {item["source"] for item in ready["sources"]} >= {"payments", "ad_spend", "email_sends"}
         text = client.get("/metrics", headers={"X-API-Key": KEY}).text
         assert 'growthops_http_requests_total{method="GET",route="/metrics/funnel",status="200"}' in text
@@ -235,6 +260,24 @@ def test_freshness_flags_sources_past_their_sla(connection, monkeypatch):
     assert "payments" in stale and "email_sends" not in stale  # email keeps its weekly SLA
 
 
+def test_future_source_timestamps_do_not_pass_freshness(connection):
+    connection.execute(
+        """UPDATE payments SET paid_at='2035-01-01T00:00:00+00:00' WHERE payment_id=(
+             SELECT payment_id FROM payments ORDER BY paid_at DESC LIMIT 1)"""
+    )
+    payment = next(row for row in freshness_check(connection) if row["source"] == "payments")
+    assert payment["status"] == "future"
+
+
+def test_invalid_source_timestamps_do_not_pass_freshness(connection):
+    connection.execute(
+        """UPDATE payments SET paid_at='zz-not-a-date' WHERE payment_id=(
+             SELECT payment_id FROM payments ORDER BY paid_at DESC LIMIT 1)"""
+    )
+    payment = next(row for row in freshness_check(connection) if row["source"] == "payments")
+    assert payment["status"] == "invalid"
+
+
 def test_ask_endpoint_is_keyless_protected_and_audited(monkeypatch, db_path):
     _production(monkeypatch, db_path)
     with TestClient(app) as client:
@@ -246,8 +289,17 @@ def test_ask_endpoint_is_keyless_protected_and_audited(monkeypatch, db_path):
         refused = client.get("/ask", params={"q": "select * from payments"}, headers=headers).json()
         assert refused["route"] == "refused"
         assert client.get("/ask", params={"q": "x" * 301}, headers=headers).status_code == 422
-        usage = client.get("/ops/ask-usage", headers=headers).json()
+        usage = client.get("/ops/ask-usage", headers={
+            **headers, "X-GrowthOps-Ops-Token": SAFE["GROWTHOPS_OPS_TOKEN"],
+        }).json()
         assert {row["route"] for row in usage["by_route"]} == {"metric", "refused"}
+    connection = connect(db_path)
+    try:
+        stored = [row[0] for row in connection.execute("SELECT question FROM ask_log")]
+        assert stored and all(item.startswith("sha256:") for item in stored)
+        assert all("Google" not in item for item in stored)
+    finally:
+        connection.close()
 
 
 def test_dashboard_password_gate_blocks_before_any_data_loads(monkeypatch):
@@ -258,6 +310,16 @@ def test_dashboard_password_gate_blocks_before_any_data_loads(monkeypatch):
     assert not app.exception and len(app.tabs) == 0
     app.text_input[0].input("wrong").run(timeout=60)
     assert app.error and len(app.tabs) == 0
+
+
+def test_production_dashboard_never_generates_demo_data(monkeypatch):
+    from streamlit.testing.v1 import AppTest
+
+    monkeypatch.setenv("GROWTHOPS_ENV", "production")
+    monkeypatch.delenv("GROWTHOPS_DASHBOARD_DATABASE", raising=False)
+    app = AppTest.from_file("../streamlit_app.py").run(timeout=60)
+    assert not app.exception and app.error and len(app.tabs) == 0
+    assert "verified live database" in app.error[0].value
 
 
 def test_worker_healthcheck_reads_the_heartbeat(monkeypatch, tmp_path):

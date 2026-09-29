@@ -49,15 +49,15 @@ def urllib_transport(method: str, url: str, headers: dict, body: bytes | None, t
     except error.HTTPError as exc:
         return exc.code, exc.read()
     except (error.URLError, TimeoutError, OSError) as exc:
-        raise ProviderError(f"network error: {exc}") from exc
+        raise ProviderError(f"network error: {type(exc).__name__}") from exc
 
 
 def _check(provider: str, status: int, body: bytes) -> None:
     if 200 <= status < 300:
         return
     kind = "transient" if status == 429 or status >= 500 else "permanent"
-    detail = body[:300].decode("utf-8", "replace")
-    raise ProviderError(f"{provider}: HTTP {status} ({kind}) {detail}")
+    # Provider response bodies can contain names, email addresses or tokens.
+    raise ProviderError(f"{provider}: HTTP {status} ({kind})")
 
 
 class CRMAdapter(Protocol):

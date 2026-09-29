@@ -1,7 +1,9 @@
 # Production runbook
 
-How to deploy, operate and recover GrowthOps OS. Everything here is exercised by
-tests or by the CI container smoke test, except where marked **manual**.
+How to deploy, operate and recover GrowthOps OS. The repository's hosted dashboard is a
+**synthetic portfolio demo**, not a live production deployment. Runtime safety gates are tested,
+but real provider ingestion, identity-backed dashboard access, TLS, monitoring and off-host
+recovery require deployment-owner evidence before customer data is used.
 
 ## Services
 
@@ -27,17 +29,26 @@ checksum-verified embedding model, so nothing is downloaded at runtime.
 3. Load data. For a local synthetic rehearsal, set `GROWTHOPS_ENV=development` and
    `GROWTHOPS_DATA_MODE=synthetic`, then run `docker compose --profile tools run --rm seed`.
    For a real deployment, keep `GROWTHOPS_ENV=production` and `GROWTHOPS_DATA_MODE=live`,
-   configure real CRM, access and messaging adapters, and ingest live source data.
-   Never run the seed command against the production volume.
+   configure real CRM, access and messaging adapters, and ingest live source data. The ingestion
+   process must write `dataset_origin.origin='live_verified'` with a source-evidence reference.
+   A generated database is stamped `synthetic_fixture` and production startup rejects it even
+   if an environment variable says `live`. An absent marker also fails closed. No live ingestion
+   process in this repository currently produces that evidence, so this step is an external gate.
+   Never run the seed command against the production volume or relabel generated rows as live.
 4. `docker compose up -d`, then check `curl -s localhost:8000/ready`.
    The API builds marts before the dashboard starts; the dashboard only reads the
-   existing database. A missing or stale source makes `/ready` report the issue.
+   existing database. A missing, stale, malformed or future-dated source makes `/ready` return **503**.
+   Route user traffic only when `/ready` is 200; `/health` is process liveness alone.
 5. Point the payment provider bridge at `POST /webhooks/payments` with the shared
    secret. Each request must send `X-GrowthOps-Timestamp` (Unix seconds) and
    `X-GrowthOps-Signature` = hex HMAC-SHA256 of `"{timestamp}.{raw body}"`.
    Requests older than `GROWTHOPS_WEBHOOK_TOLERANCE_SECONDS` are rejected.
 6. Put a TLS-terminating reverse proxy (Caddy, nginx, a cloud load balancer) in
    front of ports 8000 and 8501. The compose file binds them to 127.0.0.1 only.
+   Do not expose the dashboard with only its shared password: require external SSO and
+   role-based access before showing real customer records. Person-level API reads require both
+   an API key and the separate `X-GrowthOps-Ops-Token`; the token is still a shared operator
+   credential, so use a gateway for individual accountability.
 
 ## Service levels
 
@@ -65,7 +76,7 @@ Scrape `GET /metrics` (Prometheus text format, needs an API key) and alert on:
 | Verify a backup | `python -m growthops.ops verify --database /data/backups/growthops-<stamp>.db` |
 | Restore | Stop `api` and `worker`, then `python -m growthops.ops restore --from <backup> --force` (keeps `*.pre-restore.db`), start them again |
 | Schema upgrade | Automatic: `initialize()` applies pending migrations in order at startup and records them in `schema_migrations` |
-| See what users ask | `GET /ops/ask-usage`; raw questions are in `ask_log` (kept for audit; truncate to your retention policy) |
+| See what users ask | `GET /ops/ask-usage` with the operator token; production stores a SHA-256 digest of each question, plus route/target, rather than raw text |
 
 ## Incidents
 
@@ -103,3 +114,12 @@ The Power BI model uses embedded import partitions for a credential-free demo. I
 production, switch its partitions to the warehouse (DuckDB file, PostgreSQL or a
 CSV share) and schedule refresh through a gateway. See
 [the Power BI handoff](power-bi-handoff.md).
+
+## Release gate and rollback
+
+Before enabling live traffic, verify provider identities and source timestamps, a successful
+backup and restore rehearsal, secret rotation, operator access, TLS/SSO, and a provider-side
+read-back of payment → CRM → access. Keep the previous image and database backup. Stop routing
+traffic or roll back if `/ready` is 503, payment events dead-letter, paid customers lack access,
+or reconciliation residuals become nonzero. A code rollback does not reverse an already-applied
+schema migration; restore the verified database snapshot only with the API and worker stopped.

@@ -1,4 +1,4 @@
-# Project status — 2026-09-29
+# Project status — 2026-09-30
 
 Live synthetic dashboard: https://growthops-os.streamlit.app/ · GitHub: https://github.com/KushPatel29/GrowthOps-OS
 
@@ -114,6 +114,12 @@ Live synthetic dashboard: https://growthops-os.streamlit.app/ · GitHub: https:/
   does not accept direct provider webhooks. Explicit **synthetic** email/ads/SMS decisions gate a local paid
   conversion outbox; no ad provider is connected. Renewal proposals account for risk and email consent but
   do not create CRM tasks or send messages. The Growth lab and operations views expose these distinctions.
+- **Production-readiness gates (v2.3 code)**: generated databases carry a synthetic-origin marker; API,
+  worker and configured Streamlit dashboard reject an unverified live source. `/ready` now returns 503 for
+  stale, missing or future-dated feeds. Person-level reads require the separate operator token in production,
+  and production ask-data logs retain a question digest rather than raw text. Adapter and alert errors omit
+  provider response bodies and dry-run message content. These gates do not create real source ingestion or
+  an identity-backed operator gateway.
 
 ## Not implemented yet
 

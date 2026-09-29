@@ -55,7 +55,7 @@ from growthops.conversion_router import (
     preview_conversion,
     queue_conversion,
 )
-from growthops.db import SCHEMA_VERSION, connect, initialize, schema_version
+from growthops.db import SCHEMA_VERSION, connect, initialize
 from growthops.diagnostics import detect, incident_recall
 from growthops.email_analytics import (
     deliverability,
@@ -88,6 +88,7 @@ from growthops.observability import (
     request_id,
 )
 from growthops.performance import daily_update, paid_efficiency
+from growthops.readiness import readiness_status, require_live_origin
 from growthops.reconciliation import (
     crm_bridge,
     four_numbers,
@@ -117,6 +118,9 @@ from growthops.workflow import trace as workflow_trace
 logger = logging.getLogger("growthops.api")
 PROTECTED_PREFIXES = ("/metrics", "/ops", "/crm", "/campaign-links", "/ask", "/v2",
                       "/docs", "/redoc", "/openapi.json")
+OPS_READ_PREFIXES = ("/ops/", "/v2/ops/", "/v2/people/", "/v2/quality/issues",
+                     "/v2/ai/sales-copilot/", "/v2/conversions/preview/",
+                     "/v2/renewals/action-proposals")
 SECURITY_HEADERS = {"X-Content-Type-Options": "nosniff", "X-Frame-Options": "DENY",
                     "Referrer-Policy": "no-referrer", "Cache-Control": "no-store"}
 MAX_WEBHOOK_BYTES = 128 * 1024
@@ -142,6 +146,11 @@ async def lifespan(app: FastAPI):
     settings.require_safe()  # a misconfigured production deployment stops here
     configure_logging(settings.log_level, settings.log_format)
     build_warehouse(settings.database)
+    connection = connect(settings.database)
+    try:
+        require_live_origin(connection, settings)
+    finally:
+        connection.close()
     log(logger, logging.INFO, "api started", env=settings.env, data_mode=settings.data_mode,
         schema_version=SCHEMA_VERSION, crm_adapter=settings.crm_adapter)
     yield
@@ -150,7 +159,8 @@ async def lifespan(app: FastAPI):
 app = FastAPI(title="GrowthOps OS", version="0.3.0", lifespan=lifespan)
 if _origins := get_settings().cors_origins:  # browsers only; server-to-server callers use API keys
     app.add_middleware(CORSMiddleware, allow_origins=_origins, allow_methods=["GET"],
-                       allow_headers=["X-API-Key", "Authorization", "X-Request-ID"])
+                       allow_headers=["X-API-Key", "Authorization", "X-Request-ID",
+                                      "X-GrowthOps-Ops-Token"])
 assert set(MODELS) == {"first_touch", "lead_creation", "last_non_direct", "u_shaped", "linear", "time_decay"}
 
 
@@ -180,6 +190,12 @@ async def request_context(request: Request, call_next):
             response = JSONResponse({"detail": "server configuration unavailable"}, status_code=503)
         elif protected and (settings.production or settings.api_keys) and not _authorized(request, settings.api_keys):
             response = JSONResponse({"detail": "missing or invalid API key"}, status_code=401)
+        elif settings.production and request.url.path.startswith(OPS_READ_PREFIXES) and not (
+            settings.ops_token and hmac.compare_digest(
+                settings.ops_token, request.headers.get("x-growthops-ops-token", ""),
+            )
+        ):
+            response = JSONResponse({"detail": "ops role required"}, status_code=403)
         else:
             try:
                 response = await call_next(request)
@@ -221,17 +237,12 @@ def ready() -> JSONResponse:
         connection = connect(settings.database)
         try:
             connection.execute("SELECT 1").fetchone()
-            version = schema_version(connection)
-            sources = freshness_check(connection, settings)
+            body = readiness_status(connection, settings)
         finally:
             connection.close()
-    except sqlite3.Error as exc:
-        return JSONResponse({"status": "unavailable", "database": str(exc)}, status_code=503)
-    schema_ok = version == SCHEMA_VERSION
-    stale = [item["source"] for item in sources if item["status"] != "fresh"]
-    body = {"status": "ready" if schema_ok else "schema_mismatch", "schema_version": version,
-            "expected_schema_version": SCHEMA_VERSION, "stale_sources": stale, "sources": sources}
-    return JSONResponse(body, status_code=200 if schema_ok else 503)
+    except sqlite3.Error:
+        return JSONResponse({"status": "unavailable"}, status_code=503)
+    return JSONResponse(body, status_code=200 if body["status"] == "ready" else 503)
 
 
 @app.get("/metrics", response_class=PlainTextResponse)

@@ -15,6 +15,7 @@ bridges when configured; see `growthops/adapters.py`).
 | `/metrics/*`, `/metrics` (Prometheus), `/ops/*`, `/crm/*`, `/v2/*`, `/ask`, `/campaign-links`, `/docs`, `/openapi.json` | `X-API-Key: <key>` or `Authorization: Bearer <key>`: always in production, and in development whenever `GROWTHOPS_API_KEYS` is set |
 | `POST /ops/events/{id}/replay` | API key plus `X-GrowthOps-Ops-Token` |
 | `POST /v2/ops/events/{id}/replay` | API key, `X-GrowthOps-Ops-Token`, `X-GrowthOps-Actor`, `Idempotency-Key`, and a JSON reason of 5–500 characters; action audited and duplicate key absorbed |
+| Person-level `/ops/*`, `/v2/ops/*`, `/v2/people/*`, quality issue details, sales copilot, conversion preview and renewal action proposals | In production, API key **and** `X-GrowthOps-Ops-Token`; shared operator credentials still require an external identity gateway for per-user audit |
 
 Every response carries `X-Request-ID` (echoed from the request when supplied) and security headers. A 500
 returns `{"detail": "internal error", "request_id": ...}`; the traceback stays in the logs.
@@ -89,7 +90,7 @@ Accepts `campaign_id`, HTTPS `destination_url`, and snake-case `content`. Looks 
 
 | Endpoint | Contract |
 |---|---|
-| `GET /ready` | 200 with `schema_version`, `stale_sources` and per-source freshness; 503 when the database is unreachable or the schema is not current |
+| `GET /ready` | 200 only when schema, live provenance (in production) and every tracked source are ready; 503 for missing/stale/malformed/future data, unverified origin, schema mismatch or database failure |
 | `GET /metrics` | Prometheus text: `growthops_http_requests_total`, `growthops_http_request_seconds`, `growthops_webhook_{accepted,rejected}_total`, `growthops_workflow_events{status}`, `growthops_paid_without_access_customers`, `growthops_source_age_hours`, `growthops_source_stale` |
 | `GET /ask?q=` | Keyless answer: `answer`, `route` (`certified`, `metric`, `definition` or `refused`), `metric_id`, `citations`, `confidence`, `retrieval_mode`, `retrieved`, `latency_ms`, `understood` (the period, platform, campaign and measure that shaped the answer, empty when none did) and `follow_ups` (questions to ask next; after a refusal, the closest answerable ones). `q` is 1–300 characters |
 | `GET /ask/suggestions` | Starter questions by theme (`themes`); every one reaches a governed answer |
@@ -148,7 +149,8 @@ as-of date. They are local demonstration contracts, not claims about the connect
 
 These routes read or mutate **only the local synthetic database**. They do not call Stripe, ad networks,
 email/SMS providers or the connected HubSpot test portal. In production, the normalized media ingress
-and conversion queue are disabled; read routes still require the configured API key.
+and conversion queue are disabled; read routes require the configured API key, and person-level reads
+also require the operator token.
 
 | Endpoint | Contract |
 |---|---|

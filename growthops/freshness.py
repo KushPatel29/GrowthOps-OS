@@ -38,9 +38,15 @@ def check(connection: sqlite3.Connection, settings: Settings | None = None) -> l
         if latest is None:
             results.append({"source": source, "latest": None, "age_hours": None, "sla_hours": sla, "status": "missing"})
             continue
-        age = round((now - _parse(latest)).total_seconds() / 3600, 1)
+        try:
+            age = round((now - _parse(latest)).total_seconds() / 3600, 1)
+        except (TypeError, ValueError):
+            results.append({"source": source, "latest": latest, "age_hours": None,
+                            "sla_hours": sla, "status": "invalid"})
+            continue
+        status = "future" if age < -1 else "fresh" if age <= sla else "stale"
         results.append({"source": source, "latest": latest, "age_hours": age, "sla_hours": sla,
-                        "status": "fresh" if age <= sla else "stale"})
+                        "status": status})
     return results
 
 

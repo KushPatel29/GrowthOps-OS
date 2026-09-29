@@ -30,6 +30,7 @@ refused) in keyword and hybrid mode.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
 import re
@@ -44,6 +45,7 @@ from pathlib import Path
 from typing import Any
 
 from growthops.ask_slots import Slots, day_label, parse, resolve_window
+from growthops.config import get_settings
 from growthops.retrieval import Entry, HybridIndex, resolve_mode, tokens
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -777,8 +779,10 @@ def route(question: str, mode: str | None = None) -> dict:
 
 def _log(connection: sqlite3.Connection, question: str, decision: dict, latency_ms: int) -> None:
     try:
+        stored_question = ("sha256:" + hashlib.sha256(question.encode()).hexdigest()
+                           if get_settings().production else question[:300])
         connection.execute("INSERT INTO ask_log VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-                           (uuid.uuid4().hex, datetime.now(timezone.utc).isoformat(), question[:300],
+                           (uuid.uuid4().hex, datetime.now(timezone.utc).isoformat(), stored_question,
                             decision["route"], decision.get("target"), decision.get("score"),
                             decision.get("mode") or "none", latency_ms))
     except sqlite3.OperationalError:

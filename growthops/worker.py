@@ -34,6 +34,7 @@ from growthops.alerts import candidates, deliver, post_message
 from growthops.config import Settings, get_settings
 from growthops.db import connect, initialize
 from growthops.observability import configure_logging, log
+from growthops.readiness import require_live_origin
 from growthops.warehouse import build as build_warehouse
 from growthops.workflow import run_due
 
@@ -87,11 +88,13 @@ def _job(connection: sqlite3.Connection, job: str, run_key: str, now: datetime, 
 
 def run_once(settings: Settings, *, now: datetime | None = None, adapters: Adapters | None = None,
              transport: Transport = urllib_transport) -> dict:
+    settings.require_safe()
     now = now or datetime.now(timezone.utc)
     adapters = adapters or build_adapters(settings, transport)
     connection = connect(settings.database)
     try:
         initialize(connection)
+        require_live_origin(connection, settings)
         retried = run_due(connection, now, adapters=adapters)
         summary: dict = {"retried": len(retried),
                          "completed": sum(item["status"] == "completed" for item in retried),
@@ -148,6 +151,11 @@ def main() -> None:
     settings.require_safe()
     configure_logging(settings.log_level, settings.log_format)
     build_warehouse(settings.database)
+    connection = connect(settings.database)
+    try:
+        require_live_origin(connection, settings)
+    finally:
+        connection.close()
     if args.once:
         run_once(settings)
     else:

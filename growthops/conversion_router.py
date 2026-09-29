@@ -55,23 +55,29 @@ def preview_conversion(connection: sqlite3.Connection, payment_id: str) -> dict 
 
 def queue_conversion(connection: sqlite3.Connection, payment_id: str) -> dict:
     """Create one local intent per payment; never call a provider."""
-    preview = preview_conversion(connection, payment_id)
-    if preview is None:
-        raise LookupError("payment not found")
-    if not preview["eligible"]:
-        raise ValueError(", ".join(preview["reasons"]))
-    conversion_id = "cv_" + hashlib.sha256(
-        f"{preview['platform']}:{payment_id}".encode(),
-    ).hexdigest()[:24]
-    cursor = connection.execute(
-        """INSERT OR IGNORE INTO conversion_outbox
-           (conversion_id, payment_id, person_key, platform, campaign_id,
-            amount_minor, consent_ref, status, created_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?, 'queued', ?)""",
-        (conversion_id, payment_id, preview["person_key"], preview["platform"],
-         preview["campaign_id"], preview["amount_minor"],
-         preview["consent"]["consent_id"], datetime.now(UTC).isoformat()),
-    )
+    connection.execute("BEGIN IMMEDIATE")
+    try:
+        preview = preview_conversion(connection, payment_id)
+        if preview is None:
+            raise LookupError("payment not found")
+        if not preview["eligible"]:
+            raise ValueError(", ".join(preview["reasons"]))
+        conversion_id = "cv_" + hashlib.sha256(
+            f"{preview['platform']}:{payment_id}".encode(),
+        ).hexdigest()[:24]
+        cursor = connection.execute(
+            """INSERT OR IGNORE INTO conversion_outbox
+               (conversion_id, payment_id, person_key, platform, campaign_id,
+                amount_minor, consent_ref, status, created_at)
+               VALUES (?, ?, ?, ?, ?, ?, ?, 'queued', ?)""",
+            (conversion_id, payment_id, preview["person_key"], preview["platform"],
+             preview["campaign_id"], preview["amount_minor"],
+             preview["consent"]["consent_id"], datetime.now(UTC).isoformat()),
+        )
+        connection.execute("COMMIT")
+    except Exception:
+        connection.execute("ROLLBACK")
+        raise
     return {"conversion_id": conversion_id, "duplicate": cursor.rowcount == 0,
             "status": "queued", "provider_delivered": False}
 

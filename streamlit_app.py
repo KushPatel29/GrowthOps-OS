@@ -20,6 +20,7 @@ from growthops.attribution import summary as attribution_summary
 from growthops.brief import period_brief
 from growthops.campaign_links import audit_short_links
 from growthops.communications import communication_health
+from growthops.config import ConfigError, get_settings
 from growthops.control_plane import (
     decision_center,
     person_journey,
@@ -52,6 +53,7 @@ from growthops.hubspot import audit as hubspot_audit
 from growthops.migration import audit as migration_audit
 from growthops.narrator import narrate
 from growthops.performance import daily_update, paid_efficiency
+from growthops.readiness import readiness_status
 from growthops.reconciliation import (
     crm_bridge,
     four_numbers,
@@ -91,6 +93,9 @@ def demo_database(schema_version: str) -> str:
             connection = connect_readonly(configured)
             try:
                 connection.execute("SELECT 1 FROM mart_growth_daily LIMIT 1").fetchone()
+                if get_settings().production and readiness_status(connection, get_settings())["status"] != "ready":
+                    st.error("The configured live database has not passed its provenance and freshness checks.")
+                    st.stop()
             finally:
                 connection.close()
         except sqlite3.DatabaseError:
@@ -106,6 +111,15 @@ def demo_database(schema_version: str) -> str:
 def require_password() -> None:
     """Optional shared-password gate for a private deployment (GROWTHOPS_DASHBOARD_PASSWORD)."""
     expected = os.getenv("GROWTHOPS_DASHBOARD_PASSWORD", "")
+    if get_settings().production and not os.getenv("GROWTHOPS_DASHBOARD_DATABASE"):
+        st.error("Production dashboards require a configured, verified live database.")
+        st.stop()
+    if get_settings().production:
+        try:
+            get_settings().require_safe()
+        except ConfigError:
+            st.error("Production runtime configuration has not passed its safety checks.")
+            st.stop()
     if os.getenv("GROWTHOPS_DASHBOARD_DATABASE") and len(expected) < 16:
         st.error("A configured database requires a dashboard password of at least 16 characters.")
         st.stop()
@@ -263,7 +277,7 @@ def trend(points: list[dict], label: str, fmt: str) -> alt.LayerChart:
 require_password()
 # The cache key changes when a new synthetic schema is required. Existing
 # Streamlit Cloud processes can retain a pre-upgrade generated database.
-database = demo_database("v2.2-intelligence-lab")
+database = demo_database("v2.3-provenance-gates")
 case = load_case(database)
 kpis, quality = case["summary"]["metrics"], case["summary"]["measurement_health"]
 

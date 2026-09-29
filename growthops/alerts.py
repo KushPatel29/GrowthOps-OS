@@ -46,17 +46,17 @@ def _text(alert: dict) -> str:
 def post_message(settings: Settings, text: str, transport: Transport = urllib_transport) -> str:
     """Send one message; returns 'sent', 'dry_run' or 'failed'."""
     if not settings.alert_webhook_url:
-        log(logger, logging.INFO, "alert (dry run)", text=text)
+        log(logger, logging.INFO, "alert (dry run)", text_sha256=hashlib.sha256(text.encode()).hexdigest())
         return "dry_run"
     try:
-        status, body = transport("POST", settings.alert_webhook_url, {"Content-Type": "application/json"},
+        status, _body = transport("POST", settings.alert_webhook_url, {"Content-Type": "application/json"},
                                  json.dumps({"text": text}).encode(), settings.adapter_timeout_seconds)
     except ProviderError as exc:
         log(logger, logging.ERROR, "alert delivery failed", error=str(exc))
         return "failed"
     if 200 <= status < 300:
         return "sent"
-    log(logger, logging.ERROR, "alert delivery failed", status=status, body=body[:200].decode("utf-8", "replace"))
+    log(logger, logging.ERROR, "alert delivery failed", status=status)
     return "failed"
 
 

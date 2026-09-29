@@ -502,6 +502,14 @@ MIGRATIONS: tuple[tuple[int, str], ...] = (
       UNIQUE (platform, payment_id)
     );
     """),
+    (10, """
+    CREATE TABLE IF NOT EXISTS dataset_origin (
+      singleton INTEGER PRIMARY KEY CHECK (singleton = 1),
+      origin TEXT NOT NULL CHECK (origin IN ('synthetic_fixture','live_verified')),
+      evidence_ref TEXT NOT NULL,
+      recorded_at TEXT NOT NULL
+    );
+    """),
 )
 SCHEMA_VERSION = MIGRATIONS[-1][0]
 
