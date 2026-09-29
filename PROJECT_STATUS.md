@@ -63,11 +63,11 @@ Live synthetic dashboard: https://growthops-os.streamlit.app/ · GitHub: https:/
   89 blank original UTM sources and two active-stage contacts without owners. The inspected opt-out field is
   blank for all 961, so eligibility remains unproven and no status change is recommended. See the
   [portal audit](docs/hubspot-marketing-audit.md); it made zero portal writes.
-- **Attribution** (five models, exact-cent conservation), funnel timing and by-channel conversion, content to
+- **Attribution** (six models, including weekly time decay, exact-cent conservation), funnel timing and by-channel conversion, content to
   pipeline, renewal-risk queue, migration audit with logged safe repairs, allowlisted ask-your-data.
 - **Warehouse**: SQLite reference marts and a DuckDB dbt project (staging → intermediate → marts, schema and
   singular tests, including bridge tie-out, email and link-hygiene marts) verified against the Python reference.
-- **BI**: eleven-view Streamlit app (password gate and configured database in a deployment) (light and dark),
+- **BI**: twelve-view Streamlit app (password gate and configured database in a deployment) (light and dark),
   FastAPI Executive Pulse page, and a governed BI snapshot (`export_bi`: 16 marts plus `dim_date`,
   `dim_campaign`, payment-grain cash attribution and a quality scorecard) read by two generated deliverables.
   **Power BI** (`growthops/bi`): 22 tables, 8 relationships, 214 described measures, 7 pages and 121 visuals
@@ -104,24 +104,42 @@ Live synthetic dashboard: https://growthops-os.streamlit.app/ · GitHub: https:/
   identity; an early refund can succeed on a later delivery after its payment arrives.
   It is disabled without a separate `whsec_` secret and disabled in production. Tests use Stripe-shaped
   fixtures; no connected Stripe account, provider read-back or live ingestion has been verified.
+- **v2.2 synthetic growth and operations layer**: person-grain month/source/campaign/owner cohorts that conserve
+  customers and cash; observed paid CAC, cash per customer, contracted ARR and matured renewal rate with
+  unsupported lifetime metrics marked unavailable; a transparent assumption calculator; local schema, freshness,
+  referential-integrity and quality checks. The classifier stores 180 synthetic conversations with versioned
+  evidence spans; its 37 base phrases across four context variants produce a 148-case test contract, plus 20
+  grounded sales-copilot checks. This is a deterministic local classifier and retrieval prototype, not an LLM
+  or a live sales assistant. Normalized YouTube/Zoom/Vimeo event ingress verifies identity and idempotency but
+  does not accept direct provider webhooks. Explicit **synthetic** email/ads/SMS decisions gate a local paid
+  conversion outbox; no ad provider is connected. Renewal proposals account for risk and email consent but
+  do not create CRM tasks or send messages. The Growth lab and operations views expose these distinctions.
 
 ## Not implemented yet
 
 - The HubSpot connector returned zero tickets as of 2026-09-29, including zero unresolved
   high-priority tickets; the separate private-app token lacks ticket-search scope. The five new schema fields
-  are empty pending verified identity links and actual sales qualification decisions.
+  are empty pending verified identity links and actual sales qualification decisions. The newly planted local
+  consent decisions must not be treated as consent for any connected HubSpot contact.
 
 - Live runtime integrations: the HubSpot developer test portal is built and verified, but the payment workflow's
   HubSpot and webhook adapters are tested against a fake HTTP transport rather than a real provider bridge.
   There are no live Stripe, GA4, ad-platform, email-platform or link-shortener ingestion jobs (the data is
-  generated).
+  generated). Server-side ad conversions are local queued intents only; no Meta, Google or LinkedIn delivery
+  or attribution read-back exists. Domain DNS (SPF/DKIM/DMARC), SMS delivery and A2P registration are unverified.
 - Hosting, TLS, a secret manager and off-host backups belong to the deployment owner (see the runbook).
 - PostgreSQL, for several API hosts or point-in-time recovery (SQLite with WAL is the single-host choice).
+- BigQuery/GCP deployment, dashboard usage/certification telemetry, production-grade Markov attribution,
+  causal lift, full customer lifetime/retention economics and a statistically validated forecast are not
+  implemented. The planning view is scenario arithmetic on entered assumptions.
 - Incrementality measurement (geo holdouts, conversion-lift studies); attribution here is descriptive.
 - A published Power BI Service report (the PBIP is verified in Desktop only), and row-level security.
 
 ## Next increment
 
-Continue the [v2.1 engineering specification](docs/growthops-os-v2.1-engineering-spec.md) with
-connected Stripe test-mode verification, provider-level subscription read-back, and held-out AI evaluation. Ad/email
-ingestion and Power BI Service publication remain later integrations.
+Provider-backed work requires access to real source systems and evidence: connected Stripe test-mode
+verification and subscription read-back, authenticated HubSpot identity/qualification updates, GA4 and ad/email
+ingestion, a consent source, community access read-back, and a production delivery stack. See the
+[v2.1 engineering specification](docs/growthops-os-v2.1-engineering-spec.md) and
+[API contracts](docs/api-contracts.md) for the local contracts ready for that work. Power BI Service
+publication and row-level security still require a tenant and credentials.

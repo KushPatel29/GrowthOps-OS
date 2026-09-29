@@ -34,6 +34,7 @@ from growthops.attribution import summary as attribution_summary
 from growthops.brief import daily_series, period_brief
 from growthops.brief import findings as brief_findings
 from growthops.campaign_links import LinkRequest, audit_short_links, build_link
+from growthops.communications import communication_health
 from growthops.config import get_settings
 from growthops.control_plane import (
     campaign_qa,
@@ -49,6 +50,11 @@ from growthops.control_plane import (
 from growthops.control_plane import (
     crm_health as control_crm_health,
 )
+from growthops.conversion_router import (
+    conversion_health,
+    preview_conversion,
+    queue_conversion,
+)
 from growthops.db import SCHEMA_VERSION, connect, initialize, schema_version
 from growthops.diagnostics import detect, incident_recall
 from growthops.email_analytics import (
@@ -61,9 +67,17 @@ from growthops.email_analytics import (
 from growthops.experiments import analyze as experiment_analysis
 from growthops.freshness import check as freshness_check
 from growthops.funnel import funnel
+from growthops.growth_lab import (
+    ScenarioInputs,
+    customer_economics,
+    funnel_cohorts,
+    scenario_plan,
+    trust_center,
+)
 from growthops.hubspot import audit as hubspot_audit
 from growthops.hubspot import property_definitions
 from growthops.lifecycle import LifecycleEvent, process_lifecycle
+from growthops.media_events import MediaEvent, ingest_media_event, media_health
 from growthops.migration import audit as migration_audit
 from growthops.narrator import narrate
 from growthops.observability import (
@@ -80,8 +94,10 @@ from growthops.reconciliation import (
     platform_bridge,
     platform_comparison,
 )
+from growthops.renewals import action_proposals as renewal_action_proposals
 from growthops.renewals import monitor as renewal_monitor
 from growthops.report import executive_brief
+from growthops.sales_intelligence import classification_summary, sales_copilot
 from growthops.stripe_test_bridge import (
     StripeEventError,
     normalize_stripe_test_event,
@@ -135,7 +151,7 @@ app = FastAPI(title="GrowthOps OS", version="0.3.0", lifespan=lifespan)
 if _origins := get_settings().cors_origins:  # browsers only; server-to-server callers use API keys
     app.add_middleware(CORSMiddleware, allow_origins=_origins, allow_methods=["GET"],
                        allow_headers=["X-API-Key", "Authorization", "X-Request-ID"])
-assert set(MODELS) == {"first_touch", "lead_creation", "last_non_direct", "u_shaped", "linear"}
+assert set(MODELS) == {"first_touch", "lead_creation", "last_non_direct", "u_shaped", "linear", "time_decay"}
 
 
 def _authorized(request: Request, keys: list[str]) -> bool:
@@ -277,7 +293,8 @@ def funnel_metrics() -> list[dict]:
 
 
 @app.get("/metrics/attribution/{model}")
-def attribution_metrics(model: Literal["first_touch", "lead_creation", "last_non_direct", "u_shaped", "linear"]) -> list[dict]:
+def attribution_metrics(model: Literal["first_touch", "lead_creation", "last_non_direct", "u_shaped", "linear",
+                                       "time_decay"]) -> list[dict]:
     connection = connect(database_path())
     try:
         initialize(connection)
@@ -692,6 +709,106 @@ def growthops_registry_versions(kind: Literal["campaign", "lifecycle", "instrume
 @app.get("/v2/decision-center")
 def growthops_decision_center() -> dict:
     return _read(decision_center)
+
+
+@app.get("/v2/ai/classifications")
+def growthops_classification_summary() -> dict:
+    return _read(classification_summary)
+
+
+@app.get("/v2/ai/sales-copilot/{person_key}")
+def growthops_sales_copilot(person_key: str) -> dict:
+    result = _read(sales_copilot, person_key)
+    if result is None:
+        raise HTTPException(status_code=404, detail="person not found")
+    return result
+
+
+@app.get("/v2/growth/economics")
+def growthops_customer_economics() -> dict:
+    return _read(customer_economics)
+
+
+@app.get("/v2/growth/cohorts")
+def growthops_funnel_cohorts(dimension: Literal["acquisition_month", "source", "campaign", "owner"] =
+                             "acquisition_month") -> dict:
+    return _read(funnel_cohorts, dimension)
+
+
+@app.post("/v2/growth/scenario")
+def growthops_scenario_plan(inputs: ScenarioInputs) -> dict:
+    return scenario_plan(inputs)
+
+
+@app.get("/v2/trust")
+def growthops_trust_center() -> dict:
+    return _read(trust_center)
+
+
+@app.get("/v2/communications/health")
+def growthops_communication_health() -> dict:
+    return _read(communication_health)
+
+
+@app.get("/v2/conversions/health")
+def growthops_conversion_health() -> dict:
+    return _read(conversion_health)
+
+
+@app.get("/v2/renewals/action-proposals")
+def growthops_renewal_action_proposals() -> dict:
+    return _read(renewal_action_proposals)
+
+
+@app.get("/v2/conversions/preview/{payment_id}")
+def growthops_conversion_preview(payment_id: str) -> dict:
+    result = _read(preview_conversion, payment_id)
+    if result is None:
+        raise HTTPException(status_code=404, detail="payment not found")
+    return result
+
+
+@app.post("/v2/conversions/queue/{payment_id}", status_code=202)
+def growthops_conversion_queue(payment_id: str, x_growthops_ops_token: str = Header(default="")) -> dict:
+    """Local demo intent only. Ad network dispatch is not implemented."""
+    settings = get_settings()
+    if settings.production:
+        raise HTTPException(status_code=404, detail="local conversion queue disabled in production")
+    if not settings.ops_token or not hmac.compare_digest(settings.ops_token, x_growthops_ops_token):
+        raise HTTPException(status_code=403, detail="ops role required")
+    connection = connect(database_path())
+    try:
+        initialize(connection)
+        try:
+            return queue_conversion(connection, payment_id)
+        except LookupError as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
+        except ValueError as exc:
+            raise HTTPException(status_code=409, detail=str(exc)) from exc
+    finally:
+        connection.close()
+
+
+@app.get("/v2/engagement/health")
+def growthops_media_health() -> dict:
+    return _read(media_health)
+
+
+@app.post("/v2/engagement/events", status_code=202)
+def growthops_normalized_media_event(event: MediaEvent) -> dict:
+    """Trusted normalized ingress; direct provider webhooks need separate auth adapters."""
+    if get_settings().production:
+        raise HTTPException(status_code=404, detail="normalized demo ingress disabled in production")
+    connection = connect(database_path())
+    try:
+        initialize(connection)
+        try:
+            return ingest_media_event(connection, event)
+        except ValueError as exc:
+            code = 409 if "conflicts" in str(exc) else 422
+            raise HTTPException(status_code=code, detail=str(exc)) from exc
+    finally:
+        connection.close()
 
 
 @app.get("/v2/console", response_class=HTMLResponse, include_in_schema=False)

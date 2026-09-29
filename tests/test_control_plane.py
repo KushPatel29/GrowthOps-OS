@@ -69,8 +69,9 @@ def test_control_plane_routes_expose_distinct_values(db_path, monkeypatch):
         governance = client.get("/v2/crm/marketing-contacts/audit")
         assert governance.status_code == 200
         counts = governance.json()["counts"]
-        assert counts["eligibility_unknown"] == health.json()["contacts"]
-        assert counts["consent_granted"] == 0
+        assert (counts["eligibility_unknown"] + counts["consent_granted"] +
+                counts["suppressed"]) == health.json()["contacts"]
+        assert counts["consent_granted"] > 0
         assert counts["dormant_candidates"] > 0
         assert center.json()["marketing_contacts"]["counts"] == counts
         campaign = client.get("/v2/campaigns/qa")

@@ -26,7 +26,7 @@ The checked schema-only command is `python -m growthops.hubspot_v21 plan`; `audi
 1. Verify contact and deal identity mappings against the current 961-contact and 130-deal searches. The local person key is the synthetic contact ID, while the portal deduplicated some contacts by email.
 2. Record exact current and proposed values per object ID. Each `manage_crm_objects` batch is at most ten objects and needs a reviewed table of object type, ID, property, current value and new value.
 3. Do not copy local hash-based `synthetic_rep_assessment` into HubSpot as if a sales representative made the decision. Rep decisions need their own source and timestamp.
-4. Keep marketing-contact status unchanged without consent evidence. The connected portal's read-only audit cannot establish eligibility for any of its 961 sampled contacts from the inspected fields; the separate local audit reports 14,693/14,693 eligibility unknown across the full synthetic scenario.
+4. Keep marketing-contact status unchanged without consent evidence. The connected portal's read-only audit cannot establish eligibility for any of its 961 sampled contacts from the inspected fields. The local v2.2 scenario plants explicit **synthetic** consent decisions for a small buyer sample to exercise gating; those decisions are not linked to or authoritative for portal contacts.
 5. Recheck workflow triggers and owner routing before publishing a new workflow version. The local workflow registry is desired state, not live drift evidence.
 
 ## Local evidence ready now

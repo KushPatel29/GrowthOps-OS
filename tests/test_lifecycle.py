@@ -266,7 +266,7 @@ def test_v5_event_migration_preserves_related_rows(tmp_path):
                'update_crm', 'legacy-key', 'delivered')"""
         )
         initialize(connection)
-        assert schema_version(connection) == 7
+        assert schema_version(connection) == 9
         assert next(row for row in connection.execute("PRAGMA table_info(processed_events)")
                     if row["name"] == "payment_id")["notnull"] == 0
         assert connection.execute("SELECT payment_id FROM processed_events WHERE event_id='legacy-event'"

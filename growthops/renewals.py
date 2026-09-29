@@ -7,6 +7,7 @@ import json
 import sqlite3
 from datetime import date, datetime, timedelta
 
+from growthops.communications import latest_consent
 from growthops.db import connect
 from growthops.scenario import AS_OF
 
@@ -62,6 +63,29 @@ def monitor(connection: sqlite3.Connection, as_of: date = AS_OF, due_soon_days: 
         "issues": issues,
         "synthetic": True,
     }
+
+
+def action_proposals(connection: sqlite3.Connection, as_of: date = AS_OF) -> dict:
+    """Explain next CRM tasks; never send a message or mutate a subscription."""
+    issues = monitor(connection, as_of)["issues"]
+    proposals = []
+    for issue in issues:
+        consent = latest_consent(connection, issue["customer_id"], "email")
+        channel = "email" if consent and consent["status"] == "granted" else "manual_call"
+        reason = ("failed_payment" if issue["failed_attempts"] else
+                  "renewal_overdue" if issue["days_to_due"] <= 0 else "renewal_due_soon")
+        proposals.append({
+            "subscription_id": issue["subscription_id"],
+            "person_key": issue["customer_id"], "severity": issue["severity"],
+            "reason": reason, "due_date": issue["due_date"],
+            "suggested_task": "Review payment method and account state" if issue["severity"] == "high"
+            else "Confirm renewal readiness", "suggested_channel": channel,
+            "email_consent_status": consent["status"] if consent else "unknown",
+            "action_status": "proposal_only", "provider_dispatched": False,
+        })
+    return {"scope": "synthetic_renewal_proposals", "as_of": as_of.isoformat(),
+            "count": len(proposals), "proposals": proposals,
+            "caveat": "Engagement, satisfaction and support signals are unavailable; no CRM task or message was sent."}
 
 
 def main() -> None:

@@ -677,9 +677,14 @@ def seed(database: str, *, seed_value: int = 29, scale: float = 1.0) -> dict[str
     generator.owned_channels(seed_value)
     generator.write(connection)
     _replay(connection, generator)
+    from growthops.communications import seed_consent
     from growthops.control_plane import seed_overlay
+    from growthops.sales_intelligence import batch_classify, seed_conversations
 
     seed_overlay(connection)
+    seed_consent(connection)
+    seed_conversations(connection)
+    batch_classify(connection)
     counts = {table: connection.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0]
               for table in reversed(TABLES)}
     connection.close()

@@ -81,7 +81,7 @@ Accepts `campaign_id`, HTTPS `destination_url`, and snake-case `content`. Looks 
 
 `GET /metrics/revenue-truth` returns the five system totals plus the platform→warehouse and CRM→cash bridges (each with `residual_cents`, always 0) and per-platform self-reported vs warehouse ROAS. `GET /metrics/anomalies` returns anomaly episodes with top drivers and the ground-truth check against the planted-incident manifest. `GET /metrics/narrative` returns the validated executive narrative and the mode used (`deterministic`, `llm_validated`, `deterministic_fallback`).
 
-`GET /metrics/executive` returns the **all-time synthetic scenario** metrics, quality measures, and deterministic observations. `GET /metrics/funnel` returns stage counts, conversion from previous stage, and median/p90 transition time. `GET /metrics/attribution/{model}` accepts `first_touch`, `lead_creation`, `last_non_direct`, `u_shaped`, or `linear` and returns net cash by campaign.
+`GET /metrics/executive` returns the **all-time synthetic scenario** metrics, quality measures, and deterministic observations. `GET /metrics/funnel` returns stage counts, conversion from previous stage, and median/p90 transition time. `GET /metrics/attribution/{model}` accepts `first_touch`, `lead_creation`, `last_non_direct`, `u_shaped`, `linear`, or `time_decay` and returns net cash by campaign. Time decay halves credit for each additional week before payment and conserves integer cents.
 
 `GET /metrics/daily?days=90` returns event-date spend, leads, and payment/refund cash from the local daily mart. `GET /metrics/brief?days=7` returns the Morning Brief: the latest week against the prior week plus prioritized findings, each with evidence, drivers, a recommended investigation, confidence and a source ID. `GET /metrics/content` returns first identified content influence through MQL, calls, customers, and net cash. `GET /metrics/experiments/{experiment_id}` returns variant-level visitor, lead, MQL, customer, and cash results with lead-rate, lead-quality and bootstrap cash intervals, a sample-ratio-mismatch check and a decision derived from those intervals. Assignment is simulated per visitor; it is not a live experiment.
 
@@ -130,7 +130,7 @@ as-of date. They are local demonstration contracts, not claims about the connect
 | `GET /v2/decision-center` | One consistent snapshot: four revenue values, qualified pipeline, CRM health components, workflow health, evidence brief and five quality issues |
 | `GET /v2/metrics/revenue-truth` | Platform claims, qualified pipeline, CRM bookings and net collected cash as distinct values, with platform and CRM bridges |
 | `GET /v2/metrics/qualified-pipeline` | Explicitly qualified deal counts and created/open/won value by lead-creation campaign; unqualified count and USD scope |
-| `GET /v2/crm/health` | Passing and eligible records for four named components, equal-weight score and open issue count; marketing eligibility remains unknown |
+| `GET /v2/crm/health` | Passing and eligible records for four named components, equal-weight score and open issue count; local synthetic consent decisions are separate from the connected HubSpot test portal |
 | `GET /v2/crm/marketing-contacts/audit` | Counts consent evidence, suppression, open opportunities, customers, duplicates and 180-day dormant review candidates; no marketing-status mutation |
 | `GET /v2/campaigns/qa` | Campaign registry validity plus short-link UTM defects and click exposure |
 | `POST /v2/instrumentation/validate` | Dry-run event-name, source, required-parameter, purchase-truth and campaign-taxonomy validation; no event ingestion or conversion export |
@@ -143,6 +143,28 @@ as-of date. They are local demonstration contracts, not claims about the connect
 | `GET /v2/ops/events/{event_id}` | Existing attempt trace plus envelope metadata and outbox delivery states |
 | `POST /v2/ops/events/{event_id}/replay` | Audited, idempotent dead-letter replay with the headers above |
 | `GET /v2/console` | Local four-view Decision Center, Customer 360, Incident Trace and Quality Queue; readable journey and workflow timelines with links from incidents to traces; unavailable in production until an identity-backed UI exists |
+
+## v2.2 synthetic growth and operations contracts
+
+These routes read or mutate **only the local synthetic database**. They do not call Stripe, ad networks,
+email/SMS providers or the connected HubSpot test portal. In production, the normalized media ingress
+and conversion queue are disabled; read routes still require the configured API key.
+
+| Endpoint | Contract |
+|---|---|
+| `GET /v2/growth/cohorts?dimension=` | Person-grain lead, MQL, customer and net-cash cohorts by `acquisition_month`, `source`, `campaign` or `owner`; cash remains on the acquisition cohort |
+| `GET /v2/growth/economics` | Observed paid CAC, cash per customer, contracted annual run rate and matured renewal rate; lifetime LTV, payback and NRR are explicitly unavailable |
+| `POST /v2/growth/scenario` | Bounded spend, cost, funnel-rate and collection inputs return transparent planning arithmetic, labelled as user assumptions rather than a forecast |
+| `GET /v2/trust` | Schema, referential integrity, source freshness, mart availability and local quality rules; dashboard usage, certification and live CI test state are unavailable |
+| `GET /v2/ai/classifications` | Synthetic conversation label counts, versioned rule output and evidence coverage |
+| `GET /v2/ai/sales-copilot/{person_key}` | Read-only prospect context and cited similar closed-won cases; no raw transcript exposed |
+| `GET /v2/communications/health` | Synthetic consent decisions, observed email sends, and explicit unknown DNS and SMS provider state |
+| `GET /v2/conversions/preview/{payment_id}` | Explains settled-net-cash, registered paid-campaign and explicit ads consent both at purchase and now, with rejection reasons |
+| `POST /v2/conversions/queue/{payment_id}` | Development-only, ops-token-gated idempotent local outbox insert for eligible payments; **no provider delivery** |
+| `GET /v2/conversions/health` | Local queued count and explicit zero verified provider deliveries |
+| `GET /v2/renewals/action-proposals` | Risk and consent-aware suggested CRM tasks; proposal only, no task or message sent |
+| `POST /v2/engagement/events` | Development-only trusted normalized YouTube, Zoom or Vimeo event ingress with validated identity, UTC timestamp and source idempotency; not a direct provider webhook |
+| `GET /v2/engagement/health` | Local normalized event counts and explicit provider-connection state |
 
 ## Target endpoints (not implemented)
 

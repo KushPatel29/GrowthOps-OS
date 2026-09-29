@@ -3,13 +3,14 @@
 **Marketing measurement, revenue reconciliation and lifecycle automation for a creator-led B2B business.**
 
 [![GrowthOps checks](https://github.com/KushPatel29/GrowthOps-OS/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/KushPatel29/GrowthOps-OS/actions/workflows/ci.yml)
-[![tests](https://img.shields.io/badge/tests-587%20passing-brightgreen)](tests)
+[![tests](https://img.shields.io/badge/tests-600%20passing-brightgreen)](tests)
 [![guardrail eval](https://img.shields.io/badge/guardrail%20eval-30%2F30-brightgreen)](evals/narrative_guardrail_cases.json)
 
-[**Live dashboard**](https://growthops-os.streamlit.app/) · [Power BI and Excel](docs/power-bi-handoff.md) · [Case study](docs/case-study.md) · [Metric catalog](docs/metric-catalog.md) · [API](docs/api-contracts.md) · [v2.1 specification](docs/growthops-os-v2.1-engineering-spec.md) · [HubSpot marketing audit](docs/hubspot-marketing-audit.md) · [HubSpot v2.1 schema record](docs/hubspot-v21-change-plan.md)
+[**Live dashboard**](https://growthops-os.streamlit.app/) · [Reviewer walkthrough](docs/demo-walkthrough.md) · [Final target audit](docs/final-target-audit.md) · [Power BI and Excel](docs/power-bi-handoff.md) · [Case study](docs/case-study.md) · [Metric catalog](docs/metric-catalog.md) · [API](docs/api-contracts.md) · [v2.1 specification](docs/growthops-os-v2.1-engineering-spec.md) · [HubSpot marketing audit](docs/hubspot-marketing-audit.md) · [HubSpot v2.1 schema record](docs/hubspot-v21-change-plan.md)
 
 The live dashboard includes a read-only **Operations console** with a decision center, synthetic Customer 360,
-incident traces and a quality queue. It does not read or change the connected HubSpot developer test portal.
+incident traces, quality queue and sales copilot, plus a **Growth lab** for cohorts, customer economics,
+scenario arithmetic and trust evidence. It does not read or change the connected HubSpot developer test portal.
 
 ScaleLab is a fictional coaching and education company that moved from a legacy CRM six months ago. Since
 then nobody trusts the numbers: Meta, Google, LinkedIn, the CRM and the payment processor each report a
@@ -49,7 +50,11 @@ if it ever stops doing so.
 | Email analytics: delivery, bounce, human vs reported opens, CTR, click-to-open, unsubscribes, complaints, newsletter → pipeline, list source mix | Email & links view; [`email_analytics.py`](growthops/email_analytics.py), `mart_email_performance` |
 | Clear written daily updates | `python -m growthops.performance`, `GET /metrics/daily-update`, copy block in the Morning brief |
 | HubSpot, built live in a developer test account: 33 baseline custom properties (UTM, content, funnel dates, tracking status, attribution) and five empty v2.1 identity/qualification fields, a funnel-stage deal pipeline, an Imports API load, a CRM API sync that writes only differences, lists, three published workflows, a CRM cleanup found through the search API, a four-report dashboard, and a read-back that reconciles the baseline sample to the warehouse with zero differences | [`hubspot_portal.py`](growthops/hubspot_portal.py), [HubSpot portal build](docs/hubspot-portal.md), [v2.1 schema record](docs/hubspot-v21-change-plan.md), [`hubspot.py`](growthops/hubspot.py) |
-| Attribution: first touch, lead creation, last non-direct, U-shaped, linear, all conserving cash to the cent | [`attribution.py`](growthops/attribution.py) |
+| Attribution: first touch, lead creation, last non-direct, U-shaped, linear and time decay, all conserving cash to the cent | [`attribution.py`](growthops/attribution.py) |
+| Growth lab: person-grain acquisition cohorts, observed customer economics, assumption-based scenario planning and a local trust view | [`growth_lab.py`](growthops/growth_lab.py) |
+| Sales conversation intelligence: 180 synthetic conversations, deterministic evidence-span classification, read-only closed-won case retrieval, and a 148-case phrase-variant contract | [`sales_intelligence.py`](growthops/sales_intelligence.py), [`sales_intelligence_eval.py`](growthops/sales_intelligence_eval.py) |
+| Consent-gated marketing operations: local email/ads/SMS decisions, a conversion preview and idempotent local outbox, communication diagnostics, and renewal task proposals | [`communications.py`](growthops/communications.py), [`conversion_router.py`](growthops/conversion_router.py), [`renewals.py`](growthops/renewals.py) |
+| Normalized YouTube, Zoom and Vimeo engagement contract with identity and idempotency checks | [`media_events.py`](growthops/media_events.py) |
 | Reconciling ad platforms, CRM and payments after a migration | [`reconciliation.py`](growthops/reconciliation.py), [`migration.py`](growthops/migration.py) |
 | UTM and short-link governance, tracking-quality monitoring | [`campaign_links.py`](growthops/campaign_links.py), `mart_link_hygiene`, measurement health, [tracking plan](docs/tracking-plan.md) |
 | Explaining why a metric moved, in plain English, with an action | Morning brief ([`brief.py`](growthops/brief.py)) and Diagnostics view |
@@ -141,6 +146,7 @@ python -m growthops.hubspot_marketing_audit                           # read-onl
 python -m growthops.hubspot_v21 plan                                 # five-field v2.1 schema proposal (offline)
 python -m growthops.hubspot_portal apply                            # build + verify a HubSpot test account (HUBSPOT_ACCESS_TOKEN)
 python -m growthops.ask_data --eval                                # question contract, keyword + hybrid
+python -m growthops.sales_intelligence_eval                        # synthetic classification + copilot grounding
 python -m growthops.ask_data "What does a lead cost on Google?"    # ask from the command line
 python -m growthops.worker --once                                  # retries, alerts, daily update
 python -m uvicorn growthops.api:app --reload                       # API + /dashboard + /v2/console
@@ -152,6 +158,9 @@ Useful endpoints: `/metrics/brief`, `/metrics/daily-update`, `/metrics/paid-effi
 `/v2/console`, `/v2/decision-center`, `/v2/crm/health`, `/v2/crm/marketing-contacts/audit`,
 `/v2/campaigns/qa`, `/v2/instrumentation/validate`, `/v2/quality/issues`,
 `/v2/metrics/qualified-pipeline`, `/v2/ops/incidents`, `/v2/ops/customers/{person_key}`,
+`/v2/growth/economics`, `/v2/growth/cohorts`, `/v2/growth/scenario`, `/v2/trust`,
+`/v2/ai/classifications`, `/v2/ai/sales-copilot/{person_key}`, `/v2/communications/health`,
+`/v2/conversions/preview/{payment_id}`, `/v2/conversions/health`, `/v2/renewals/action-proposals`,
 `/v2/ops/events/{event_id}`, signed `/v2/webhooks/lifecycle`, signed development-only `/v2/webhooks/stripe-test`, `/ready`, `/metrics` (Prometheus).
 Production: `cp .env.example .env`, fill in the secrets, then `docker compose up -d` (see the
 [runbook](docs/production-runbook.md)). Local embeddings need `pip install -e ".[rag]"`; without them ask-your-data

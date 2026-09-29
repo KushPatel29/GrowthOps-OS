@@ -340,7 +340,7 @@ def crm_health(connection: sqlite3.Connection) -> dict:
         "open_issues": connection.execute(
             "SELECT COUNT(*) FROM quality_issues WHERE state='open'"
         ).fetchone()[0],
-        "marketing_eligibility": "unknown; synthetic consent evidence not provided",
+        "marketing_eligibility": "only explicit synthetic consent evidence is eligible; the connected HubSpot test portal is separate",
     }
 
 
@@ -444,7 +444,7 @@ def marketing_contact_audit(connection: sqlite3.Connection) -> dict:
     return {
         "scope": "full_synthetic_scenario", "data_as_of": AS_OF.isoformat(),
         "dormancy_cutoff": cutoff, "counts": dict(row),
-        "marketing_eligibility_policy": "Only an explicit granted email-consent ledger entry is eligible; no such evidence is planted in this scenario.",
+        "marketing_eligibility_policy": "Only an explicit granted email-consent ledger entry is eligible; the planted evidence is synthetic and not synced to HubSpot.",
         "cleanup_policy": "Dormant and duplicate counts are review candidates, never automatic deletions or marketing-status changes.",
     }
 

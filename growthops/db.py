@@ -469,6 +469,39 @@ MIGRATIONS: tuple[tuple[int, str], ...] = (
       WHERE p.subscription_id IS NOT NULL AND p.status='succeeded'
     ) WHERE rn=1;
     """),
+    (8, """
+    CREATE TABLE IF NOT EXISTS sales_conversations (
+      conversation_id TEXT PRIMARY KEY,
+      deal_id TEXT NOT NULL REFERENCES deals(deal_id),
+      person_key TEXT NOT NULL REFERENCES persons(person_key),
+      occurred_at TEXT NOT NULL,
+      transcript TEXT NOT NULL,
+      source TEXT NOT NULL CHECK (source='synthetic_fixture')
+    );
+    CREATE INDEX IF NOT EXISTS idx_conversations_person ON sales_conversations(person_key);
+    CREATE TABLE IF NOT EXISTS conversation_classifications (
+      conversation_id TEXT NOT NULL REFERENCES sales_conversations(conversation_id),
+      model_version TEXT NOT NULL,
+      labels_json TEXT NOT NULL,
+      evidence_json TEXT NOT NULL,
+      classified_at TEXT NOT NULL,
+      PRIMARY KEY (conversation_id, model_version)
+    );
+    """),
+    (9, """
+    CREATE TABLE IF NOT EXISTS conversion_outbox (
+      conversion_id TEXT PRIMARY KEY,
+      payment_id TEXT NOT NULL REFERENCES payments(payment_id),
+      person_key TEXT NOT NULL REFERENCES persons(person_key),
+      platform TEXT NOT NULL CHECK (platform IN ('meta','google','linkedin')),
+      campaign_id TEXT NOT NULL REFERENCES campaigns(campaign_id),
+      amount_minor INTEGER NOT NULL CHECK (amount_minor > 0),
+      consent_ref TEXT NOT NULL,
+      status TEXT NOT NULL CHECK (status IN ('queued','simulated_delivered')),
+      created_at TEXT NOT NULL,
+      UNIQUE (platform, payment_id)
+    );
+    """),
 )
 SCHEMA_VERSION = MIGRATIONS[-1][0]
 

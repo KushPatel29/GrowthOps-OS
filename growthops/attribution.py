@@ -8,8 +8,9 @@ from datetime import datetime
 from fractions import Fraction
 from typing import Literal
 
-AttributionModel = Literal["first_touch", "lead_creation", "last_non_direct", "u_shaped", "linear"]
-MODELS: tuple[AttributionModel, ...] = ("first_touch", "lead_creation", "last_non_direct", "u_shaped", "linear")
+AttributionModel = Literal["first_touch", "lead_creation", "last_non_direct", "u_shaped", "linear", "time_decay"]
+MODELS: tuple[AttributionModel, ...] = ("first_touch", "lead_creation", "last_non_direct", "u_shaped", "linear",
+                                      "time_decay")
 
 
 def _split_cents(amount: int, weights: dict[str, Fraction]) -> dict[str, int]:
@@ -24,12 +25,23 @@ def _split_cents(amount: int, weights: dict[str, Fraction]) -> dict[str, int]:
     return base
 
 
-def _weights(touches: list[dict], model: AttributionModel) -> dict[str, Fraction]:
+def _weights(touches: list[dict], model: AttributionModel,
+             paid_at: datetime | None = None) -> dict[str, Fraction]:
     if not touches:
         return {}
     if model == "linear":
         share = Fraction(1, len(touches))
         return {touch["touch_id"]: share for touch in touches}
+    if model == "time_decay":
+        if paid_at is None:
+            raise ValueError("time decay requires the payment timestamp")
+        ages = [max(0, int((paid_at - touch["at"]).total_seconds() // (7 * 86400)))
+                for touch in touches]
+        maximum = max(ages)
+        raw = [1 << (maximum - age) for age in ages]
+        total = sum(raw)
+        return {touch["touch_id"]: Fraction(weight, total)
+                for touch, weight in zip(touches, raw)}
     first = touches[0]
     lead = next((touch for touch in reversed(touches) if touch["touch_type"] == "lead_creation"), None)
     non_direct = [touch for touch in touches if touch["source"] != "direct"]
@@ -81,7 +93,7 @@ def allocations(connection: sqlite3.Connection, model: AttributionModel) -> list
             raise ValueError(f"refunds exceed payment {payment['payment_id']}")
         paid_at = datetime.fromisoformat(payment["paid_at"])
         eligible = [t for t in touches_by_person.get(payment["customer_id"], []) if t["at"] <= paid_at]
-        weights = _weights(eligible, model)
+        weights = _weights(eligible, model, paid_at)
         if not weights:
             result.append({"model": model, "payment_id": payment["payment_id"], "touch_id": None,
                            "campaign_id": None, "credited_cents": net})

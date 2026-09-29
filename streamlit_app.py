@@ -19,12 +19,14 @@ from growthops.attribution import MODELS
 from growthops.attribution import summary as attribution_summary
 from growthops.brief import period_brief
 from growthops.campaign_links import audit_short_links
+from growthops.communications import communication_health
 from growthops.control_plane import (
     decision_center,
     person_journey,
     quality_queue,
     repair_proposal,
 )
+from growthops.conversion_router import conversion_health
 from growthops.db import connect_readonly
 from growthops.diagnostics import detect, incident_recall
 from growthops.diagnostics import series as metric_series
@@ -39,6 +41,13 @@ from growthops.embeddings import model_ready, runtime_available
 from growthops.experiments import analyze as experiment_analysis
 from growthops.experiments import format_p
 from growthops.funnel import funnel, funnel_by_campaign
+from growthops.growth_lab import (
+    ScenarioInputs,
+    customer_economics,
+    funnel_cohorts,
+    scenario_plan,
+    trust_center,
+)
 from growthops.hubspot import audit as hubspot_audit
 from growthops.migration import audit as migration_audit
 from growthops.narrator import narrate
@@ -49,8 +58,10 @@ from growthops.reconciliation import (
     platform_bridge,
     platform_comparison,
 )
+from growthops.renewals import action_proposals as renewal_action_proposals
 from growthops.renewals import monitor as renewal_monitor
 from growthops.report import TARGETS, campaign_performance, executive_brief
+from growthops.sales_intelligence import classification_summary, sales_copilot
 from growthops.scenario import AS_OF
 from growthops.seed import seed
 from growthops.warehouse import build
@@ -145,6 +156,7 @@ def load_case(database: str) -> dict:
                 """SELECT event_id FROM processed_events WHERE attempts > 1 OR status <> 'completed'
                    ORDER BY status <> 'dead_letter', received_at""")},
             "renewals": renewal_monitor(connection),
+            "renewal_proposals": renewal_action_proposals(connection),
             "migration": migration_audit(connection),
             "daily_update": daily_update(connection, findings=brief["findings"]),
             "paid_7d": paid_efficiency(connection, AS_OF - timedelta(days=6), AS_OF),
@@ -174,6 +186,21 @@ def load_operations_snapshot(database: str) -> dict:
                         received_at DESC, event_id LIMIT 100"""
         )]
         return {"decision": snapshot, "incidents": incidents}
+    finally:
+        connection.close()
+
+
+@st.cache_data(show_spinner="Preparing the growth lab…", ttl=120)
+def load_growth_snapshot(database: str) -> dict:
+    connection = connect_readonly(database)
+    try:
+        return {"economics": customer_economics(connection),
+                "trust": trust_center(connection),
+                "classification": classification_summary(connection),
+                "communications": communication_health(connection),
+                "conversions": conversion_health(connection),
+                "cohorts": {dimension: funnel_cohorts(connection, dimension)
+                            for dimension in ("acquisition_month", "source", "campaign", "owner")}}
     finally:
         connection.close()
 
@@ -236,7 +263,7 @@ def trend(points: list[dict], label: str, fmt: str) -> alt.LayerChart:
 require_password()
 # The cache key changes when a new synthetic schema is required. Existing
 # Streamlit Cloud processes can retain a pre-upgrade generated database.
-database = demo_database("v2.1-control-plane")
+database = demo_database("v2.2-intelligence-lab")
 case = load_case(database)
 kpis, quality = case["summary"]["metrics"], case["summary"]["measurement_health"]
 
@@ -247,7 +274,7 @@ st.caption("Acquisition → CRM → cash → access → renewal for a fictional 
 
 tabs = st.tabs(["Morning brief", "Which number is right?", "Acquisition", "Email & links", "Funnel & content",
                 "Diagnostics", "Experiment", "Automation & renewals", "Data quality", "Ask your data",
-                "Operations console"])
+                "Operations console", "Growth lab"])
 
 with tabs[0]:
     brief = case["brief"]
@@ -577,6 +604,10 @@ with tabs[7]:
     cols[3].metric("Canceled", renewals["canceled"])
     if renewals["issues"]:
         st.dataframe(pd.DataFrame(renewals["issues"]), hide_index=True, width="stretch")
+        with st.expander("Suggested renewal actions"):
+            st.caption(case["renewal_proposals"]["caveat"])
+            st.dataframe(pd.DataFrame(case["renewal_proposals"]["proposals"]),
+                         hide_index=True, width="stretch")
 
 with tabs[8]:
     st.subheader("Can we trust the numbers?")
@@ -680,7 +711,8 @@ with tabs[10]:
     revenue = decision["revenue_truth"]
     pipeline = decision["pipeline"]
     health = decision["crm_health"]
-    ops_tabs = st.tabs(["Decision center", "Customer 360", "Incident trace", "Quality queue"])
+    ops_tabs = st.tabs(["Decision center", "Customer 360", "Incident trace", "Quality queue",
+                        "Sales copilot"])
 
     with ops_tabs[0]:
         cols = st.columns(4)
@@ -781,6 +813,112 @@ with tabs[10]:
                 st.caption(f"Showing the first {len(queue['results'])} matching issues.")
         else:
             st.success("No open issues for this rule.")
+
+    with ops_tabs[4]:
+        st.caption("Keyless classification of synthetic conversation fixtures. Labels require explicit text "
+                   "evidence; ambiguous phrases remain unknown. Raw transcripts stay in the local store.")
+        person_key = st.text_input("Synthetic prospect key", value="c-000789", key="sales-person")
+        connection = connect_readonly(database)
+        try:
+            assistant = sales_copilot(connection, person_key.strip()) if person_key else None
+        finally:
+            connection.close()
+        if assistant is None:
+            st.info("No person with that key in this scenario.")
+        else:
+            if assistant["labels"]:
+                st.markdown("#### Explicitly observed conversation signals")
+                labels = assistant["labels"]
+                evidence = assistant["evidence"]
+                st.dataframe(pd.DataFrame([{"signal": field, "label": value,
+                                            "evidence": evidence[field]["quote"]
+                                            if evidence and evidence[field] else "—"}
+                                           for field, value in labels.items()]),
+                             hide_index=True, width="stretch")
+            else:
+                st.info("No classified synthetic conversation for this person.")
+            st.markdown("#### Similar closed-won cases")
+            if assistant["similar_won_cases"]:
+                st.dataframe(pd.DataFrame(assistant["similar_won_cases"]), hide_index=True, width="stretch")
+            else:
+                st.caption("No sufficiently similar won-case evidence.")
+            st.caption(assistant["recommendation"])
+
+with tabs[11]:
+    st.subheader("Growth lab")
+    st.caption("Observed cohort and customer economics, plus transparent planning arithmetic. All source data is "
+               "synthetic; scenario results are assumptions, not forecasts.")
+    growth = load_growth_snapshot(database)
+    lab_tabs = st.tabs(["Cohorts", "Customer economics", "Scenario", "Trust & classification"])
+    with lab_tabs[0]:
+        dimension = st.selectbox("Group by", ("acquisition_month", "source", "campaign", "owner"),
+                                 key="cohort-dimension")
+        cohort = growth["cohorts"][dimension]
+        st.caption(f"Cohort basis: {cohort['cohort_basis']}. Customers and net cash remain assigned to the "
+                   "person's acquisition cohort.")
+        st.dataframe(pd.DataFrame(cohort["rows"]), hide_index=True, width="stretch")
+    with lab_tabs[1]:
+        economics = growth["economics"]
+        cols = st.columns(4)
+        cols[0].metric("Paid acquisition CAC", usd(economics["paid_cac_minor"]))
+        cols[1].metric("Observed net cash / customer", usd(economics["observed_net_cash_per_customer_minor"]))
+        cols[2].metric("Contracted subscription ARR", usd(economics["contracted_arr_minor"]))
+        cols[3].metric("Observed renewal rate", pct(economics["observed_renewal_rate"]))
+        st.caption(economics["caveat"])
+        st.caption("Unavailable without longer account and cost history: " +
+                   ", ".join(economics["unsupported_metrics"]))
+    with lab_tabs[2]:
+        cols = st.columns(4)
+        spend = cols[0].number_input("Spend ($)", min_value=0, max_value=1_000_000,
+                                     value=10_000, step=1_000, key="scenario-spend")
+        cpl = cols[1].number_input("Cost per lead ($)", min_value=1, max_value=100_000,
+                                   value=100, step=10, key="scenario-cpl")
+        mql_rate = cols[2].slider("Lead → MQL", 0.0, 1.0, .30, .01, key="scenario-mql")
+        qualification_rate = cols[3].slider("MQL → qualified", 0.0, 1.0, .50, .01,
+                                             key="scenario-qualified")
+        cols = st.columns(4)
+        win_rate = cols[0].slider("Qualified → won", 0.0, 1.0, .20, .01, key="scenario-win")
+        deal_value = cols[1].number_input("Average deal ($)", min_value=0, max_value=1_000_000,
+                                          value=5_000, step=500, key="scenario-deal")
+        collection = cols[2].slider("Collection share", 0.0, 1.0, .80, .01,
+                                     key="scenario-collection")
+        refund = cols[3].slider("Refund share", 0.0, 1.0, .05, .01, key="scenario-refund")
+        if collection + refund <= 1:
+            plan = scenario_plan(ScenarioInputs(
+                spend_minor=spend * 100, cost_per_lead_minor=cpl * 100,
+                mql_rate=mql_rate, qualification_rate=qualification_rate,
+                win_rate=win_rate, average_deal_minor=deal_value * 100,
+                collection_rate=collection, refund_rate=refund))
+            cols = st.columns(4)
+            cols[0].metric("Assumed leads", plan["expected_leads"])
+            cols[1].metric("Assumed qualified", plan["expected_qualified_opportunities"])
+            cols[2].metric("Pipeline created", usd(plan["pipeline_created_minor"]))
+            cols[3].metric("Net cash", usd(plan["net_collected_minor"]))
+            st.caption(plan["caveat"])
+        else:
+            st.warning("Collection share plus refund share must be at most 100%.")
+    with lab_tabs[3]:
+        trust = growth["trust"]
+        classifier = growth["classification"]
+        cols = st.columns(4)
+        cols[0].metric("Schema version", trust["schema_version"])
+        cols[1].metric("Foreign-key violations", trust["foreign_key_violations"])
+        cols[2].metric("Materialized marts", trust["materialized_marts"])
+        cols[3].metric("Classified conversations", classifier["conversations"])
+        st.caption(trust["note"])
+        st.dataframe(pd.DataFrame(trust["source_freshness"]), hide_index=True, width="stretch")
+        st.caption("Unavailable operational signals: " + ", ".join(trust["unavailable_signals"]))
+        st.caption("Marketing consent decisions in the synthetic fixture")
+        st.dataframe(pd.DataFrame(growth["communications"]["consent"]),
+                     hide_index=True, width="stretch")
+        st.caption("Ad conversion provider connected: no. Local queued intents: " +
+                   str(growth["conversions"]["queued"]) +
+                   "; now blocked by changed evidence: " +
+                   str(growth["conversions"]["queued_blocked_by_current_evidence"]) +
+                   ". Consent at purchase and now, plus settled cash, are required before queuing.")
+        st.caption("Email DNS verification and SMS provider delivery are unmeasured.")
+        with st.expander("Synthetic classification label counts"):
+            st.json(classifier["labels"])
 
 st.divider()
 st.caption("All business data shown here is synthetic. This public dashboard does not read live HubSpot, Stripe "
