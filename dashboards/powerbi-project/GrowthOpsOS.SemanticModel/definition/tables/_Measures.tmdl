@@ -259,6 +259,24 @@ table _Measures
 		lineageTag: 28f9dc0a-d6f7-5976-9eca-71c99f0c341a
 		displayFolder: 04 Revenue truth
 
+	/// Value at explicit deal qualification, across qualified deals. Snapshot by campaign; USD.
+	measure 'Qualified pipeline created' = DIVIDE(SUM(mart_qualified_pipeline[created_minor]), 100)
+		formatString: \$#,0
+		lineageTag: e6e6348b-ecd5-5e39-b660-e5ffc700abdb
+		displayFolder: 04 Revenue truth
+
+	/// Current open value of explicitly qualified deals. Snapshot by campaign; USD.
+	measure 'Open qualified pipeline' = DIVIDE(SUM(mart_qualified_pipeline[open_minor]), 100)
+		formatString: \$#,0
+		lineageTag: 878468fa-e2e0-5455-92e3-5a48b1dbb4fa
+		displayFolder: 04 Revenue truth
+
+	/// Deals with an explicit qualification decision; each deal counts once.
+	measure 'Qualified opportunities' = SUM(mart_qualified_pipeline[qualified_deals])
+		formatString: #,0
+		lineageTag: 13eab3b2-8673-5280-8bcd-f52cd9179150
+		displayFolder: 04 Revenue truth
+
 	/// Net cash the warehouse credits to each platform's campaigns.
 	measure 'Warehouse cash (paid platforms)' = DIVIDE(SUM(mart_platform_comparison[warehouse_net_cash_cents]), 100)
 		formatString: \$#,0
@@ -1530,7 +1548,28 @@ table _Measures
 		dataCategory: ImageUrl
 		displayFolder: Report UI
 
-	measure 'KPI SVG Booked (CRM, all time) | CRM booked caption | The CRM books @310' =
+	measure 'KPI SVG Qualified pipeline created | Qualified pipeline @310' =
+			VAR vValue = [Qualified pipeline created]
+			VAR vShown = IF(ISBLANK(vValue), "—", IF(ABS(vValue) >= 1000000, FORMAT(vValue / 1000000, "\$#,0.00") & "M", FORMAT(vValue, "\$#,0")))
+			VAR vCaptionRaw = ""
+			VAR vCaption = IF(LEN(vCaptionRaw) > 61, LEFT(vCaptionRaw, 59) & "…", vCaptionRaw)
+			VAR vTone = "#7d7d85"
+			VAR vArrow = ""
+			VAR vSvg =
+			    "<svg xmlns='http://www.w3.org/2000/svg' width='310' height='112' viewBox='0 0 310 112'>"
+			        & "<rect x='0' y='18' width='3' height='76' rx='1.5' fill='#3987e5'/>"
+			        & "<text x='16' y='28' font-family='Segoe UI' font-size='11' fill='#a6a6ad'>Qualified pipeline</text>"
+			        & "<text x='16' y='64' font-family='Segoe UI Light' font-size='30' fill='#f2f2f4'>" & vShown & "</text>"
+			        & ""
+			        & "<text x='16' y='90' font-family='Segoe UI' font-size='10' fill='" & vTone & "'>" & vArrow & vCaption & "</text>"
+			        & "</svg>"
+			RETURN
+			    "data:image/svg+xml;utf8," & SUBSTITUTE(SUBSTITUTE(vSvg, "%", "%25"), "#", "%23")
+		lineageTag: 75ad60d4-f81c-5632-abe9-927bc757ee7e
+		dataCategory: ImageUrl
+		displayFolder: Report UI
+
+	measure 'KPI SVG Booked (CRM, all time) | CRM booked caption | The CRM books @314' =
 			VAR vValue = [Booked (CRM, all time)]
 			VAR vShown = IF(ISBLANK(vValue), "—", IF(ABS(vValue) >= 1000000, FORMAT(vValue / 1000000, "\$#,0.00") & "M", FORMAT(vValue, "\$#,0")))
 			VAR vCaptionRaw = SUBSTITUTE(SUBSTITUTE(COALESCE([CRM booked caption], ""), "&", "&amp;"), "<", "&lt;")
@@ -1538,7 +1577,7 @@ table _Measures
 			VAR vTone = "#7d7d85"
 			VAR vArrow = ""
 			VAR vSvg =
-			    "<svg xmlns='http://www.w3.org/2000/svg' width='310' height='112' viewBox='0 0 310 112'>"
+			    "<svg xmlns='http://www.w3.org/2000/svg' width='314' height='112' viewBox='0 0 314 112'>"
 			        & "<rect x='0' y='18' width='3' height='76' rx='1.5' fill='#3987e5'/>"
 			        & "<text x='16' y='28' font-family='Segoe UI' font-size='11' fill='#a6a6ad'>The CRM books</text>"
 			        & "<text x='16' y='64' font-family='Segoe UI Light' font-size='30' fill='#f2f2f4'>" & vShown & "</text>"
@@ -1547,19 +1586,19 @@ table _Measures
 			        & "</svg>"
 			RETURN
 			    "data:image/svg+xml;utf8," & SUBSTITUTE(SUBSTITUTE(vSvg, "%", "%25"), "#", "%23")
-		lineageTag: f7ad9425-0448-5227-860c-d23ee053f220
+		lineageTag: f828ae7c-3ad7-5276-822d-a14e8ff0ea27
 		dataCategory: ImageUrl
 		displayFolder: Report UI
 
-	measure 'KPI SVG Net collected (all time) | Net collected caption | The bank collected (net) @314' =
+	measure 'KPI SVG Net collected (all time) | Net collected caption | The bank collected (net) @333' =
 			VAR vValue = [Net collected (all time)]
 			VAR vShown = IF(ISBLANK(vValue), "—", IF(ABS(vValue) >= 1000000, FORMAT(vValue / 1000000, "\$#,0.00") & "M", FORMAT(vValue, "\$#,0")))
 			VAR vCaptionRaw = SUBSTITUTE(SUBSTITUTE(COALESCE([Net collected caption], ""), "&", "&amp;"), "<", "&lt;")
-			VAR vCaption = IF(LEN(vCaptionRaw) > 61, LEFT(vCaptionRaw, 59) & "…", vCaptionRaw)
+			VAR vCaption = IF(LEN(vCaptionRaw) > 66, LEFT(vCaptionRaw, 64) & "…", vCaptionRaw)
 			VAR vTone = "#7d7d85"
 			VAR vArrow = ""
 			VAR vSvg =
-			    "<svg xmlns='http://www.w3.org/2000/svg' width='314' height='112' viewBox='0 0 314 112'>"
+			    "<svg xmlns='http://www.w3.org/2000/svg' width='333' height='112' viewBox='0 0 333 112'>"
 			        & "<rect x='0' y='18' width='3' height='76' rx='1.5' fill='#3987e5'/>"
 			        & "<text x='16' y='28' font-family='Segoe UI' font-size='11' fill='#a6a6ad'>The bank collected (net)</text>"
 			        & "<text x='16' y='64' font-family='Segoe UI Light' font-size='30' fill='#f2f2f4'>" & vShown & "</text>"
@@ -1568,28 +1607,7 @@ table _Measures
 			        & "</svg>"
 			RETURN
 			    "data:image/svg+xml;utf8," & SUBSTITUTE(SUBSTITUTE(vSvg, "%", "%25"), "#", "%23")
-		lineageTag: c8ce2a05-fa52-5d30-810e-df4bc11a6676
-		dataCategory: ImageUrl
-		displayFolder: Report UI
-
-	measure 'KPI SVG Warehouse ROAS | ROAS caption | Paid ROAS on net cash @333' =
-			VAR vValue = [Warehouse ROAS]
-			VAR vShown = IF(ISBLANK(vValue), "—", FORMAT(vValue, "0.00""x"""))
-			VAR vCaptionRaw = SUBSTITUTE(SUBSTITUTE(COALESCE([ROAS caption], ""), "&", "&amp;"), "<", "&lt;")
-			VAR vCaption = IF(LEN(vCaptionRaw) > 66, LEFT(vCaptionRaw, 64) & "…", vCaptionRaw)
-			VAR vTone = "#7d7d85"
-			VAR vArrow = ""
-			VAR vSvg =
-			    "<svg xmlns='http://www.w3.org/2000/svg' width='333' height='112' viewBox='0 0 333 112'>"
-			        & "<rect x='0' y='18' width='3' height='76' rx='1.5' fill='#3987e5'/>"
-			        & "<text x='16' y='28' font-family='Segoe UI' font-size='11' fill='#a6a6ad'>Paid ROAS on net cash</text>"
-			        & "<text x='16' y='64' font-family='Segoe UI Light' font-size='30' fill='#f2f2f4'>" & vShown & "</text>"
-			        & ""
-			        & "<text x='16' y='90' font-family='Segoe UI' font-size='10' fill='" & vTone & "'>" & vArrow & vCaption & "</text>"
-			        & "</svg>"
-			RETURN
-			    "data:image/svg+xml;utf8," & SUBSTITUTE(SUBSTITUTE(vSvg, "%", "%25"), "#", "%23")
-		lineageTag: 5296ebdf-12d9-570f-83a3-9f8cbc3e59c8
+		lineageTag: 3d759d63-5dbf-51f9-a22e-55a57a4d9f9e
 		dataCategory: ImageUrl
 		displayFolder: Report UI
 

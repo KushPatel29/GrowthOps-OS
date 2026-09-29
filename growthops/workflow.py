@@ -192,11 +192,26 @@ def process_payment(
             connection.execute(
                 """INSERT INTO processed_events
                    (event_id, event_type, payment_id, customer_id, payload_sha256, status,
-                    received_at, trace_id, payload_json)
-                   VALUES (?, ?, ?, ?, ?, 'received', ?, ?, ?)""",
+                    received_at, trace_id, payload_json, source, source_event_id,
+                    schema_version, entity_type, entity_id, correlation_id, idempotency_key)
+                   VALUES (?, ?, ?, ?, ?, 'received', ?, ?, ?,
+                           'growthops_internal', ?, '1', 'payment', ?, ?, ?)""",
                 (event.event_id, event.event_type, event.payment_id, event.customer_id, digest,
-                 clock.isoformat(), trace_id_for(event.event_id), event.model_dump_json()),
+                 clock.isoformat(), trace_id_for(event.event_id), event.model_dump_json(),
+                 event.event_id, event.payment_id, trace_id_for(event.event_id), event.event_id),
             )
+            for planned_step in STEPS_BY_TYPE[event.payment_type]:
+                if planned_step == "record_payment":
+                    continue
+                connection.execute(
+                    """INSERT INTO event_outbox
+                       (outbox_id, event_id, destination, action, idempotency_key, status)
+                       VALUES (?, ?, ?, ?, ?, 'pending')""",
+                    (f"{event.event_id}:{planned_step}", event.event_id,
+                     "hubspot" if planned_step == "update_crm" else
+                     "community" if planned_step == "grant_access" else "messaging",
+                     planned_step, f"{event.event_id}:{planned_step}:1"),
+                )
         connection.execute(
             """UPDATE processed_events SET status='processing', attempts=attempts+1,
                last_error=NULL, claimed_at=?, next_attempt_at=NULL WHERE event_id=?""",
@@ -246,6 +261,12 @@ def process_payment(
                 connection.execute(
                     "INSERT INTO workflow_steps VALUES (?, ?, ?)", (event.event_id, step, cursor.isoformat())
                 )
+                connection.execute(
+                    """UPDATE event_outbox SET status='delivered', attempts=?,
+                       last_error=NULL, next_attempt_at=NULL, delivered_at=?
+                       WHERE event_id=? AND action=?""",
+                    (attempt, cursor.isoformat(), event.event_id, step),
+                )
                 connection.commit()
             except Exception as exc:
                 connection.rollback()
@@ -274,10 +295,23 @@ def process_payment(
                    WHERE event_id=?""",
                 (str(exc), event.event_id),
             )
+            connection.execute(
+                """UPDATE event_outbox SET status='dead_letter', attempts=?,
+                   last_error=?, next_attempt_at=NULL
+                   WHERE event_id=? AND action=?""",
+                (attempt, str(exc), event.event_id, step),
+            )
         else:
+            next_at = (cursor + backoff(attempts)).isoformat()
             connection.execute(
                 "UPDATE processed_events SET status='failed', last_error=?, next_attempt_at=? WHERE event_id=?",
-                (str(exc), (cursor + backoff(attempts)).isoformat(), event.event_id),
+                (str(exc), next_at, event.event_id),
+            )
+            connection.execute(
+                """UPDATE event_outbox SET status='retry', attempts=?,
+                   last_error=?, next_attempt_at=?
+                   WHERE event_id=? AND action=?""",
+                (attempt, str(exc), next_at, event.event_id, step),
             )
     row = connection.execute(
         "SELECT status, attempts, last_error, next_attempt_at, trace_id FROM processed_events WHERE event_id=?",
@@ -390,4 +424,11 @@ def trace(connection: sqlite3.Connection, event_id: str) -> dict:
            FROM workflow_step_attempts WHERE event_id=? ORDER BY started_at, step_name, attempt""",
         (event_id,),
     ).fetchall()
-    return {**dict(event), "attempts_log": [dict(row) for row in steps]}
+    outbox = connection.execute(
+        """SELECT destination, action, idempotency_key, status, attempts,
+                  last_error, next_attempt_at, delivered_at
+           FROM event_outbox WHERE event_id=? ORDER BY action""",
+        (event_id,),
+    ).fetchall()
+    return {**dict(event), "attempts_log": [dict(row) for row in steps],
+            "outbox": [dict(row) for row in outbox]}

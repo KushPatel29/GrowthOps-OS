@@ -6,6 +6,7 @@ import argparse
 from pathlib import Path
 
 from growthops.campaign_links import audit_short_links
+from growthops.control_plane import crm_health, qualified_pipeline
 from growthops.db import connect
 from growthops.email_analytics import email_performance
 from growthops.experiments import analyze as experiment_analysis
@@ -160,6 +161,31 @@ def verify(sqlite_database: str, duckdb_database: str) -> None:
         for row in paid_efficiency(source, START, AS_OF)[:-1]:
             totals = tuple(int(value) for value in daily[row["segment"]])
             assert totals == tuple(row[f] for f in fields), f"paid efficiency daily {row['segment']}"
+
+        pipeline = qualified_pipeline(source)
+        dbt_pipeline = {
+            campaign: (int(deals), int(created), int(open_value), int(won))
+            for campaign, deals, created, open_value, won in warehouse.execute(
+                """select campaign_id, qualified_deals, created_minor, open_minor, won_minor
+                   from mart_qualified_pipeline where currency='USD'"""
+            ).fetchall()
+        }
+        for row in pipeline["by_campaign"]:
+            assert dbt_pipeline[row["campaign_id"]] == (
+                row["qualified_deals"], row["created_minor"],
+                row["open_minor"], row["won_minor"],
+            ), f"qualified pipeline {row['campaign_id']}"
+        assert len(dbt_pipeline) == len(pipeline["by_campaign"])
+
+        expected_health = {row["name"]: (row["passing"], row["eligible"])
+                           for row in crm_health(source)["components"]}
+        actual_health = {
+            name: (int(passing), int(eligible))
+            for name, passing, eligible in warehouse.execute(
+                "select component, passed_records, eligible from mart_crm_health_v21"
+            ).fetchall()
+        }
+        assert actual_health == expected_health, "CRM health component denominators differ"
     finally:
         warehouse.close()
         source.close()

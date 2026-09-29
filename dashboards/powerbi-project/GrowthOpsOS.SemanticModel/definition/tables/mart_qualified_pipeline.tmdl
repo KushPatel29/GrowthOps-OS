@@ -1,0 +1,72 @@
+table mart_qualified_pipeline
+	lineageTag: 52a8ba46-d603-526a-9453-be23f346dd12
+
+	column campaign_id
+		dataType: string
+		lineageTag: e478f9bd-516f-5040-9657-aeafd4a1ca77
+		summarizeBy: none
+		sourceColumn: campaign_id
+
+	column currency
+		dataType: string
+		lineageTag: a9823637-a263-55e8-abd7-7fd07e57c909
+		summarizeBy: none
+		sourceColumn: currency
+
+	column qualified_deals
+		dataType: int64
+		formatString: #,0
+		lineageTag: 252dc148-9e55-5f79-b935-1b3fbd3a0f64
+		summarizeBy: sum
+		sourceColumn: qualified_deals
+
+	column qualified_people
+		dataType: int64
+		formatString: #,0
+		lineageTag: fd4287a7-178f-5cf0-b160-6305a5bb026c
+		summarizeBy: sum
+		sourceColumn: qualified_people
+
+	column created_minor
+		dataType: int64
+		formatString: #,0
+		lineageTag: 2f8d3b00-3e2e-5c05-beed-ede79c65cb67
+		summarizeBy: sum
+		sourceColumn: created_minor
+
+	column open_minor
+		dataType: int64
+		formatString: #,0
+		lineageTag: 8e761076-7cc2-5d09-8780-fd24915d5e85
+		summarizeBy: sum
+		sourceColumn: open_minor
+
+	column won_minor
+		dataType: int64
+		formatString: #,0
+		lineageTag: 1b8f6f85-a98e-5272-9982-ce64e832ae5a
+		summarizeBy: sum
+		sourceColumn: won_minor
+
+	partition mart_qualified_pipeline = m
+		mode: import
+		source =
+				let
+				    Source = #table(type table [#"campaign_id" = nullable text, #"currency" = nullable text, #"qualified_deals" = nullable text, #"qualified_people" = nullable text, #"created_minor" = nullable text, #"open_minor" = nullable text, #"won_minor" = nullable text], {
+				        {"(unattributed)", "USD", "15", "13", "7650000", "480000", "4710000"},
+				        {"FB-Broad", "USD", "57", "52", "29280000", "0", "12510000"},
+				        {"direct", "USD", "36", "29", "21360000", "0", "9960000"},
+				        {"google_brand_search", "USD", "152", "131", "105900000", "480000", "55800000"},
+				        {"google_nonbrand_growth", "USD", "85", "77", "47970000", "480000", "21690000"},
+				        {"linkedin_ceo_abm", "USD", "113", "92", "102960000", "2490000", "61020000"},
+				        {"meta_broad_v17", "USD", "5", "5", "3480000", "480000", "1020000"},
+				        {"meta_prospecting_founder", "USD", "221", "188", "124530000", "990000", "53940000"},
+				        {"meta_retargeting_webinar", "USD", "118", "108", "65400000", "0", "28110000"},
+				        {"newsletter_weekly", "USD", "82", "72", "45780000", "1440000", "19770000"},
+				        {"partner_podcast", "USD", "35", "29", "22260000", "0", "13830000"},
+				        {"webinar_growth_os", "USD", "49", "44", "27330000", "480000", "15600000"},
+				        {"youtube_founder_guide", "USD", "109", "92", "64890000", "1500000", "34380000"}
+				    }),
+				    Typed = Table.TransformColumnTypes(Source, {{"campaign_id", type text}, {"currency", type text}, {"qualified_deals", Int64.Type}, {"qualified_people", Int64.Type}, {"created_minor", Int64.Type}, {"open_minor", Int64.Type}, {"won_minor", Int64.Type}})
+				in
+				    Typed

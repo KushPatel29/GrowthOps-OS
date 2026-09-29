@@ -10,8 +10,9 @@ bridges when configured; see `growthops/adapters.py`).
 |---|---|
 | `/health`, `/ready` | Open (probes) |
 | `POST /webhooks/payments` | Signed request (below) |
-| `/metrics/*`, `/metrics` (Prometheus), `/ops/*`, `/crm/*`, `/ask`, `/campaign-links`, `/docs`, `/openapi.json` | `X-API-Key: <key>` or `Authorization: Bearer <key>`: always in production, and in development whenever `GROWTHOPS_API_KEYS` is set |
+| `/metrics/*`, `/metrics` (Prometheus), `/ops/*`, `/crm/*`, `/v2/*`, `/ask`, `/campaign-links`, `/docs`, `/openapi.json` | `X-API-Key: <key>` or `Authorization: Bearer <key>`: always in production, and in development whenever `GROWTHOPS_API_KEYS` is set |
 | `POST /ops/events/{id}/replay` | API key plus `X-GrowthOps-Ops-Token` |
+| `POST /v2/ops/events/{id}/replay` | API key, `X-GrowthOps-Ops-Token`, `X-GrowthOps-Actor`, `Idempotency-Key`, and a JSON reason of 5–500 characters; action audited and duplicate key absorbed |
 
 Every response carries `X-Request-ID` (echoed from the request when supplied) and security headers. A 500
 returns `{"detail": "internal error", "request_id": ...}`; the traceback stays in the logs.
@@ -92,6 +93,30 @@ Accepts `campaign_id`, HTTPS `destination_url`, and snake-case `content`. Looks 
 | `POST /ops/events/{event_id}/replay` | Operator replay of a dead-lettered event; requires `X-GrowthOps-Ops-Token` matching `GROWTHOPS_OPS_TOKEN` (403 otherwise, and disabled when unset) |
 
 `GET /ops/customers/{customer_id}` also returns a `diagnosis` such as "Paid but no community access: replay evt-…".
+
+## v2.1 local control-plane endpoints
+
+All v2.1 analytics use the full deterministic synthetic scenario, USD minor units, and a fixed scenario
+as-of date. They are local demonstration contracts, not claims about the connected HubSpot test sample.
+
+| Endpoint | Contract |
+|---|---|
+| `GET /v2/decision-center` | One consistent snapshot: four revenue values, qualified pipeline, CRM health components, workflow health, evidence brief and five quality issues |
+| `GET /v2/metrics/revenue-truth` | Platform claims, qualified pipeline, CRM bookings and net collected cash as distinct values, with platform and CRM bridges |
+| `GET /v2/metrics/qualified-pipeline` | Explicitly qualified deal counts and created/open/won value by lead-creation campaign; unqualified count and USD scope |
+| `GET /v2/crm/health` | Passing and eligible records for four named components, equal-weight score and open issue count; marketing eligibility remains unknown |
+| `GET /v2/crm/marketing-contacts/audit` | Counts consent evidence, suppression, open opportunities, customers, duplicates and 180-day dormant review candidates; no marketing-status mutation |
+| `GET /v2/campaigns/qa` | Campaign registry validity plus short-link UTM defects and click exposure |
+| `POST /v2/instrumentation/validate` | Dry-run event-name, source, required-parameter, purchase-truth and campaign-taxonomy validation; no event ingestion or conversion export |
+| `GET /v2/quality/issues` | Paginated queue with `limit`, `offset`, `rule`, `severity`, `entity_type`, `state` filters and counts by rule for navigation |
+| `POST /v2/quality/issues/{id}/propose-repair` | Read-only dry-run diagnosis and evidence; never guesses or writes a missing value |
+| `GET /v2/registries/{kind}/versions` | Versioned campaign, lifecycle, instrumentation, expected 33-property portal schema and three expected workflow definitions; definitions are local desired state, not a live drift read-back |
+| `GET /v2/people/{person_key}/journey` | Pseudonymous identity evidence, touches, lifecycle, deals and payments |
+| `GET /v2/ops/customers/{person_key}` | Journey plus existing payment-to-access customer trace |
+| `GET /v2/ops/incidents?limit=20` | Pseudonymous failed/dead-letter workflow queue, ordered for investigation; 1–100 results and total count |
+| `GET /v2/ops/events/{event_id}` | Existing attempt trace plus envelope metadata and outbox delivery states |
+| `POST /v2/ops/events/{event_id}/replay` | Audited, idempotent dead-letter replay with the headers above |
+| `GET /v2/console` | Local four-view Decision Center, Customer 360, Incident Trace and Quality Queue; readable journey and workflow timelines with links from incidents to traces; unavailable in production until an identity-backed UI exists |
 
 ## Target endpoints (not implemented)
 

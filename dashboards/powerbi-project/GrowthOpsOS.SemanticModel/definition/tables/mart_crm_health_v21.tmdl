@@ -1,0 +1,36 @@
+table mart_crm_health_v21
+	lineageTag: eac85141-3150-5fa5-aa95-8da0023806f0
+
+	column component
+		dataType: string
+		lineageTag: d1fdbf4d-5433-598d-a66e-bdbf6d87d589
+		summarizeBy: none
+		sourceColumn: component
+
+	column passed_records
+		dataType: int64
+		formatString: #,0
+		lineageTag: 110b58e0-6b29-560a-bee2-966c4d3d12bf
+		summarizeBy: sum
+		sourceColumn: passed_records
+
+	column eligible
+		dataType: int64
+		formatString: #,0
+		lineageTag: ef179397-f415-59fe-a4cb-f6775078768c
+		summarizeBy: sum
+		sourceColumn: eligible
+
+	partition mart_crm_health_v21 = m
+		mode: import
+		source =
+				let
+				    Source = #table(type table [#"component" = nullable text, #"passed_records" = nullable text, #"eligible" = nullable text], {
+				        {"actionable_owner", "13697", "14269"},
+				        {"deal_campaign", "1333", "1354"},
+				        {"source_present", "14352", "14693"},
+				        {"unique_email", "14417", "14693"}
+				    }),
+				    Typed = Table.TransformColumnTypes(Source, {{"component", type text}, {"passed_records", Int64.Type}, {"eligible", Int64.Type}})
+				in
+				    Typed

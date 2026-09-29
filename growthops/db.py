@@ -217,6 +217,14 @@ CREATE TABLE IF NOT EXISTS access_entitlements (
 CREATE TABLE IF NOT EXISTS processed_events (
   event_id TEXT PRIMARY KEY,
   event_type TEXT NOT NULL,
+  source TEXT NOT NULL DEFAULT 'growthops_internal',
+  source_event_id TEXT,
+  schema_version TEXT NOT NULL DEFAULT '1',
+  entity_type TEXT,
+  entity_id TEXT,
+  correlation_id TEXT,
+  idempotency_key TEXT,
+  payload_ref TEXT,
   payment_id TEXT NOT NULL,
   customer_id TEXT NOT NULL,
   payload_sha256 TEXT NOT NULL,
@@ -294,6 +302,131 @@ MIGRATIONS: tuple[tuple[int, str], ...] = (
     # original local simulator. SQLite has no ADD COLUMN IF NOT EXISTS, so
     # _upgrade_legacy_columns performs the introspection before SCHEMA runs.
     (3, "SELECT 1;"),
+    (4, """
+    CREATE TABLE IF NOT EXISTS persons (
+      person_key TEXT PRIMARY KEY,
+      created_at TEXT NOT NULL,
+      resolution_version TEXT NOT NULL,
+      status TEXT NOT NULL CHECK (status IN ('resolved','ambiguous','unresolved'))
+    );
+    CREATE TABLE IF NOT EXISTS identity_links (
+      source_system TEXT NOT NULL,
+      id_type TEXT NOT NULL,
+      id_hash TEXT NOT NULL,
+      person_key TEXT NOT NULL REFERENCES persons(person_key),
+      first_seen_at TEXT NOT NULL,
+      last_seen_at TEXT NOT NULL,
+      evidence_event_id TEXT,
+      confidence TEXT NOT NULL CHECK (confidence IN ('verified','observed')),
+      rule_version TEXT NOT NULL,
+      state TEXT NOT NULL CHECK (state IN ('active','ambiguous')),
+      PRIMARY KEY (source_system, id_type, id_hash)
+    );
+    CREATE INDEX IF NOT EXISTS idx_identity_person ON identity_links(person_key);
+    CREATE TABLE IF NOT EXISTS lifecycle_transitions (
+      transition_id TEXT PRIMARY KEY,
+      person_key TEXT NOT NULL REFERENCES persons(person_key),
+      from_stage TEXT,
+      to_stage TEXT NOT NULL,
+      occurred_at TEXT NOT NULL,
+      source_event_id TEXT NOT NULL UNIQUE,
+      policy_version TEXT NOT NULL,
+      owner_id TEXT,
+      campaign_id TEXT
+    );
+    CREATE INDEX IF NOT EXISTS idx_transition_person_time
+      ON lifecycle_transitions(person_key, occurred_at);
+    CREATE TABLE IF NOT EXISTS deal_qualification (
+      decision_id TEXT PRIMARY KEY,
+      deal_id TEXT NOT NULL REFERENCES deals(deal_id),
+      qualified_at TEXT NOT NULL,
+      status TEXT NOT NULL CHECK (status IN ('qualified','unqualified')),
+      reason TEXT NOT NULL,
+      amount_minor INTEGER NOT NULL CHECK (amount_minor >= 0),
+      currency TEXT NOT NULL,
+      source_event_id TEXT NOT NULL UNIQUE,
+      policy_version TEXT NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_qualification_deal_time
+      ON deal_qualification(deal_id, qualified_at);
+    CREATE TABLE IF NOT EXISTS quality_issues (
+      issue_id TEXT PRIMARY KEY,
+      rule_id TEXT NOT NULL,
+      entity_type TEXT NOT NULL,
+      entity_id TEXT NOT NULL,
+      severity TEXT NOT NULL CHECK (severity IN ('info','warning','critical')),
+      first_seen_at TEXT NOT NULL,
+      last_seen_at TEXT NOT NULL,
+      state TEXT NOT NULL CHECK (state IN ('open','resolved')),
+      evidence_ref TEXT NOT NULL,
+      UNIQUE (rule_id, entity_type, entity_id)
+    );
+    CREATE INDEX IF NOT EXISTS idx_quality_state
+      ON quality_issues(state, severity, rule_id);
+    CREATE TABLE IF NOT EXISTS registry_versions (
+      registry_type TEXT NOT NULL,
+      version TEXT NOT NULL,
+      definition_json TEXT NOT NULL,
+      owner TEXT NOT NULL,
+      approved_at TEXT NOT NULL,
+      effective_at TEXT NOT NULL,
+      PRIMARY KEY (registry_type, version)
+    );
+    CREATE TABLE IF NOT EXISTS consent_ledger (
+      consent_id TEXT PRIMARY KEY,
+      person_key TEXT NOT NULL REFERENCES persons(person_key),
+      channel TEXT NOT NULL,
+      status TEXT NOT NULL CHECK (status IN ('granted','denied','unknown','revoked')),
+      source TEXT NOT NULL,
+      recorded_at TEXT NOT NULL,
+      evidence_ref TEXT NOT NULL
+    );
+    CREATE TABLE IF NOT EXISTS operator_actions (
+      action_id TEXT PRIMARY KEY,
+      actor_id TEXT NOT NULL,
+      action_type TEXT NOT NULL,
+      target_type TEXT NOT NULL,
+      target_id TEXT NOT NULL,
+      reason TEXT NOT NULL,
+      requested_at TEXT NOT NULL,
+      result TEXT NOT NULL
+    );
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_event_source_id
+      ON processed_events(source, source_event_id)
+      WHERE source_event_id IS NOT NULL;
+    UPDATE processed_events SET source_event_id=event_id,
+      correlation_id=COALESCE(correlation_id, trace_id),
+      idempotency_key=COALESCE(idempotency_key, event_id)
+      WHERE source_event_id IS NULL;
+    """),
+    (5, """
+    CREATE TABLE IF NOT EXISTS event_outbox (
+      outbox_id TEXT PRIMARY KEY,
+      event_id TEXT NOT NULL REFERENCES processed_events(event_id),
+      destination TEXT NOT NULL,
+      action TEXT NOT NULL,
+      idempotency_key TEXT NOT NULL UNIQUE,
+      status TEXT NOT NULL CHECK (status IN ('pending','delivered','retry','dead_letter')),
+      attempts INTEGER NOT NULL DEFAULT 0,
+      last_error TEXT,
+      next_attempt_at TEXT,
+      delivered_at TEXT
+    );
+    CREATE INDEX IF NOT EXISTS idx_outbox_status ON event_outbox(status, next_attempt_at);
+    CREATE TABLE IF NOT EXISTS engagement_events (
+      event_id TEXT PRIMARY KEY,
+      person_key TEXT REFERENCES persons(person_key),
+      anonymous_id_hash TEXT,
+      platform TEXT NOT NULL,
+      content_id TEXT,
+      event_type TEXT NOT NULL,
+      occurred_at TEXT NOT NULL,
+      duration_seconds INTEGER NOT NULL DEFAULT 0 CHECK (duration_seconds >= 0),
+      source_event_id TEXT NOT NULL UNIQUE
+    );
+    CREATE INDEX IF NOT EXISTS idx_engagement_person_time
+      ON engagement_events(person_key, occurred_at);
+    """),
 )
 SCHEMA_VERSION = MIGRATIONS[-1][0]
 
@@ -319,6 +452,14 @@ LEGACY_COLUMNS: dict[str, dict[str, str]] = {
         "product_id": "TEXT",
     },
     "processed_events": {
+        "source": "TEXT NOT NULL DEFAULT 'growthops_internal'",
+        "source_event_id": "TEXT",
+        "schema_version": "TEXT NOT NULL DEFAULT '1'",
+        "entity_type": "TEXT",
+        "entity_id": "TEXT",
+        "correlation_id": "TEXT",
+        "idempotency_key": "TEXT",
+        "payload_ref": "TEXT",
         "trace_id": "TEXT",
         "payload_json": "TEXT",
         "next_attempt_at": "TEXT",

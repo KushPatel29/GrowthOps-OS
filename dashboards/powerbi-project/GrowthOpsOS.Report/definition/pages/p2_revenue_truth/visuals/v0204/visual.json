@@ -30,7 +30,7 @@
                       "Entity": "_Measures"
                     }
                   },
-                  "Property": "KPI SVG Warehouse ROAS | ROAS caption | Paid ROAS on net cash @333"
+                  "Property": "KPI SVG Net collected (all time) | Net collected caption | The bank collected (net) @333"
                 }
               }
             },
@@ -52,7 +52,7 @@
             "altText": {
               "expr": {
                 "Literal": {
-                  "Value": "'KPI tile. Warehouse ROAS: net cash per dollar of paid spend.'"
+                  "Value": "'KPI tile. Net collected (all time): payments minus refunds.'"
                 }
               }
             }

@@ -34,6 +34,8 @@ TABLES: dict[str, dict] = {
     "mart_migration_summary": {"kind": "snapshot"},
     "mart_link_hygiene": {"kind": "snapshot"},
     "mart_renewal_risk": {"kind": "snapshot"},
+    "mart_qualified_pipeline": {"kind": "snapshot"},
+    "mart_crm_health_v21": {"kind": "snapshot"},
     "quality_scorecard": {"kind": "snapshot"},
     "incident_register": {"kind": "reference"},
 }
@@ -71,6 +73,7 @@ RELATIONSHIPS: list[tuple[str, str, str, str]] = [
     ("fact_cash_attribution", "campaign_id", "dim_campaign", "campaign_id"),
     ("mart_email_performance", "sent_date", "dim_date", "date"),
     ("mart_campaign_performance", "campaign_id", "dim_campaign", "campaign_id"),
+    ("mart_qualified_pipeline", "campaign_id", "dim_campaign", "campaign_id"),
 ]
 
 # Tables intentionally left unrelated, with the reason.
@@ -86,6 +89,7 @@ UNRELATED: dict[str, str] = {
     "mart_migration_summary": "One row: the legacy-to-new CRM migration audit.",
     "mart_link_hygiene": "One row per short link, checked against the campaign registry.",
     "mart_renewal_risk": "Subscriptions due from the as-of date forward; the calendar ends at the as-of date.",
+    "mart_crm_health_v21": "One row per CRM health component, with its own denominator.",
     "quality_scorecard": "One row per data-quality check, from the single-row health and migration marts.",
     "incident_register": "One row per logged incident; read as a list, not filtered by the calendar.",
 }
@@ -209,6 +213,12 @@ MEASURES: list[tuple[str, str, str, str, str]] = [
      "The bridge value at each step, totals included."),
     ("Platform-reported value", _usd("mart_platform_comparison", "reported_value_cents"), MONEY,
      "04 Revenue truth", "Conversion value the ad platforms claim for themselves."),
+    ("Qualified pipeline created", _usd("mart_qualified_pipeline", "created_minor"), MONEY,
+     "04 Revenue truth", "Value at explicit deal qualification, across qualified deals. Snapshot by campaign; USD."),
+    ("Open qualified pipeline", _usd("mart_qualified_pipeline", "open_minor"), MONEY,
+     "04 Revenue truth", "Current open value of explicitly qualified deals. Snapshot by campaign; USD."),
+    ("Qualified opportunities", "SUM(mart_qualified_pipeline[qualified_deals])", COUNT,
+     "04 Revenue truth", "Deals with an explicit qualification decision; each deal counts once."),
     ("Warehouse cash (paid platforms)", _usd("mart_platform_comparison", "warehouse_net_cash_cents"), MONEY,
      "04 Revenue truth", "Net cash the warehouse credits to each platform's campaigns."),
     ("Platform spend", _usd("mart_platform_comparison", "spend_cents"), MONEY, "04 Revenue truth",

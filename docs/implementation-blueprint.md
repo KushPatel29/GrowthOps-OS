@@ -1,6 +1,6 @@
 # GrowthOps OS implementation blueprint
 
-Status: **design contract; much of it is now implemented.** `growthops/` runs the operational system on
+Status: **historical broad design contract.** The narrower [v2.1 engineering specification](growthops-os-v2.1-engineering-spec.md) is the current implementation plan. `growthops/` runs the operational system on
 SQLite (WAL, migrations, backups) with provider adapters, a worker, alerts and the API; `warehouse/dbt/`
 implements the DuckDB dbt DAG; deployment is in `compose.yaml` and the [runbook](production-runbook.md). The
 39-table target schema and the BigQuery/PostgreSQL warehouse below remain targets for a larger business. The
@@ -130,4 +130,4 @@ versioned JSON evidence object produced by deterministic queries. A human-author
 4. **Lifecycle automation:** provider adapters, retries, DLQ, entitlement and renewal flows, operations console. Exit: duplicate webhook causes zero duplicate side effects; partial failure resumes safely.
 5. **AI and scale:** grounded narrative, transcript classifier, RAG and evals, larger synthetic dataset, deployment. Exit: zero unsupported claims in the evaluation suite.
 
-The next code increment should implement dbt-style staging and marts against the local dataset, with the existing payment-level attribution module as a reconciliation reference.
+The dbt staging and marts described here are implemented in `warehouse/dbt/`; subsequent work follows the v2.1 engineering specification.

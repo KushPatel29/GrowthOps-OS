@@ -122,12 +122,12 @@ PAGES: list[dict] = [
                 tile("[Platform-reported value]", "Card. Platform-reported value: the conversion value "
                      "Meta, Google and LinkedIn claim.", subtitle="[Platform claim caption]",
                      label="Ad platforms claim"),
+                tile("[Qualified pipeline created]", "Card. Qualified pipeline created: deal value at "
+                     "an explicit qualification decision.", label="Qualified pipeline"),
                 tile("[Booked (CRM, all time)]", "Card. Booked (CRM, all time): closed-won deal value in "
                      "the CRM.", subtitle="[CRM booked caption]", label="The CRM books"),
                 tile("[Net collected (all time)]", "Card. Net collected (all time): payments minus "
                      "refunds.", subtitle="[Net collected caption]", label="The bank collected (net)"),
-                tile("[Warehouse ROAS]", "Card. Warehouse ROAS: net cash per dollar of paid spend.",
-                     subtitle="[ROAS caption]", label="Paid ROAS on net cash"),
             ),
             {"type": "waterfall", "x": "mart_revenue_bridge[step_label]", "y": ["[Bridge movement]"],
              "sort": ("mart_revenue_bridge[step_label]", "Ascending"),

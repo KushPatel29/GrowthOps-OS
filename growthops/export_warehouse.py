@@ -14,6 +14,8 @@ TABLES = (
     "experiments", "experiment_variants", "experiment_exposures",
     "subscriptions", "renewal_attempts", "platform_conversions", "products", "incidents",
     "email_campaigns", "short_links", "short_link_clicks",
+    "persons", "identity_links", "lifecycle_transitions", "deal_qualification",
+    "quality_issues", "engagement_events",
 )
 
 

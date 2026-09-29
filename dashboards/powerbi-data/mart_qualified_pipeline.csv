@@ -1,0 +1,14 @@
+﻿campaign_id,currency,qualified_deals,qualified_people,created_minor,open_minor,won_minor
+(unattributed),USD,15,13,7650000,480000,4710000
+FB-Broad,USD,57,52,29280000,0,12510000
+direct,USD,36,29,21360000,0,9960000
+google_brand_search,USD,152,131,105900000,480000,55800000
+google_nonbrand_growth,USD,85,77,47970000,480000,21690000
+linkedin_ceo_abm,USD,113,92,102960000,2490000,61020000
+meta_broad_v17,USD,5,5,3480000,480000,1020000
+meta_prospecting_founder,USD,221,188,124530000,990000,53940000
+meta_retargeting_webinar,USD,118,108,65400000,0,28110000
+newsletter_weekly,USD,82,72,45780000,1440000,19770000
+partner_podcast,USD,35,29,22260000,0,13830000
+webinar_growth_os,USD,49,44,27330000,480000,15600000
+youtube_founder_guide,USD,109,92,64890000,1500000,34380000

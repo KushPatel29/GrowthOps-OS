@@ -24,6 +24,7 @@ MARTS = (
     "mart_content_performance", "mart_measurement_health", "mart_migration_summary",
     "mart_experiment_variants", "mart_renewal_risk", "mart_revenue_bridge", "mart_platform_comparison",
     "mart_paid_efficiency_daily", "mart_email_performance", "mart_link_hygiene",
+    "mart_qualified_pipeline", "mart_crm_health_v21",
 )
 ORDER_BY = {
     "mart_growth_daily": "day",
@@ -37,6 +38,8 @@ ORDER_BY = {
     "mart_paid_efficiency_daily": "day, campaign_id",
     "mart_email_performance": "sent_date, email_id",
     "mart_link_hygiene": "link_id",
+    "mart_qualified_pipeline": "campaign_id, currency",
+    "mart_crm_health_v21": "component",
 }
 # Marts that need a readable label or an ordering key for a report axis. The added
 # columns go last, so every column the Excel workbook addresses by letter stays put.
@@ -111,6 +114,18 @@ EXTRAS = {
             UNION ALL SELECT 7, 'Migration', 'Owner kept', round(owner_match_rate, 4), 0.98 FROM m
             UNION ALL SELECT 8, 'Migration', 'Source kept', round(source_match_rate, 4), 0.98 FROM m
             UNION ALL SELECT 9, 'Migration', 'Stage kept', round(stage_match_rate, 4), 0.98 FROM m
+            UNION ALL SELECT 10, 'CRM v2.1', 'Actionable owner',
+                   round(passed_records / nullif(eligible, 0), 4), 0.98
+                   FROM mart_crm_health_v21 WHERE component='actionable_owner'
+            UNION ALL SELECT 11, 'CRM v2.1', 'Source present',
+                   round(passed_records / nullif(eligible, 0), 4), 0.95
+                   FROM mart_crm_health_v21 WHERE component='source_present'
+            UNION ALL SELECT 12, 'CRM v2.1', 'Unique email candidate',
+                   round(passed_records / nullif(eligible, 0), 4), 0.99
+                   FROM mart_crm_health_v21 WHERE component='unique_email'
+            UNION ALL SELECT 13, 'CRM v2.1', 'Deal campaign',
+                   round(passed_records / nullif(eligible, 0), 4), 0.95
+                   FROM mart_crm_health_v21 WHERE component='deal_campaign'
         ) ORDER BY check_order""",
     "incident_register": """
         SELECT incident_id, kind, CAST(substr(starts_at, 1, 10) AS DATE) AS started_on,

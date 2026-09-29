@@ -30,7 +30,7 @@
                       "Entity": "_Measures"
                     }
                   },
-                  "Property": "KPI SVG Booked (CRM, all time) | CRM booked caption | The CRM books @310"
+                  "Property": "KPI SVG Qualified pipeline created | Qualified pipeline @310"
                 }
               }
             },
@@ -52,7 +52,7 @@
             "altText": {
               "expr": {
                 "Literal": {
-                  "Value": "'KPI tile. Booked (CRM, all time): closed-won deal value in the CRM.'"
+                  "Value": "'KPI tile. Qualified pipeline created: deal value at an explicit qualification decision.'"
                 }
               }
             }

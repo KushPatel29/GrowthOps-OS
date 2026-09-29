@@ -3,10 +3,10 @@
 **Marketing measurement, revenue reconciliation and lifecycle automation for a creator-led B2B business.**
 
 [![GrowthOps checks](https://github.com/KushPatel29/GrowthOps-OS/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/KushPatel29/GrowthOps-OS/actions/workflows/ci.yml)
-[![tests](https://img.shields.io/badge/tests-558%20passing-brightgreen)](tests)
+[![tests](https://img.shields.io/badge/tests-566%20passing-brightgreen)](tests)
 [![guardrail eval](https://img.shields.io/badge/guardrail%20eval-30%2F30-brightgreen)](evals/narrative_guardrail_cases.json)
 
-[**Live dashboard**](https://growthops-os.streamlit.app/) · [Power BI and Excel](docs/power-bi-handoff.md) · [Case study](docs/case-study.md) · [Metric catalog](docs/metric-catalog.md) · [API](docs/api-contracts.md)
+[**Live dashboard**](https://growthops-os.streamlit.app/) · [Power BI and Excel](docs/power-bi-handoff.md) · [Case study](docs/case-study.md) · [Metric catalog](docs/metric-catalog.md) · [API](docs/api-contracts.md) · [v2.1 specification](docs/growthops-os-v2.1-engineering-spec.md) · [HubSpot v2.1 change plan](docs/hubspot-v21-change-plan.md)
 
 ScaleLab is a fictional coaching and education company that moved from a legacy CRM six months ago. Since
 then nobody trusts the numbers: Meta, Google, LinkedIn, the CRM and the payment processor each report a
@@ -53,7 +53,7 @@ if it ever stops doing so.
 | Experimentation that optimizes cash, not vanity conversion | [`experiments.py`](growthops/experiments.py) |
 | Content-to-pipeline analysis (views vs buyers) | Content section, `mart_content_performance` |
 | SQL modelling and analytics engineering: dbt staging → intermediate → marts with data tests | [`warehouse/dbt`](warehouse/dbt), verified against the Python reference in CI |
-| BI delivery: a 7-page Power BI report (211 described measures, SVG KPI tiles, a filter panel, a written summary computed in DAX) generated from a spec and verified in Desktop, and an Excel workbook driven by one window control with a campaign scorecard and 14 zero-difference audit checks; both read the same governed snapshot and agree to the cent | [Power BI and Excel](docs/power-bi-handoff.md), [`growthops/bi`](growthops/bi), [`export_excel.py`](growthops/export_excel.py), [measure reference](docs/power-bi-measures.md) |
+| BI delivery: a 7-page Power BI report (214 described measures, SVG KPI tiles, a filter panel, a written summary computed in DAX) generated from a spec and verified in Desktop for the earlier baseline, and an Excel workbook driven by one window control with a campaign scorecard and 14 zero-difference audit checks; both read the same governed snapshot and agree to the cent | [Power BI and Excel](docs/power-bi-handoff.md), [`growthops/bi`](growthops/bi), [`export_excel.py`](growthops/export_excel.py), [measure reference](docs/power-bi-measures.md) |
 | Lifecycle automation: payment → CRM → access, idempotency, retries, dead letters, operator replay | [`workflow.py`](growthops/workflow.py), [`api.py`](growthops/api.py) |
 | Keyless, local AI: ask-your-data answers from governed metrics or cited definitions using BM25, with local MiniLM added when its verified model is preloaded. It reads the period, ad platform, campaign and measure a question names ("what did a lead cost on Google last month", "Meta vs Google CPL between July and August", "refund rate since the start of June", "spend in Q2", "compare net cash in July and August"), refuses untracked platforms, impossible dates and periods the data does not cover, says so when an answer cannot be cut by the period asked for, offers themed suggested questions and follow-ups, and is held to a 152-question contract that checks the details it read, the answer it chose and, for every period and platform answer, that the figure it states equals the mart, with zero wrong answers; no language model, no API key | [`ask_data.py`](growthops/ask_data.py), [`retrieval.py`](growthops/retrieval.py), [`evals/ask_questions.json`](evals/ask_questions.json) |
 | Evidence-bound narrative: a validator rejects invented numbers, dates or causal claims in any draft; 30-case eval set | [`narrator.py`](growthops/narrator.py), [`evals/`](evals/narrative_guardrail_cases.json) |
@@ -137,12 +137,16 @@ python -m growthops.hubspot_portal apply                            # build + ve
 python -m growthops.ask_data --eval                                # question contract, keyword + hybrid
 python -m growthops.ask_data "What does a lead cost on Google?"    # ask from the command line
 python -m growthops.worker --once                                  # retries, alerts, daily update
-python -m uvicorn growthops.api:app --reload                       # API + /dashboard
+python -m uvicorn growthops.api:app --reload                       # API + /dashboard + /v2/console
 ```
 
 Useful endpoints: `/metrics/brief`, `/metrics/daily-update`, `/metrics/paid-efficiency`, `/metrics/email`,
 `/metrics/link-hygiene`, `/crm/hubspot/audit`, `/metrics/revenue-truth`, `/metrics/anomalies`, `/metrics/narrative`,
-`/ask?q=`, `/ask/suggestions`, `/ops/workflows`, `/ops/paid-without-access`, `/ops/events/{id}`, `/ready`, `/metrics` (Prometheus).
+`/ask?q=`, `/ask/suggestions`, `/ops/workflows`, `/ops/paid-without-access`, `/ops/events/{id}`,
+`/v2/console`, `/v2/decision-center`, `/v2/crm/health`, `/v2/crm/marketing-contacts/audit`,
+`/v2/campaigns/qa`, `/v2/instrumentation/validate`, `/v2/quality/issues`,
+`/v2/metrics/qualified-pipeline`, `/v2/ops/incidents`, `/v2/ops/customers/{person_key}`,
+`/v2/ops/events/{event_id}`, `/ready`, `/metrics` (Prometheus).
 Production: `cp .env.example .env`, fill in the secrets, then `docker compose up -d` (see the
 [runbook](docs/production-runbook.md)). Local embeddings need `pip install -e ".[rag]"`; without them ask-your-data
 runs keyword-only and says so.
@@ -166,6 +170,7 @@ runs keyword-only and says so.
   Attribution is descriptive, not incremental.
 
 **Data provenance:** every person, transaction and campaign is synthetic. No real company's
-data or systems are used. The HubSpot and webhook adapters are tested against a fake HTTP transport; no
-provider account (HubSpot, Stripe, ad platforms, community platform) is connected.
+data or systems are used. A HubSpot developer test account holds a deterministic synthetic sample and is
+documented in [the portal build](docs/hubspot-portal.md). The runtime HubSpot and webhook adapters are
+tested against a fake HTTP transport; no live Stripe, ad-platform or community provider is connected.
 Current state and limits: [PROJECT_STATUS.md](PROJECT_STATUS.md).

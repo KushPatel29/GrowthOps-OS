@@ -8,3 +8,7 @@
 7,Migration,Owner kept,0.9526,0.98
 8,Migration,Source kept,0.9222,0.98
 9,Migration,Stage kept,0.9871,0.98
+10,CRM v2.1,Actionable owner,0.9599,0.98
+11,CRM v2.1,Source present,0.9768,0.95
+12,CRM v2.1,Unique email candidate,0.9812,0.99
+13,CRM v2.1,Deal campaign,0.9845,0.95

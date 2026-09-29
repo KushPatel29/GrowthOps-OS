@@ -1,6 +1,76 @@
 version: 2
 
 models:
+  - name: stg_persons
+    description: One pseudonymous person per canonical GrowthOps key.
+    columns:
+      - name: person_key
+        data_tests: [unique, not_null]
+  - name: stg_identity_links
+    description: Hashed external identifiers with evidence and confidence.
+    columns:
+      - name: person_key
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_persons')
+                field: person_key
+  - name: stg_lifecycle_transitions
+    description: Accepted stage history sourced from immutable lifecycle events.
+    columns:
+      - name: transition_id
+        data_tests: [unique, not_null]
+      - name: person_key
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('stg_persons')
+                field: person_key
+  - name: stg_deal_qualification
+    description: Explicit synthetic rep decisions, separate from meeting attendance.
+    columns:
+      - name: decision_id
+        data_tests: [unique, not_null]
+      - name: deal_id
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('stg_deals')
+                field: deal_id
+      - name: status
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [qualified, unqualified]
+  - name: stg_quality_issues
+    columns:
+      - name: issue_id
+        data_tests: [unique, not_null]
+  - name: stg_engagement_events
+    columns:
+      - name: event_id
+        data_tests: [unique, not_null]
+  - name: int_person_resolution
+    columns:
+      - name: person_key
+        data_tests: [unique, not_null]
+  - name: int_qualified_pipeline
+    columns:
+      - name: deal_id
+        data_tests: [unique, not_null]
+  - name: mart_qualified_pipeline
+    description: Qualified pipeline created, open and won at campaign and currency grain.
+    columns:
+      - name: campaign_id
+        data_tests: [not_null]
+      - name: currency
+        data_tests: [not_null]
+  - name: mart_crm_health_v21
+    description: Passing and eligible denominators for four transparent CRM health components.
+    columns:
+      - name: component
+        data_tests: [unique, not_null]
   - name: stg_campaigns
     description: Normalized synthetic campaign registry, retaining invalid names for audit.
     columns:

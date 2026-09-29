@@ -30,7 +30,7 @@
                       "Entity": "_Measures"
                     }
                   },
-                  "Property": "KPI SVG Net collected (all time) | Net collected caption | The bank collected (net) @314"
+                  "Property": "KPI SVG Booked (CRM, all time) | CRM booked caption | The CRM books @314"
                 }
               }
             },
@@ -52,7 +52,7 @@
             "altText": {
               "expr": {
                 "Literal": {
-                  "Value": "'KPI tile. Net collected (all time): payments minus refunds.'"
+                  "Value": "'KPI tile. Booked (CRM, all time): closed-won deal value in the CRM.'"
                 }
               }
             }

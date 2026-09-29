@@ -677,6 +677,9 @@ def seed(database: str, *, seed_value: int = 29, scale: float = 1.0) -> dict[str
     generator.owned_channels(seed_value)
     generator.write(connection)
     _replay(connection, generator)
+    from growthops.control_plane import seed_overlay
+
+    seed_overlay(connection)
     counts = {table: connection.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0]
               for table in reversed(TABLES)}
     connection.close()

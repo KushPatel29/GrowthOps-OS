@@ -12,6 +12,11 @@ All timestamps are UTC. A report must show its time range, cohort basis, data-as
 | Closed won | Distinct deal first entering closed-won | Booked outcome, not cash |
 | Win rate | Closed-won sales deals / (closed-won + closed-lost sales deals) | Excludes self-serve community add-on deals, which exist only when won |
 | Open pipeline | Sum of amount on deals still open at the data cut-off | Not revenue; excluded from bookings and cash |
+| Qualified opportunities (v2.1) | Distinct deals with an explicit accepted qualification decision | Synthetic rep-assessment fixture; one decision per deal, never inferred from a booked call |
+| Qualified pipeline created (v2.1) | Sum deal amount at first accepted qualification | Deal grain, USD cents, all-time synthetic snapshot; separate from booked revenue and cash |
+| Open qualified pipeline (v2.1) | Sum current amount of qualified deals whose current stage is open | As-of snapshot, not a cash or closed-won metric |
+| Qualified people (v2.1) | Distinct resolved person keys attached to qualified deals | One person may have more than one qualified deal |
+| CRM health component (v2.1) | Passing eligible records / eligible records for the named rule | Actionable owner, source present, unique email candidate, and deal campaign each expose a denominator; the displayed score weights them equally |
 | Customer | Distinct person with a successful payment and valid product entitlement | Local workflow uses payment plus access state |
 | Spend | Sum paid-media daily spend | Local slice is campaign/day; excludes agency fee |
 | Gross collected | Sum successful captured payment amounts | Payment event date, gross of refunds |
@@ -60,4 +65,4 @@ Use one row per net payment allocation and preserve unassigned cash. First touch
 
 ## Metric governance
 
-Every published measure has one definition here and one implementation in `growthops/report.py`, `growthops/reconciliation.py` or `growthops/workflow.py`; the SQL marts and dbt models re-implement the table-level measures and are verified against the Python reference in CI (`python -m growthops.verify_dbt`). Change detection (`growthops/diagnostics.py`) uses rolling 7-day windows against the prior 56 days, a minimum practical effect (3 percentage points for rates, 10% for volumes) and an exact shift-share decomposition. The local simulator has no source-freshness monitoring or quality-based suppression yet.
+Every published measure has one definition here and one implementation in the Python reference; the SQL marts and dbt models re-implement the table-level measures and are verified against that reference in CI (`python -m growthops.verify_dbt`). Change detection (`growthops/diagnostics.py`) uses rolling 7-day windows against the prior 56 days, a minimum practical effect (3 percentage points for rates, 10% for volumes) and an exact shift-share decomposition. The local simulator monitors source freshness and exposes quality issues; automated suppression of untrusted metrics is not yet implemented. The v2.1 qualified pipeline is a synthetic decision fixture and an all-time snapshot. A live integration needs actual rep decisions, cohort policy and FX policy before period or cross-currency comparisons.

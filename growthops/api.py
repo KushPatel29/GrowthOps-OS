@@ -10,7 +10,7 @@ import sqlite3
 import time
 import uuid
 from contextlib import asynccontextmanager
-from datetime import date, timedelta
+from datetime import UTC, date, datetime, timedelta
 from importlib.resources import files
 from typing import Literal
 
@@ -22,7 +22,7 @@ from fastapi.responses import (
     PlainTextResponse,
     RedirectResponse,
 )
-from pydantic import ValidationError
+from pydantic import BaseModel, Field, ValidationError
 
 from growthops.adapters import build_adapters
 from growthops.ai_brief import generate as ai_brief
@@ -35,6 +35,20 @@ from growthops.brief import daily_series, period_brief
 from growthops.brief import findings as brief_findings
 from growthops.campaign_links import LinkRequest, audit_short_links, build_link
 from growthops.config import get_settings
+from growthops.control_plane import (
+    campaign_qa,
+    decision_center,
+    marketing_contact_audit,
+    person_journey,
+    qualified_pipeline,
+    quality_queue,
+    registry_versions,
+    repair_proposal,
+    validate_instrumentation_event,
+)
+from growthops.control_plane import (
+    crm_health as control_crm_health,
+)
 from growthops.db import SCHEMA_VERSION, connect, initialize, schema_version
 from growthops.diagnostics import detect, incident_recall
 from growthops.email_analytics import (
@@ -78,10 +92,21 @@ from growthops.workflow import health as workflow_health
 from growthops.workflow import trace as workflow_trace
 
 logger = logging.getLogger("growthops.api")
-PROTECTED_PREFIXES = ("/metrics", "/ops", "/crm", "/campaign-links", "/ask", "/docs", "/redoc", "/openapi.json")
+PROTECTED_PREFIXES = ("/metrics", "/ops", "/crm", "/campaign-links", "/ask", "/v2",
+                      "/docs", "/redoc", "/openapi.json")
 SECURITY_HEADERS = {"X-Content-Type-Options": "nosniff", "X-Frame-Options": "DENY",
                     "Referrer-Policy": "no-referrer", "Cache-Control": "no-store"}
 MAX_WEBHOOK_BYTES = 128 * 1024
+
+
+class ReplayRequest(BaseModel):
+    reason: str = Field(min_length=5, max_length=500)
+
+
+class InstrumentationCheck(BaseModel):
+    event_name: str = Field(min_length=1, max_length=64)
+    source: str = Field(min_length=1, max_length=64)
+    parameters: dict = Field(default_factory=dict)
 
 
 def database_path() -> str:
@@ -150,10 +175,10 @@ async def request_context(request: Request, call_next):
         request_id.reset(token)
 
 
-def _read(function, *args):
+def _read(function, *args, **kwargs):
     connection = connect(database_path())
     try:
-        return function(connection, *args)
+        return function(connection, *args, **kwargs)
     finally:
         connection.close()
 
@@ -525,5 +550,199 @@ def replay_event(event_id: str, x_growthops_ops_token: str = Header(default=""))
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except ValueError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
+    finally:
+        connection.close()
+
+
+@app.get("/v2/people/{person_key}/journey")
+def growthops_journey(person_key: str) -> dict:
+    """Pseudonymous acquisition-to-cash journey with identity evidence."""
+    result = _read(person_journey, person_key)
+    if result is None:
+        raise HTTPException(status_code=404, detail="person not found")
+    return result
+
+
+@app.get("/v2/crm/health")
+def growthops_crm_health() -> dict:
+    return _read(control_crm_health)
+
+
+@app.get("/v2/crm/marketing-contacts/audit")
+def growthops_marketing_contact_audit() -> dict:
+    return _read(marketing_contact_audit)
+
+
+@app.get("/v2/campaigns/qa")
+def growthops_campaign_qa() -> dict:
+    return _read(campaign_qa)
+
+
+@app.post("/v2/instrumentation/validate")
+def growthops_instrumentation_check(body: InstrumentationCheck) -> dict:
+    return _read(validate_instrumentation_event, body.event_name, body.source, body.parameters)
+
+
+@app.get("/v2/quality/issues")
+def growthops_quality_issues(limit: int = Query(default=100, ge=1, le=200),
+                             offset: int = Query(default=0, ge=0),
+                             rule: str | None = None,
+                             severity: Literal["info", "warning", "critical"] | None = None,
+                             entity_type: Literal["contact", "deal"] | None = None,
+                             state: Literal["open", "resolved"] = "open") -> dict:
+    return _read(quality_queue, limit=limit, offset=offset, rule=rule,
+                 severity=severity, entity_type=entity_type, state=state)
+
+
+@app.post("/v2/quality/issues/{issue_id}/propose-repair")
+def growthops_repair_proposal(issue_id: str) -> dict:
+    result = _read(repair_proposal, issue_id)
+    if result is None:
+        raise HTTPException(status_code=404, detail="issue not found")
+    return result
+
+
+@app.get("/v2/registries/{kind}/versions")
+def growthops_registry_versions(kind: Literal["campaign", "lifecycle", "instrumentation",
+                                            "property", "workflow"]) -> dict:
+    return {"kind": kind, "versions": _read(registry_versions, kind)}
+
+
+@app.get("/v2/decision-center")
+def growthops_decision_center() -> dict:
+    return _read(decision_center)
+
+
+@app.get("/v2/console", response_class=HTMLResponse, include_in_schema=False)
+def growthops_console() -> HTMLResponse:
+    if get_settings().production:
+        raise HTTPException(status_code=404, detail="not available in production")
+    html = files("growthops").joinpath("static/console.html").read_text(encoding="utf-8")
+    return HTMLResponse(html)
+
+
+@app.get("/v2/metrics/qualified-pipeline")
+def growthops_qualified_pipeline() -> dict:
+    return _read(qualified_pipeline)
+
+
+@app.get("/v2/metrics/revenue-truth")
+def growthops_revenue_truth() -> dict:
+    """Separate platform claims, qualified pipeline, bookings and net cash."""
+    summary = _read(four_numbers)
+    pipeline = _read(qualified_pipeline)
+    return {
+        "scope": pipeline["scope"],
+        "as_of": pipeline["as_of"],
+        "currency": pipeline["currency"],
+        "platform_reported_total_minor": summary["platform_reported_total_cents"],
+        "qualified_pipeline_created_minor": pipeline["created_minor"],
+        "qualified_pipeline_open_minor": pipeline["open_minor"],
+        "crm_booked_minor": summary["crm_booked_cents"],
+        "net_collected_minor": summary["net_collected_cents"],
+        "platform_bridge": _read(platform_bridge),
+        "crm_bridge": _read(crm_bridge),
+    }
+
+
+@app.get("/v2/ops/customers/{person_key}")
+def growthops_customer_360(person_key: str) -> dict:
+    journey = _read(person_journey, person_key)
+    if journey is None:
+        raise HTTPException(status_code=404, detail="person not found")
+    operations = customer_lookup(person_key)
+    return {"journey": journey, "operations": operations}
+
+
+@app.get("/v2/ops/incidents")
+def growthops_incidents(limit: int = Query(default=20, ge=1, le=100)) -> dict:
+    """A discoverable, pseudonymous queue of workflow failures for the local console."""
+    def read(connection: sqlite3.Connection) -> dict:
+        total = connection.execute(
+            "SELECT COUNT(*) FROM processed_events WHERE status IN ('failed','dead_letter')"
+        ).fetchone()[0]
+        rows = connection.execute(
+            """SELECT e.event_id, e.customer_id AS person_key, e.status, e.attempts,
+                      e.received_at, e.next_attempt_at, e.last_error,
+                      p.amount_cents, a.status AS access_status
+               FROM processed_events e
+               LEFT JOIN payments p ON p.payment_id=e.payment_id
+               LEFT JOIN access_entitlements a ON a.customer_id=e.customer_id
+               WHERE e.status IN ('failed','dead_letter')
+               ORDER BY CASE e.status WHEN 'dead_letter' THEN 0 ELSE 1 END,
+                        e.received_at DESC, e.event_id
+               LIMIT ?""",
+            (limit,),
+        ).fetchall()
+        return {"scope": "full_synthetic_scenario", "total": total,
+                "results": [dict(row) for row in rows]}
+
+    return _read(read)
+
+
+@app.get("/v2/ops/events/{event_id}")
+def growthops_event_trace(event_id: str) -> dict:
+    trace = event_trace(event_id)
+    metadata = _read(
+        lambda c: c.execute(
+            """SELECT source, source_event_id, schema_version, correlation_id,
+                      idempotency_key, payload_ref FROM processed_events WHERE event_id=?""",
+            (event_id,),
+        ).fetchone(),
+    )
+    return {**trace, "envelope": dict(metadata) if metadata else None}
+
+
+@app.post("/v2/ops/events/{event_id}/replay")
+def growthops_replay_event(
+    event_id: str,
+    body: ReplayRequest,
+    x_growthops_ops_token: str = Header(default=""),
+    x_growthops_actor: str = Header(default="local_operator"),
+    idempotency_key: str = Header(default=""),
+) -> dict:
+    """Audited local replay. Hosted use requires an identity-backed actor and RBAC."""
+    expected = get_settings().ops_token
+    if not expected or not hmac.compare_digest(expected, x_growthops_ops_token):
+        raise HTTPException(status_code=403, detail="ops role required")
+    if not re.fullmatch(r"[A-Za-z0-9_.:-]{8,128}", idempotency_key):
+        raise HTTPException(status_code=422, detail="valid Idempotency-Key header required")
+    if not re.fullmatch(r"[A-Za-z0-9_.:-]{1,64}", x_growthops_actor):
+        raise HTTPException(status_code=422, detail="invalid actor")
+    action_id = "oa_" + hashlib.sha256(
+        f"{event_id}:{idempotency_key}".encode()
+    ).hexdigest()[:24]
+    connection = connect(database_path())
+    try:
+        initialize(connection)
+        prior = connection.execute(
+            "SELECT result FROM operator_actions WHERE action_id=?", (action_id,)
+        ).fetchone()
+        if prior:
+            return {"action_id": action_id, "duplicate": True, "result": prior["result"]}
+        connection.execute(
+            """INSERT INTO operator_actions VALUES (?, ?, 'replay', 'event', ?, ?, ?, 'requested')""",
+            (action_id, x_growthops_actor, event_id, body.reason,
+             datetime.now(UTC).isoformat()),
+        )
+        try:
+            result = replay_dead_letter(
+                connection, event_id, adapters=build_adapters(get_settings())
+            )
+        except LookupError as exc:
+            connection.execute(
+                "UPDATE operator_actions SET result='not_found' WHERE action_id=?", (action_id,)
+            )
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
+        except ValueError as exc:
+            connection.execute(
+                "UPDATE operator_actions SET result='rejected' WHERE action_id=?", (action_id,)
+            )
+            raise HTTPException(status_code=409, detail=str(exc)) from exc
+        connection.execute(
+            "UPDATE operator_actions SET result=? WHERE action_id=?",
+            (result["status"], action_id),
+        )
+        return {"action_id": action_id, "duplicate": False, "result": result}
     finally:
         connection.close()

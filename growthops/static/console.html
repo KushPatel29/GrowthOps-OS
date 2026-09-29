@@ -1,0 +1,281 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Decision Center · GrowthOps OS</title>
+  <style>
+    :root { color-scheme: light; --ink:#122a39; --muted:#587080; --line:#d8e2e6;
+      --paper:#f5f7f5; --white:#fff; --teal:#087d76; --pale:#e4f3ef; --amber:#a26313; }
+    * { box-sizing:border-box; }
+    body { margin:0; background:var(--paper); color:var(--ink); font:15px/1.5 "Segoe UI",Arial,sans-serif; }
+    button,input { font:inherit; }
+    button { cursor:pointer; }
+    :focus-visible { outline:3px solid var(--teal); outline-offset:2px; }
+    header { background:#102d3d; color:white; padding:22px clamp(18px,5vw,72px); }
+    header .inner { max-width:1400px; margin:auto; display:flex; justify-content:space-between; gap:20px; align-items:center; }
+    .brand { font-size:21px; font-weight:750; letter-spacing:-.02em; }
+    .brand span { color:#5de1c5; }
+    .mode { color:#b7ccd4; font-size:13px; }
+    main { max-width:1400px; margin:auto; padding:26px clamp(18px,5vw,72px) 70px; }
+    h1 { font-size:clamp(30px,4vw,48px); line-height:1.08; margin:0 0 8px; letter-spacing:-.04em; }
+    h2 { font-size:21px; margin:0 0 15px; letter-spacing:-.02em; }
+    h3 { font-size:16px; margin:0 0 8px; }
+    p { margin:0 0 10px; }
+    .sub { color:var(--muted); max-width:780px; }
+    .tabs { display:flex; flex-wrap:wrap; gap:8px; margin:25px 0; }
+    .tabs button { border:1px solid var(--line); background:white; padding:10px 16px; border-radius:7px; color:var(--ink); font-weight:650; }
+    .tabs button.active { background:var(--teal); border-color:var(--teal); color:white; }
+    .view[hidden] { display:none; }
+    .grid4 { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px; }
+    .grid2 { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px; margin-top:16px; }
+    .card { background:var(--white); border:1px solid var(--line); border-radius:10px; padding:20px; min-width:0; }
+    .eyebrow { font-size:11px; color:var(--muted); text-transform:uppercase; font-weight:750; letter-spacing:.12em; }
+    .value { font-size:clamp(23px,2.7vw,34px); font-weight:760; letter-spacing:-.04em; margin:6px 0; }
+    .note { color:var(--muted); font-size:13px; }
+    .status { display:inline-block; border-radius:20px; background:var(--pale); color:#07584f; padding:4px 9px; font-size:12px; font-weight:700; }
+    .warn { background:#fff1d8; color:#8e5210; }
+    ul { margin:0; padding-left:20px; }
+    li { margin:10px 0; }
+    .line { display:flex; justify-content:space-between; gap:18px; border-top:1px solid var(--line); padding:9px 0; }
+    .line:first-child { border-top:0; }
+    form { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:17px; }
+    input { border:1px solid #afc3ca; background:white; border-radius:6px; padding:10px 12px; min-width:260px; flex:1; }
+    form button,.small-button { border:0; background:var(--teal); color:white; border-radius:6px; padding:10px 16px; font-weight:700; }
+    .small-button { padding:6px 10px; font-size:12px; }
+    .filters { display:flex; flex-wrap:wrap; gap:7px; margin:14px 0; }
+    .filters button { border:1px solid var(--line); background:white; color:var(--ink); border-radius:20px;
+      padding:6px 10px; font-size:12px; font-weight:650; }
+    .filters button[aria-pressed="true"] { background:var(--teal); color:white; border-color:var(--teal); }
+    .stack { display:grid; gap:10px; }
+    .record { border:1px solid var(--line); border-radius:7px; padding:13px; background:white; }
+    .record strong { word-break:break-word; }
+    .record h3 { margin-top:0; }
+    .record .note:last-child { margin-bottom:0; }
+    .section-heading { margin:22px 0 9px; }
+    .pill { display:inline-block; background:#edf2f3; color:#264758; border-radius:20px; padding:3px 9px;
+      font-size:12px; font-weight:700; text-transform:capitalize; }
+    .pill.failed,.pill.dead_letter { background:#fce8e4; color:#922f27; }
+    .pill.completed,.pill.succeeded,.pill.active { background:var(--pale); color:#07584f; }
+    .timeline { border-left:2px solid #bddbd4; margin:5px 0 0 7px; padding-left:18px; }
+    .timeline .record { margin-bottom:9px; }
+    .mono { font-family:Consolas,monospace; font-size:12px; overflow-wrap:anywhere; }
+    pre { margin:0; white-space:pre-wrap; overflow-wrap:anywhere; font:12px/1.5 Consolas,monospace; }
+    .error { color:#a53d36; font-weight:650; }
+    @media(max-width:900px) { .grid4,.grid2 { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+    @media(max-width:600px) { .grid4,.grid2 { grid-template-columns:1fr; } header .inner { display:block; } }
+  </style>
+</head>
+<body>
+<header><div class="inner"><div class="brand">GrowthOps <span>OS</span> / Decision Center</div><div class="mode">Synthetic scenario · local operator console</div></div></header>
+<main>
+  <h1>From signal to action.</h1>
+  <p class="sub">One view of acquisition, qualified pipeline, cash, CRM quality and workflow recovery. Values are separate accounting concepts; issues link to evidence.</p>
+  <nav class="tabs" aria-label="Console views">
+    <button type="button" data-view="decision" class="active">Decision Center</button>
+    <button type="button" data-view="customer">Customer 360</button>
+    <button type="button" data-view="incident">Incident Trace</button>
+    <button type="button" data-view="quality">Quality Queue</button>
+  </nav>
+  <section id="decision" class="view" aria-label="Decision Center">
+    <div id="numbers" class="grid4"></div>
+    <div class="grid2">
+      <div class="card"><h2>What needs attention</h2><div id="brief"></div></div>
+      <div class="card"><h2>Trust and operations</h2><div id="trust"></div></div>
+    </div>
+  </section>
+  <section id="customer" class="view" hidden aria-label="Customer 360">
+    <div class="card"><h2>Customer 360</h2><p class="note">Search by opaque person key. The journey includes identity evidence, touches, lifecycle, deals and payments.</p>
+      <form id="customer-form"><input name="person" required placeholder="Person key, e.g. c-000001" aria-label="Person key"><button>Open journey</button></form><div id="customer-result" aria-live="polite"></div></div>
+  </section>
+  <section id="incident" class="view" hidden aria-label="Incident Trace">
+    <div class="card"><h2>Incident Trace</h2><p class="note">Find a workflow event by ID to inspect attempts, outbox state and correlation metadata. Replay requires a separate privileged API call.</p>
+      <form id="incident-form"><input name="event" required placeholder="Event ID, e.g. evt-pay-..." aria-label="Event ID"><button>Open trace</button></form>
+      <div id="incident-result" aria-live="polite"></div><h3 class="section-heading">Open workflow incidents</h3><div id="incident-queue" class="stack"></div></div>
+  </section>
+  <section id="quality" class="view" hidden aria-label="Quality Queue">
+    <div class="card"><h2>Open CRM issues</h2><p class="note">Repair proposals are read-only. Missing source, ownership and identity values require verified evidence before a CRM change.</p><div id="issue-filters" class="filters" aria-label="Filter issues by rule"></div><p id="issue-count" class="note"></p><div id="issues" class="stack"></div></div>
+  </section>
+</main>
+<script>
+  const $ = id => document.getElementById(id);
+  const fmt = n => new Intl.NumberFormat('en-US',{style:'currency',currency:'USD',maximumFractionDigits:0}).format(n/100);
+  const num = n => new Intl.NumberFormat('en-US').format(n);
+  async function json(url, options) {
+    const response = await fetch(url, options);
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.detail || `HTTP ${response.status}`);
+    return data;
+  }
+  function node(tag, cls, value) {
+    const el = document.createElement(tag);
+    if (cls) el.className = cls;
+    if (value !== undefined) el.textContent = value;
+    return el;
+  }
+  function line(parent, label, value) {
+    const row = node('div','line'); row.append(node('span','',label),node('strong','',value)); parent.append(row);
+  }
+  const label = value => String(value || 'Unknown').replaceAll('_',' ');
+  const date = value => value ? new Date(value).toLocaleString('en-US',{dateStyle:'medium',timeStyle:'short',timeZone:'UTC'})+' UTC' : 'Not recorded';
+  function pill(value) { return node('span',`pill ${value || ''}`,label(value)); }
+  function section(parent, title, rows, render) {
+    parent.append(node('h3','section-heading',title));
+    const list=node('div','stack');
+    if (!rows.length) list.append(node('p','note','No records in this synthetic journey.'));
+    rows.forEach(row=>list.append(render(row)));
+    parent.append(list);
+  }
+  function showError(parent, error) { parent.replaceChildren(node('p','error',error.message)); }
+  document.querySelectorAll('[data-view]').forEach(button => button.addEventListener('click', () => {
+    document.querySelectorAll('[data-view]').forEach(b => b.classList.toggle('active',b===button));
+    document.querySelectorAll('.view').forEach(v => v.hidden = v.id !== button.dataset.view);
+  }));
+  async function loadDecision() {
+    const data = await json('/v2/decision-center');
+    const truth = data.revenue_truth;
+    const cards = [
+      ['Ad platforms claim',truth.platform_reported_minor,'Platform-reported conversion value'],
+      ['Qualified pipeline',truth.qualified_pipeline_created_minor,'Explicit deal qualification value'],
+      ['CRM booked',truth.crm_booked_minor,'Closed-won deal value'],
+      ['Net collected',truth.net_collected_minor,'Payments less refunds']
+    ];
+    $('numbers').replaceChildren(...cards.map(([title,value,detail]) => {
+      const c = node('div','card'); c.append(node('div','eyebrow',title),node('div','value',fmt(value)),node('div','note',detail)); return c;
+    }));
+    const brief = $('brief'); brief.replaceChildren();
+    data.brief.findings.forEach(item => { const block=node('div','record'); block.append(node('strong','',item.finding),node('p','note',item.action)); brief.append(block); });
+    const trust = $('trust'); trust.replaceChildren();
+    line(trust,'CRM health',`${data.crm_health.score}% across ${data.crm_health.components.length} named components`);
+    line(trust,'Open quality issues',num(data.crm_health.open_issues));
+    line(trust,'Marketing eligibility unknown',num(data.marketing_contacts.counts.eligibility_unknown));
+    line(trust,'Dormant review candidates',num(data.marketing_contacts.counts.dormant_candidates));
+    line(trust,'Short links with UTM defects',`${data.campaign_qa.short_links_with_issues} / ${data.campaign_qa.short_links}`);
+    line(trust,'Qualified opportunities',num(data.pipeline.qualified_deals));
+    line(trust,'Open qualified pipeline',fmt(data.pipeline.open_minor));
+    line(trust,'Workflow completed',`${num(data.operations.completed)} / ${num(data.operations.events)}`);
+    line(trust,'Dead-letter events',num(data.operations.dead_letter));
+    line(trust,'Bridge residuals',`${fmt(truth.platform_bridge_residual_minor)} / ${fmt(truth.crm_bridge_residual_minor)}`);
+    trust.append(node('p','note',`As of ${data.data_as_of} · Metric version ${data.metric_version} · ${data.scope.replaceAll('_',' ')}`));
+  }
+  async function loadIssues(rule='') {
+    const data=await json(`/v2/quality/issues?limit=10${rule ? `&rule=${encodeURIComponent(rule)}` : ''}`);
+    const target=$('issues'); target.replaceChildren();
+    $('issue-count').textContent=`Showing ${data.results.length} of ${num(data.total)} ${rule ? rule.replaceAll('_',' ') : 'open'} issues.`;
+    const filters=$('issue-filters'); filters.replaceChildren();
+    [['',data.rule_counts.reduce((sum,item)=>sum+item.count,0)],
+      ...data.rule_counts.map(item=>[item.rule_id,item.count])].forEach(([id,count])=>{
+      const button=node('button','',`${id ? id.replaceAll('_',' ') : 'All'} · ${num(count)}`);
+      button.type='button'; button.setAttribute('aria-pressed',String(id===rule));
+      button.addEventListener('click',()=>loadIssues(id).catch(error=>showError(target,error)));
+      filters.append(button);
+    });
+    data.results.forEach(issue => {
+      const card=node('div','record'); card.append(node('strong','',`${issue.rule_id.replaceAll('_',' ')} · ${issue.entity_id}`));
+      card.append(node('p','note',`${issue.severity} · ${issue.entity_type} · ${issue.issue_id}`));
+      const button=node('button','small-button','Show repair proposal');
+      const detail=node('div','');
+      button.addEventListener('click',async()=>{ try { const p=await json(`/v2/quality/issues/${encodeURIComponent(issue.issue_id)}/propose-repair`,{method:'POST'});
+        detail.replaceChildren(node('p','',p.instruction),node('p','note',`Action: ${p.proposed_action}; automatic apply: no`),node('pre','',JSON.stringify(p.evidence,null,2)));
+      } catch(error) { showError(detail,error); } });
+      card.append(button,detail); target.append(card);
+    });
+  }
+  async function openCustomer(key) {
+    const target=$('customer-result');
+    try {
+      const data=await json(`/v2/ops/customers/${encodeURIComponent(key)}`);
+      const j=data.journey, o=data.operations; target.replaceChildren();
+      const grid=node('div','grid2'), identity=node('div','record'), state=node('div','record');
+      identity.append(node('h3','','Person and CRM'));
+      line(identity,'Person key',j.person_key); line(identity,'CRM stage',label(j.crm.current_stage));
+      line(identity,'Acquisition source',j.crm.original_source || 'Unknown');
+      line(identity,'Owner',j.crm.owner_id || 'Unassigned');
+      line(identity,'Identity evidence',`${j.identity_evidence.length} links · ${j.identity_version}`);
+      state.append(node('h3','','Payment and access'));
+      const collected=j.payments.reduce((sum,p)=>sum+p.amount_cents,0);
+      line(state,'Recorded payments',`${j.payments.length} · ${fmt(collected)}`);
+      line(state,'Community access',label(o.access?.status || 'not granted'));
+      line(state,'Last access grant',date(o.access?.granted_at));
+      state.append(node('p',o.diagnosis==='OK'?'note':'error',o.diagnosis));
+      grid.append(identity,state); target.append(grid);
+      section(target,'Lifecycle history',j.lifecycle,row=>{
+        const card=node('div','record');
+        card.append(node('strong','',`${label(row.from_stage || 'Start')} → ${label(row.to_stage)}`),
+          node('p','note',`${date(row.occurred_at)} · Source ${row.source_event_id}`)); return card;
+      });
+      section(target,'Deals and qualification',j.deals,row=>{
+        const card=node('div','record');
+        card.append(node('strong','',`${row.deal_id} · ${fmt(row.amount_cents)}`),
+          node('p','note',`Stage: ${label(row.stage)} · Qualification: ${label(row.qualification_status)}`));
+        if(row.qualified_at) card.append(node('p','note',`Qualified ${date(row.qualified_at)} · synthetic assessment`));
+        return card;
+      });
+      section(target,'Payments',j.payments,row=>{
+        const card=node('div','record');
+        card.append(node('strong','',`${fmt(row.amount_cents)} · ${label(row.payment_type)}`),
+          node('p','note',`${row.payment_id} · ${date(row.paid_at)}`)); return card;
+      });
+      section(target,'Recent automation',o.workflows.slice(0,10),row=>{
+        const card=node('div','record'); card.append(node('strong','',row.event_id),pill(row.status),
+          node('p','note',`${row.attempts} attempt(s)${row.last_error ? ` · ${row.last_error}` : ''}`));
+        const button=node('button','small-button','Inspect trace'); button.type='button';
+        button.addEventListener('click',()=>{ document.querySelector('[data-view="incident"]').click();
+          $('incident-form').querySelector('input').value=row.event_id; openIncident(row.event_id); });
+        card.append(button); return card;
+      });
+      section(target,'Acquisition touches',j.touches.slice(0,12),row=>{
+        const card=node('div','record'); card.append(node('strong','',label(row.touch_type)),
+          node('p','note',`${row.campaign_id || 'Unattributed'} · ${date(row.occurred_at)}`)); return card;
+      });
+      if(j.touches_truncated) target.append(node('p','note','Touch history is limited to the first 100 records.'));
+    } catch(error) { showError(target,error); }
+  }
+  async function openIncident(id) {
+    const target=$('incident-result');
+    try {
+      const d=await json(`/v2/ops/events/${encodeURIComponent(id)}`); target.replaceChildren();
+      const card=node('div','record'); card.append(node('h3','',d.event_id),pill(d.status));
+      line(card,'Person key',d.customer_id); line(card,'Payment ID',d.payment_id);
+      line(card,'Correlation ID',d.envelope?.correlation_id || d.trace_id);
+      line(card,'Source',d.envelope?.source || 'Unknown');
+      line(card,'Received',date(d.received_at)); line(card,'Completed',date(d.completed_at));
+      line(card,'Attempts / deliveries',`${d.attempts} / ${d.deliveries}`);
+      if(d.next_attempt_at) line(card,'Next retry',date(d.next_attempt_at));
+      if(d.last_error) card.append(node('p','error',d.last_error)); target.append(card);
+      section(target,'Step attempts',d.attempts_log,row=>{
+        const step=node('div','record'); step.append(node('strong','',label(row.step_name)),pill(row.status),
+          node('p','note',`Attempt ${row.attempt} · ${date(row.started_at)} · ${row.duration_ms} ms`));
+        if(row.error) step.append(node('p','error',row.error)); return step;
+      });
+      section(target,'Outbox delivery',d.outbox,row=>{
+        const step=node('div','record'); step.append(node('strong','',`${label(row.destination)} · ${label(row.action)}`),pill(row.status),
+          node('p','note',`${row.attempts} attempt(s) · ${row.delivered_at ? `Delivered ${date(row.delivered_at)}` :
+            row.next_attempt_at ? `Retry ${date(row.next_attempt_at)}` : 'Awaiting operator or provider'}`));
+        if(row.last_error) step.append(node('p','error',row.last_error)); return step;
+      });
+    } catch(error) { showError(target,error); }
+  }
+  async function loadIncidents() {
+    const data=await json('/v2/ops/incidents?limit=12'), target=$('incident-queue'); target.replaceChildren();
+    if(!data.total) { target.append(node('p','note','No failed workflows.')); return; }
+    target.append(node('p','note',`Showing ${data.results.length} of ${num(data.total)} failed or dead-letter workflows in the synthetic scenario.`));
+    data.results.forEach(row=>{
+      const card=node('div','record'); card.append(node('strong','',row.event_id),pill(row.status),
+        node('p','note',`${row.person_key} · ${row.amount_cents ? fmt(row.amount_cents) : 'No recorded payment'} · Access ${label(row.access_status || 'not granted')}`));
+      if(row.last_error) card.append(node('p','error',row.last_error));
+      const button=node('button','small-button','Inspect trace'); button.type='button';
+      button.addEventListener('click',()=>{ $('incident-form').querySelector('input').value=row.event_id; openIncident(row.event_id); });
+      card.append(button); target.append(card);
+    });
+  }
+  $('customer-form').addEventListener('submit',event=>{
+    event.preventDefault(); openCustomer(new FormData(event.target).get('person').trim());
+  });
+  $('incident-form').addEventListener('submit',event=>{
+    event.preventDefault(); openIncident(new FormData(event.target).get('event').trim());
+  });
+  Promise.all([loadDecision(),loadIssues(),loadIncidents()]).catch(error=>showError($('decision'),error));
+</script>
+</body>
+</html>

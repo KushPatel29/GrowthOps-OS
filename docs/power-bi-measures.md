@@ -1,7 +1,7 @@
 # Power BI measures
 
 Generated from `growthops/bi/model_spec.py` by `python -m growthops.bi.build_pbip`; do not edit by hand.
-211 business measures in 14 display folders. The report's own SVG tile, header and button measures live in the *Report UI* folder and are not listed.
+214 business measures in 14 display folders. The report's own SVG tile, header and button measures live in the *Report UI* folder and are not listed.
 
 
 ## 00 Calendar
@@ -71,6 +71,9 @@ Generated from `growthops/bi/model_spec.py` by `python -m growthops.bi.build_pbi
 | Bridge movement | Each step between CRM bookings and net cash. The chart adds them, so its total is the gap between the two. | `\$#,0` | `SUMX(FILTER(mart_revenue_bridge, mart_revenue_bridge[kind] = "delta"), mart_revenue_bridge[cents]) / 100` |
 | Bridge amount | The bridge value at each step, totals included. | `\$#,0` | `DIVIDE(SUM(mart_revenue_bridge[cents]), 100)` |
 | Platform-reported value | Conversion value the ad platforms claim for themselves. | `\$#,0` | `DIVIDE(SUM(mart_platform_comparison[reported_value_cents]), 100)` |
+| Qualified pipeline created | Value at explicit deal qualification, across qualified deals. Snapshot by campaign; USD. | `\$#,0` | `DIVIDE(SUM(mart_qualified_pipeline[created_minor]), 100)` |
+| Open qualified pipeline | Current open value of explicitly qualified deals. Snapshot by campaign; USD. | `\$#,0` | `DIVIDE(SUM(mart_qualified_pipeline[open_minor]), 100)` |
+| Qualified opportunities | Deals with an explicit qualification decision; each deal counts once. | `#,0` | `SUM(mart_qualified_pipeline[qualified_deals])` |
 | Warehouse cash (paid platforms) | Net cash the warehouse credits to each platform's campaigns. | `\$#,0` | `DIVIDE(SUM(mart_platform_comparison[warehouse_net_cash_cents]), 100)` |
 | Platform spend | Spend on each platform, all time. | `\$#,0` | `DIVIDE(SUM(mart_platform_comparison[spend_cents]), 100)` |
 | Platform overstatement | Claimed value the warehouse cannot find in cash. | `\$#,0` | `[Platform-reported value] - [Warehouse cash (paid platforms)]` |

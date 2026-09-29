@@ -25,3 +25,7 @@ relationship 066e4d9f-c469-5a8d-ac6c-a1ca03881d36
 relationship 89b0a49f-fb8a-5a47-b9f4-3f56884ff290
 	fromColumn: mart_campaign_performance.campaign_id
 	toColumn: dim_campaign.campaign_id
+
+relationship 8ac2bad5-dd82-5d2e-b7db-95b3130d5c82
+	fromColumn: mart_qualified_pipeline.campaign_id
+	toColumn: dim_campaign.campaign_id
