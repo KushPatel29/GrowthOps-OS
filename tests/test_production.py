@@ -27,6 +27,7 @@ SAFE = {
     "GROWTHOPS_ENV": "production", "GROWTHOPS_DATA_MODE": "live", "GROWTHOPS_WEBHOOK_SECRET": "s" * 40,
     "GROWTHOPS_API_KEYS": f"{KEY},{'j' * 32}", "GROWTHOPS_OPS_TOKEN": "o" * 32, "GROWTHOPS_LOG_FORMAT": "text",
     "GROWTHOPS_CRM_ADAPTER": "hubspot", "HUBSPOT_ACCESS_TOKEN": "test-provider-token",
+    "GROWTHOPS_HUBSPOT_PORTAL_ID": "4242",
     "GROWTHOPS_ACCESS_ADAPTER": "webhook", "GROWTHOPS_ACCESS_WEBHOOK_URL": "https://access.example.test/action",
     "GROWTHOPS_ACCESS_WEBHOOK_SECRET": "a" * 40,
     "GROWTHOPS_MESSAGING_ADAPTER": "webhook", "GROWTHOPS_MESSAGING_WEBHOOK_URL": "https://mail.example.test/action",

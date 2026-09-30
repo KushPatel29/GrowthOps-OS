@@ -65,7 +65,8 @@ def test_read_only_schema_audit_separates_baseline_drift_from_proposals(connecti
     portal = FakePortal(existing=existing)
     clean = audit_schema(portal, connection)
     assert clean["mode"] == "read_only" and clean["writes"] == 0
-    assert clean["baseline_expected"] == clean["baseline_present"] == 33
+    # 33 from the portal build plus the two renewal fields the v3 sync pushes (renewal due date and risk).
+    assert clean["baseline_expected"] == clean["baseline_present"] == 35
     assert clean["baseline_issues"] == []
     assert clean["proposed_issues"] == []
     assert len(clean["proposed_additions"]) == 5
@@ -76,7 +77,7 @@ def test_read_only_schema_audit_separates_baseline_drift_from_proposals(connecti
     portal.properties["contacts"][changed]["label"] = "Changed in portal"
     del portal.properties["deals"][baseline["deals"][0]["name"]]
     drift = audit_schema(portal, connection)
-    assert drift["baseline_present"] == 32
+    assert drift["baseline_present"] == 34
     assert {row["issue"] for row in drift["baseline_issues"]} == {"missing", "label_mismatch"}
     assert portal.posts == []
 

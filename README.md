@@ -3,10 +3,10 @@
 **Marketing measurement, revenue reconciliation and lifecycle automation for a creator-led B2B business.**
 
 [![GrowthOps checks](https://github.com/KushPatel29/GrowthOps-OS/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/KushPatel29/GrowthOps-OS/actions/workflows/ci.yml)
-[![tests](https://img.shields.io/badge/tests-644%20passing-brightgreen)](tests)
+[![tests](https://img.shields.io/badge/tests-673%20passing-brightgreen)](tests)
 [![guardrail eval](https://img.shields.io/badge/guardrail%20eval-30%2F30-brightgreen)](evals/narrative_guardrail_cases.json)
 
-[**Live dashboard**](https://growthops-os.streamlit.app/) · [Reviewer walkthrough](docs/demo-walkthrough.md) · [Final target audit](docs/final-target-audit.md) · [Power BI and Excel](docs/power-bi-handoff.md) · [Case study](docs/case-study.md) · [Metric catalog](docs/metric-catalog.md) · [API](docs/api-contracts.md) · [v2.1 specification](docs/growthops-os-v2.1-engineering-spec.md) · [HubSpot marketing audit](docs/hubspot-marketing-audit.md) · [HubSpot v2.1 schema record](docs/hubspot-v21-change-plan.md)
+[**Live dashboard**](https://growthops-os.streamlit.app/) · [Reviewer walkthrough](docs/demo-walkthrough.md) · [Final target audit](docs/final-target-audit.md) · [Power BI and Excel](docs/power-bi-handoff.md) · [Case study](docs/case-study.md) · [Metric catalog](docs/metric-catalog.md) · [API](docs/api-contracts.md) · [v2.1 specification](docs/growthops-os-v2.1-engineering-spec.md) · [HubSpot in production](docs/hubspot-production.md) · [HubSpot marketing audit](docs/hubspot-marketing-audit.md) · [HubSpot v2.1 schema record](docs/hubspot-v21-change-plan.md)
 
 The live dashboard includes a read-only **Operations console** with a decision center, synthetic Customer 360,
 incident traces, quality queue and sales copilot, plus a **Growth lab** for cohorts, customer economics,
@@ -49,7 +49,7 @@ if it ever stops doing so.
 | Paid media efficiency: CPM, CTR, CPC, CPL, cost per MQL, cost per booked call, net-cash ROAS, funnel conversion by channel | Acquisition and Funnel views; [`performance.py`](growthops/performance.py), [`report.py`](growthops/report.py), [`funnel.py`](growthops/funnel.py) |
 | Email analytics: delivery, bounce, human vs reported opens, CTR, click-to-open, unsubscribes, complaints, newsletter → pipeline, list source mix | Email & links view; [`email_analytics.py`](growthops/email_analytics.py), `mart_email_performance` |
 | Clear written daily updates | `python -m growthops.performance`, `GET /metrics/daily-update`, copy block in the Morning brief |
-| HubSpot, built live in a developer test account: 33 baseline custom properties (UTM, content, funnel dates, tracking status, attribution) and five empty v2.1 identity/qualification fields, a funnel-stage deal pipeline, an Imports API load, a CRM API sync that writes only differences, lists, three published workflows, a CRM cleanup found through the search API, a four-report dashboard, and a read-back that reconciles the baseline sample to the warehouse with zero differences | [`hubspot_portal.py`](growthops/hubspot_portal.py), [HubSpot portal build](docs/hubspot-portal.md), [v2.1 schema record](docs/hubspot-v21-change-plan.md), [`hubspot.py`](growthops/hubspot.py) |
+| HubSpot in production, live in a developer test account. The build: 35 GrowthOps properties, a funnel-stage deal pipeline, an Imports API load, lists, three published workflows, a search-API cleanup and a dashboard. Kept in step by a two-way sync under a field-ownership contract (HubSpot owns the CRM record, GrowthOps its analytics): key-set incremental pulls that land contact data hashed, field-by-field reconcile to the warehouse, change sets a named person approves that are re-checked before and read back after every write, v3-signed webhooks that trigger refetches, renewal tasks for customer success, paced and budgeted calls, and a payment adapter that only moves lifecycle forward. Also the product catalog, 130 line items (HubSpot ARR and MRR) and a support pipeline holding the real support cases | [HubSpot in production](docs/hubspot-production.md), [live sync record](docs/hubspot-sync.md), [field contract](docs/hubspot-contract.md), [build-out](docs/hubspot-buildout.md), [portal build](docs/hubspot-portal.md), [`hubspot_sync.py`](growthops/hubspot_sync.py) |
 | Attribution: first touch, lead creation, last non-direct, U-shaped, linear and time decay, all conserving cash to the cent | [`attribution.py`](growthops/attribution.py) |
 | Growth lab: person-grain acquisition cohorts, observed customer economics, assumption-based scenario planning and a local trust view | [`growth_lab.py`](growthops/growth_lab.py) |
 | Sales conversation intelligence: 180 synthetic conversations, deterministic evidence-span classification, read-only closed-won case retrieval, and a 148-case phrase-variant contract | [`sales_intelligence.py`](growthops/sales_intelligence.py), [`sales_intelligence_eval.py`](growthops/sales_intelligence_eval.py) |
@@ -145,6 +145,9 @@ python -m growthops.hubspot_v21 audit                                # read-only
 python -m growthops.hubspot_marketing_audit                           # read-only live marketing-contact audit
 python -m growthops.hubspot_v21 plan                                 # five-field v2.1 schema proposal (offline)
 python -m growthops.hubspot_portal apply                            # build + verify a HubSpot test account (HUBSPOT_ACCESS_TOKEN)
+python -m growthops.hubspot_sync preflight                          # read-only: account, pinned portal, every API the sync needs
+python -m growthops.hubspot_sync run                                # incremental pull, reconcile under the field contract, plan
+python -m growthops.hubspot_sync approve <changeset> --by <name>    # a person approves; apply <changeset> or the worker writes it
 python -m growthops.ask_data --eval                                # question contract, keyword + hybrid
 python -m growthops.sales_intelligence_eval                        # synthetic classification + copilot grounding
 python -m growthops.ask_data "What does a lead cost on Google?"    # ask from the command line
@@ -186,6 +189,8 @@ runs keyword-only and says so.
 
 **Data provenance:** every person, transaction and campaign is synthetic. No real company's
 data or systems are used. A HubSpot developer test account holds a deterministic synthetic sample and is
-documented in [the portal build](docs/hubspot-portal.md). The runtime HubSpot and webhook adapters are
-tested against a fake HTTP transport; no live Stripe, ad-platform or community provider is connected.
+documented in [the portal build](docs/hubspot-portal.md) and [the live sync record](docs/hubspot-sync.md); every
+sync step, the webhook processing path and the payment adapter's HubSpot read path were run against it. The access
+and messaging bridges are tested against a fake HTTP transport; no live Stripe, ad-platform or community provider is
+connected.
 Current state and limits: [PROJECT_STATUS.md](PROJECT_STATUS.md).

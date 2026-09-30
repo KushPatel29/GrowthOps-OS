@@ -3,5 +3,8 @@
 dashboards/powerbi-project/** text eol=lf
 dashboards/powerbi-data/*.csv text eol=lf
 docs/power-bi-measures.md text eol=lf
+docs/hubspot-contract.md text eol=lf
+docs/hubspot-sync.md text eol=lf
+docs/hubspot-buildout.md text eol=lf
 *.xlsx binary
 *.png binary

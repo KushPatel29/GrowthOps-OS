@@ -117,4 +117,23 @@ def business_gauges(connection: sqlite3.Connection, freshness: list[dict]) -> di
                               if item["age_hours"] is not None]),
         "source_stale": ("1 when a source is older than its freshness SLA.",
                          [({"source": item["source"]}, int(item["status"] != "fresh")) for item in freshness]),
+        **_hubspot_gauges(connection),
+    }
+
+
+def _hubspot_gauges(connection: sqlite3.Connection) -> dict:
+    """HubSpot sync backlog: webhook events by status, change sets by status, and items that hit a conflict."""
+    try:
+        events = connection.execute("SELECT status, COUNT(*) FROM hubspot_webhook_events GROUP BY status").fetchall()
+        changesets = connection.execute("SELECT status, COUNT(*) FROM hubspot_changesets GROUP BY status").fetchall()
+        conflicts = connection.execute(
+            "SELECT COUNT(*) FROM hubspot_changeset_items WHERE status IN ('conflict','failed')").fetchone()[0]
+    except sqlite3.OperationalError:  # a database from before the sync tables
+        return {}
+    return {
+        "hubspot_webhook_events": ("HubSpot webhook events by status.",
+                                   [({"status": status}, count) for status, count in events]),
+        "hubspot_changesets": ("HubSpot change sets by status (planned ones wait for approval).",
+                               [({"status": status}, count) for status, count in changesets]),
+        "hubspot_write_problems": ("HubSpot change set items that failed or hit a conflict.", [({}, conflicts)]),
     }

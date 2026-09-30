@@ -97,24 +97,53 @@ class SimulatedMessaging:
         return None
 
 
+LIFECYCLE_RANK = {stage: rank for rank, stage in enumerate(
+    ("subscriber", "lead", "marketingqualifiedlead", "salesqualifiedlead", "opportunity", "customer", "evangelist"))}
+
+
 @dataclass
 class HubSpotCRM:
-    """Sets the paying contact's lifecycle stage to Customer through the CRM v3 batch upsert endpoint."""
+    """Moves the paying contact's lifecycle stage forward to Customer, looked up on its unique GrowthOps ID.
+
+    The contact is read first. A payment for a contact the CRM does not hold is a permanent failure, so the event
+    dead-letters for a person to link the identity, rather than creating an empty contact. A contact already at
+    Customer or beyond is left alone (lifecycle stages only move forward). A batch answer of 207 with errors is a
+    failure, not a success.
+    """
 
     token: str
     timeout: float = 10
     transport: Transport = urllib_transport
     base_url: str = HUBSPOT_API
 
-    def mark_customer(self, event: PaymentEvent) -> None:
-        body = json.dumps({"inputs": [{
-            "idProperty": "growthops_contact_id", "id": event.customer_id,
-            "properties": {"growthops_contact_id": event.customer_id, "lifecyclestage": "customer"},
-        }]}).encode()
+    def _post(self, path: str, body: dict) -> dict:
         status, response = self.transport(
-            "POST", f"{self.base_url}/crm/v3/objects/contacts/batch/upsert",
-            {"Authorization": f"Bearer {self.token}", "Content-Type": "application/json"}, body, self.timeout)
+            "POST", f"{self.base_url}{path}",
+            {"Authorization": f"Bearer {self.token}", "Content-Type": "application/json"},
+            json.dumps(body).encode(), self.timeout)[:2]
         _check("hubspot", status, response)
+        try:
+            return json.loads(response) if response else {}
+        except ValueError:
+            return {}
+
+    def mark_customer(self, event: PaymentEvent) -> None:
+        key = {"idProperty": "growthops_contact_id", "id": event.customer_id}
+        page = self._post("/crm/v3/objects/contacts/batch/read",
+                          {"idProperty": "growthops_contact_id", "properties": ["lifecyclestage"],
+                           "inputs": [{"id": event.customer_id}]})
+        results = page.get("results") or []
+        if not results:
+            raise ProviderError(f"hubspot: contact {event.customer_id} is not in the CRM (permanent); "
+                                "link the identity before retrying")
+        current = (results[0].get("properties") or {}).get("lifecyclestage") or ""
+        if LIFECYCLE_RANK.get(current, -1) >= LIFECYCLE_RANK["customer"]:
+            return
+        page = self._post("/crm/v3/objects/contacts/batch/update",
+                          {"inputs": [{**key, "properties": {"lifecyclestage": "customer"}}]})
+        if page.get("errors"):
+            category = (page["errors"][0] or {}).get("category", "UNKNOWN")
+            raise ProviderError(f"hubspot: lifecycle update failed ({category}, permanent)")
 
 
 @dataclass

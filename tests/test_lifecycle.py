@@ -10,7 +10,14 @@ from fastapi.testclient import TestClient
 
 from growthops.adapters import Adapters, SignedWebhook
 from growthops.api import app
-from growthops.db import MIGRATIONS, SCHEMA, connect, initialize, schema_version
+from growthops.db import (
+    MIGRATIONS,
+    SCHEMA,
+    SCHEMA_VERSION,
+    connect,
+    initialize,
+    schema_version,
+)
 from growthops.lifecycle import LifecycleEvent, process_lifecycle
 from growthops.workflow import (
     EventConflict,
@@ -266,7 +273,7 @@ def test_v5_event_migration_preserves_related_rows(tmp_path):
                'update_crm', 'legacy-key', 'delivered')"""
         )
         initialize(connection)
-        assert schema_version(connection) == 10
+        assert schema_version(connection) == SCHEMA_VERSION
         assert next(row for row in connection.execute("PRAGMA table_info(processed_events)")
                     if row["name"] == "payment_id")["notnull"] == 0
         assert connection.execute("SELECT payment_id FROM processed_events WHERE event_id='legacy-event'"

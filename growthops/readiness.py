@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import sqlite3
+from datetime import UTC, datetime
 
 from growthops.config import ConfigError, Settings
 from growthops.db import SCHEMA_VERSION, schema_version
@@ -36,9 +37,28 @@ def require_live_origin(connection: sqlite3.Connection, settings: Settings) -> N
         raise ConfigError("database contains foreign-key violations")
 
 
+def hubspot_freshness(connection: sqlite3.Connection, settings: Settings, now: datetime | None = None) -> dict:
+    """The HubSpot sync as a source: stale after three missed sync intervals, or while its last run failed."""
+    sla_hours = round(3 * settings.hubspot_sync_minutes / 60, 2)
+    try:
+        row = connection.execute("SELECT MIN(last_success_at) oldest, MAX(last_error IS NOT NULL) failing "
+                                 "FROM hubspot_sync_state").fetchone()
+    except sqlite3.OperationalError:
+        row = None
+    if row is None or row["oldest"] is None:
+        return {"source": "hubspot_sync", "latest": None, "age_hours": None, "sla_hours": sla_hours,
+                "status": "missing"}
+    age = round(((now or datetime.now(UTC)) - datetime.fromisoformat(row["oldest"])).total_seconds() / 3600, 2)
+    status = "stale" if age > sla_hours or row["failing"] else "fresh"
+    return {"source": "hubspot_sync", "latest": row["oldest"], "age_hours": age, "sla_hours": sla_hours,
+            "status": status}
+
+
 def readiness_status(connection: sqlite3.Connection, settings: Settings) -> dict:
     version = schema_version(connection)
     sources = freshness_check(connection, settings)
+    if settings.hubspot_sync_enabled:
+        sources.append(hubspot_freshness(connection, settings))
     stale = [item["source"] for item in sources if item["status"] != "fresh"]
     provenance = origin_problem(connection) if settings.production else None
     if version != SCHEMA_VERSION:

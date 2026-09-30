@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import hmac
+import json
 import logging
 import re
 import sqlite3
@@ -76,6 +77,10 @@ from growthops.growth_lab import (
 )
 from growthops.hubspot import audit as hubspot_audit
 from growthops.hubspot import property_definitions
+from growthops.hubspot_sync import approve as hubspot_approve
+from growthops.hubspot_sync import status as hubspot_status
+from growthops.hubspot_webhooks import record as record_hubspot_events
+from growthops.hubspot_webhooks import verify as verify_hubspot_signature
 from growthops.lifecycle import LifecycleEvent, process_lifecycle
 from growthops.media_events import MediaEvent, ingest_media_event, media_health
 from growthops.migration import audit as migration_audit
@@ -120,7 +125,8 @@ PROTECTED_PREFIXES = ("/metrics", "/ops", "/crm", "/campaign-links", "/ask", "/v
                       "/docs", "/redoc", "/openapi.json")
 OPS_READ_PREFIXES = ("/ops/", "/v2/ops/", "/v2/people/", "/v2/quality/issues",
                      "/v2/ai/sales-copilot/", "/v2/conversions/preview/",
-                     "/v2/renewals/action-proposals")
+                     "/v2/renewals/action-proposals", "/v2/hubspot/")
+UNSIGNED_BY_API_KEY = ("/v2/webhooks/lifecycle", "/v2/webhooks/stripe-test", "/v2/webhooks/hubspot")
 SECURITY_HEADERS = {"X-Content-Type-Options": "nosniff", "X-Frame-Options": "DENY",
                     "Referrer-Policy": "no-referrer", "Cache-Control": "no-store"}
 MAX_WEBHOOK_BYTES = 128 * 1024
@@ -182,7 +188,7 @@ async def request_context(request: Request, call_next):
     settings = get_settings()
     try:
         protected = (request.url.path.startswith(PROTECTED_PREFIXES)
-                     and request.url.path not in ("/v2/webhooks/lifecycle", "/v2/webhooks/stripe-test"))
+                     and request.url.path not in UNSIGNED_BY_API_KEY)
         # Lifespan normally blocks an unsafe production start. Keep the same
         # fail-closed behavior if a server disables ASGI lifespan or settings
         # change while the process is running.
@@ -486,6 +492,70 @@ async def stripe_test_webhook(request: Request, stripe_signature: str = Header(d
         return process_lifecycle(connection, event, adapters=build_adapters(settings))
     except EventConflict as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
+    finally:
+        connection.close()
+
+
+@app.post("/v2/webhooks/hubspot")
+async def hubspot_webhook(request: Request, x_hubspot_signature_v3: str = Header(default=""),
+                          x_hubspot_request_timestamp: str = Header(default="")) -> dict:
+    """HubSpot app webhooks: v3-signed, stored once per eventId, applied later by the worker's refetch."""
+    settings = get_settings()
+    if not settings.hubspot_app_secret:
+        raise HTTPException(status_code=404, detail="HubSpot webhooks are not configured")
+    body = await _bounded_webhook_body(request)
+    # HubSpot signs the URI it called; behind a proxy that is the public URL, not the one this process sees.
+    uri = (settings.public_base_url.rstrip("/") + request.url.path
+           + (f"?{request.url.query}" if request.url.query else "")) if settings.public_base_url else str(request.url)
+    if not verify_hubspot_signature(settings.hubspot_app_secret, request.method, uri, body,
+                                    x_hubspot_request_timestamp, x_hubspot_signature_v3):
+        METRICS.increment("hubspot_webhook_rejected")
+        raise HTTPException(status_code=401, detail="invalid or expired HubSpot signature")
+    try:
+        events = json.loads(body)
+    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise HTTPException(status_code=400, detail="invalid JSON") from exc
+    connection = connect(database_path())
+    try:
+        initialize(connection)
+        counts = record_hubspot_events(connection, events, settings.hubspot_portal_id or None)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    finally:
+        connection.close()
+    METRICS.increment("hubspot_webhook_accepted", counts["accepted"])
+    return counts
+
+
+@app.get("/v2/hubspot/sync")
+def hubspot_sync_status() -> dict:
+    """Watermarks, landed records, webhook backlog and recent change sets (operator role in production)."""
+    return _read(hubspot_status)
+
+
+@app.post("/v2/hubspot/changesets/{changeset_id}/approve")
+def hubspot_changeset_approve(changeset_id: str, body: ReplayRequest, x_growthops_ops_token: str = Header(default=""),
+                              x_growthops_actor: str = Header(default="")) -> dict:
+    """Approve a planned HubSpot change set for the worker to apply. Audited in operator_actions."""
+    expected = get_settings().ops_token
+    if not expected or not hmac.compare_digest(expected, x_growthops_ops_token):
+        raise HTTPException(status_code=403, detail="ops role required")
+    if not re.fullmatch(r"[A-Za-z0-9_.:@-]{2,64}", x_growthops_actor):
+        raise HTTPException(status_code=422, detail="X-GrowthOps-Actor must name the approver")
+    connection = connect(database_path())
+    try:
+        initialize(connection)
+        try:
+            result = hubspot_approve(connection, changeset_id, x_growthops_actor)
+        except LookupError as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
+        except ValueError as exc:
+            raise HTTPException(status_code=409, detail=str(exc)) from exc
+        connection.execute(
+            "INSERT OR IGNORE INTO operator_actions VALUES (?, ?, 'approve', 'hubspot_changeset', ?, ?, ?, 'approved')",
+            ("oa_" + hashlib.sha256(f"approve:{changeset_id}".encode()).hexdigest()[:24], x_growthops_actor,
+             changeset_id, body.reason, datetime.now(UTC).isoformat()))
+        return result
     finally:
         connection.close()
 

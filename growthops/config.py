@@ -54,6 +54,13 @@ class Settings(BaseModel):
 
     crm_adapter: Literal["simulated", "hubspot"] = "simulated"
     hubspot_access_token: str = ""
+    hubspot_portal_id: str = ""
+    hubspot_sync_enabled: bool = False
+    hubspot_sync_minutes: int = Field(default=15, ge=5, le=1440)
+    hubspot_daily_floor: int = Field(default=0, ge=0)
+    hubspot_app_secret: str = ""
+    public_base_url: str = ""
+    pii_hash_key: str = ""
     access_adapter: Literal["simulated", "webhook"] = "simulated"
     access_webhook_url: str = ""
     access_webhook_secret: str = ""
@@ -101,6 +108,14 @@ class Settings(BaseModel):
             issues.append("GROWTHOPS_MESSAGING_ADAPTER=webhook is required in production")
         if self.crm_adapter == "hubspot" and not self.hubspot_access_token:
             issues.append("HUBSPOT_ACCESS_TOKEN is required when GROWTHOPS_CRM_ADAPTER=hubspot")
+        if (self.crm_adapter == "hubspot" or self.hubspot_sync_enabled) and not self.hubspot_portal_id.isdigit():
+            issues.append("GROWTHOPS_HUBSPOT_PORTAL_ID must pin the one HubSpot portal this deployment may touch")
+        if self.hubspot_sync_enabled and not self.hubspot_access_token:
+            issues.append("HUBSPOT_ACCESS_TOKEN is required when GROWTHOPS_HUBSPOT_SYNC is on")
+        if self.hubspot_sync_enabled and len(self.pii_hash_key) < 32:
+            issues.append("GROWTHOPS_PII_HASH_KEY (32+ characters) is required to land HubSpot contact data as hashes")
+        if self.hubspot_app_secret and not _https_url(self.public_base_url):
+            issues.append("GROWTHOPS_PUBLIC_BASE_URL (https) is required to verify HubSpot webhook signatures")
         if self.access_adapter == "webhook" and not _https_url(self.access_webhook_url):
             issues.append("GROWTHOPS_ACCESS_WEBHOOK_URL must be an https URL when GROWTHOPS_ACCESS_ADAPTER=webhook")
         if self.access_adapter == "webhook" and (
@@ -127,7 +142,7 @@ class Settings(BaseModel):
     def redacted(self) -> dict:
         """Settings for logs and `ops check-config`, with secrets masked."""
         secret = {"webhook_secret", "stripe_test_webhook_secret", "api_keys", "ops_token", "hubspot_access_token",
-                  "access_webhook_secret", "messaging_webhook_secret"}
+                  "access_webhook_secret", "messaging_webhook_secret", "hubspot_app_secret", "pii_hash_key"}
         data = self.model_dump(mode="json")
         for key in secret:
             if data.get(key):
@@ -159,6 +174,13 @@ def get_settings() -> Settings:
         "cors_origins": _list("GROWTHOPS_CORS_ORIGINS"),
         "crm_adapter": env.get("GROWTHOPS_CRM_ADAPTER", "simulated"),
         "hubspot_access_token": env.get("HUBSPOT_ACCESS_TOKEN", ""),
+        "hubspot_portal_id": env.get("GROWTHOPS_HUBSPOT_PORTAL_ID", "").strip(),
+        "hubspot_sync_enabled": env.get("GROWTHOPS_HUBSPOT_SYNC", "off").strip().lower() in {"1", "true", "on", "yes"},
+        "hubspot_sync_minutes": env.get("GROWTHOPS_HUBSPOT_SYNC_MINUTES", 15),
+        "hubspot_daily_floor": env.get("GROWTHOPS_HUBSPOT_DAILY_FLOOR", 0),
+        "hubspot_app_secret": env.get("GROWTHOPS_HUBSPOT_APP_SECRET", ""),
+        "public_base_url": env.get("GROWTHOPS_PUBLIC_BASE_URL", ""),
+        "pii_hash_key": env.get("GROWTHOPS_PII_HASH_KEY", ""),
         "access_adapter": env.get("GROWTHOPS_ACCESS_ADAPTER", "simulated"),
         "access_webhook_url": env.get("GROWTHOPS_ACCESS_WEBHOOK_URL", ""),
         "access_webhook_secret": env.get("GROWTHOPS_ACCESS_WEBHOOK_SECRET", ""),

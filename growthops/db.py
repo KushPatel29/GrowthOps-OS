@@ -510,6 +510,90 @@ MIGRATIONS: tuple[tuple[int, str], ...] = (
       recorded_at TEXT NOT NULL
     );
     """),
+    (11, """
+    -- HubSpot two-way sync (growthops/hubspot_sync.py). Contact data in properties_json is a keyed hash.
+    CREATE TABLE IF NOT EXISTS hubspot_records (
+      object_type TEXT NOT NULL CHECK (object_type IN ('contacts','deals')),
+      hs_id TEXT NOT NULL,
+      growthops_id TEXT,
+      properties_json TEXT NOT NULL,
+      hs_updated_at TEXT NOT NULL,
+      archived INTEGER NOT NULL DEFAULT 0 CHECK (archived IN (0,1)),
+      synced_at TEXT NOT NULL,
+      PRIMARY KEY (object_type, hs_id)
+    );
+    CREATE INDEX IF NOT EXISTS idx_hubspot_records_growthops ON hubspot_records(object_type, growthops_id);
+    CREATE TABLE IF NOT EXISTS hubspot_associations (
+      from_type TEXT NOT NULL,
+      from_id TEXT NOT NULL,
+      to_type TEXT NOT NULL,
+      to_id TEXT NOT NULL,
+      synced_at TEXT NOT NULL,
+      PRIMARY KEY (from_type, from_id, to_type, to_id)
+    );
+    CREATE TABLE IF NOT EXISTS hubspot_reference (
+      kind TEXT NOT NULL,
+      key TEXT NOT NULL,
+      value_json TEXT NOT NULL,
+      synced_at TEXT NOT NULL,
+      PRIMARY KEY (kind, key)
+    );
+    CREATE TABLE IF NOT EXISTS hubspot_sync_state (
+      object_type TEXT PRIMARY KEY,
+      watermark TEXT,
+      last_started_at TEXT,
+      last_success_at TEXT,
+      last_error TEXT,
+      records_seen INTEGER NOT NULL DEFAULT 0,
+      runs INTEGER NOT NULL DEFAULT 0
+    );
+    CREATE TABLE IF NOT EXISTS hubspot_webhook_events (
+      event_id TEXT PRIMARY KEY,
+      portal_id TEXT NOT NULL,
+      subscription_type TEXT NOT NULL,
+      object_type TEXT,
+      object_id TEXT,
+      property_name TEXT,
+      occurred_at TEXT,
+      attempt INTEGER NOT NULL DEFAULT 0,
+      received_at TEXT NOT NULL,
+      status TEXT NOT NULL CHECK (status IN ('pending','processed','ignored','failed')),
+      processed_at TEXT,
+      detail TEXT
+    );
+    CREATE INDEX IF NOT EXISTS idx_hubspot_webhook_status ON hubspot_webhook_events(status, object_type);
+    CREATE TABLE IF NOT EXISTS hubspot_changesets (
+      changeset_id TEXT PRIMARY KEY,
+      created_at TEXT NOT NULL,
+      basis TEXT NOT NULL,
+      items INTEGER NOT NULL,
+      status TEXT NOT NULL CHECK (status IN ('planned','approved','applied','partially_applied','superseded')),
+      approved_by TEXT,
+      approved_at TEXT,
+      applied_at TEXT,
+      summary_json TEXT
+    );
+    CREATE TABLE IF NOT EXISTS hubspot_changeset_items (
+      changeset_id TEXT NOT NULL REFERENCES hubspot_changesets(changeset_id),
+      object_type TEXT NOT NULL,
+      hs_id TEXT NOT NULL,
+      growthops_id TEXT,
+      property TEXT NOT NULL,
+      before_value TEXT,
+      after_value TEXT NOT NULL,
+      status TEXT NOT NULL CHECK (status IN ('pending','applied','verified','failed','conflict')),
+      error_category TEXT,
+      applied_at TEXT,
+      PRIMARY KEY (changeset_id, object_type, hs_id, property)
+    );
+    CREATE TABLE IF NOT EXISTS hubspot_created_objects (
+      idempotency_key TEXT PRIMARY KEY,
+      object_type TEXT NOT NULL,
+      hs_id TEXT NOT NULL,
+      purpose TEXT NOT NULL,
+      created_at TEXT NOT NULL
+    );
+    """),
 )
 SCHEMA_VERSION = MIGRATIONS[-1][0]
 

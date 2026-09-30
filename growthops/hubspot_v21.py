@@ -12,13 +12,9 @@ import json
 import sqlite3
 
 from growthops.db import connect, initialize
-from growthops.hubspot_portal import (
-    GROUP,
-    Portal,
-    account,
-    load_token,
-    portal_properties,
-)
+from growthops.hubspot_client import HubSpotClient as Portal
+from growthops.hubspot_client import account, load_token
+from growthops.hubspot_portal import GROUP, portal_properties
 
 EXPECTED_PORTAL_ID = "247549241"
 

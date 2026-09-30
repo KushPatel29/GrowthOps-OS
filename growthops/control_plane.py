@@ -245,10 +245,12 @@ def seed_overlay(connection: sqlite3.Connection) -> None:
             "workflows": workflow_specs("<portal_default_owner>"),
         }
         now = datetime.combine(AS_OF, datetime.min.time(), UTC).isoformat()
+        # The property registry gained the v3 renewal fields (renewal due date and risk) the HubSpot sync pushes.
+        versions = {"property": "3.0"}
         for kind, definition in registries.items():
             connection.execute(
                 "INSERT OR IGNORE INTO registry_versions VALUES (?, ?, ?, 'growthops_demo', ?, ?)",
-                (kind, VERSION, json.dumps(definition, sort_keys=True), now, now),
+                (kind, versions.get(kind, VERSION), json.dumps(definition, sort_keys=True), now, now),
             )
         connection.commit()
     except Exception:

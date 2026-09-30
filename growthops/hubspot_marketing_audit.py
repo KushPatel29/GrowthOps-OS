@@ -11,7 +11,8 @@ import json
 from collections import Counter
 from datetime import UTC, datetime
 
-from growthops.hubspot_portal import Portal, account, load_token
+from growthops.hubspot_client import HubSpotClient as Portal
+from growthops.hubspot_client import account, load_token
 from growthops.hubspot_v21 import EXPECTED_PORTAL_ID
 
 PROPERTIES = (

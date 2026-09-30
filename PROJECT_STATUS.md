@@ -125,16 +125,34 @@ Live synthetic dashboard: https://growthops-os.streamlit.app/ · GitHub: https:/
   and production ask-data logs retain a question digest rather than raw text. Adapter and alert errors omit
   provider response bodies and dry-run message content. These gates do not create real source ingestion or
   an identity-backed operator gateway.
+- **HubSpot production integration (v3)** (`hubspot_client.py`, `hubspot_contract.py`, `hubspot_sync.py`,
+  `hubspot_webhooks.py`): a paced, budgeted client with `Retry-After`, a circuit breaker and redacted errors; a field
+  contract (HubSpot owns the CRM record, GrowthOps the analytics it computes, lifecycle forward only); key-set
+  incremental pulls into hashed landing tables; reconcile, content-addressed change sets, named approval, re-check
+  before and read-back after every write; v3-signed webhooks stored once and applied by refetch; renewal tasks;
+  a worker pass, `/ready` freshness, metrics and an approval API. Live on 2026-09-30 against the developer test
+  account: 961 contacts and 130 deals pulled with every record exactly once (the first pull used offset pages and
+  missed two records that changed mid-scan, which is why pages are now key-set), reconciled with zero drift except
+  the two new renewal fields on 18 contacts, a 36-value change set approved, applied in one batch and verified, a
+  re-plan with nothing to write, and two renewal tasks created once. The product catalog, 130 line items (HubSpot
+  ARR $27,000) and a support pipeline with eight real support cases were added through HubSpot's connector without
+  changing a deal amount. See [HubSpot in production](docs/hubspot-production.md) and the
+  [live sync record](docs/hubspot-sync.md).
 
 ## Not implemented yet
 
-- The HubSpot connector returned zero tickets as of 2026-09-29, including zero unresolved
-  high-priority tickets; the separate private-app token lacks ticket-search scope. The five new schema fields
-  are empty pending verified identity links and actual sales qualification decisions. The newly planted local
-  consent decisions must not be treated as consent for any connected HubSpot contact.
+- HubSpot: the portal's service key cannot reach tickets at all, or products, line items and companies without
+  more scopes, so the product catalog, line items and support tickets were created once through HubSpot's own
+  connector from a plan the code derives (`hubspot_buildout.py`); rerunning them needs a key with those scopes.
+  No webhook has been delivered by HubSpot itself (that needs a HubSpot app subscribed to a public URL); the
+  receiver and processing are verified with HubSpot's documented signature. The five v2.1 schema fields stay
+  empty pending verified identity links and real sales qualification decisions, and the local consent
+  decisions must not be treated as consent for any connected HubSpot contact. The key in `.env` was exposed in
+  chat on 2026-09-29 and should be rotated.
 
-- Live runtime integrations: the HubSpot developer test portal is built and verified, but the payment workflow's
-  HubSpot and webhook adapters are tested against a fake HTTP transport rather than a real provider bridge.
+- Live runtime integrations: the HubSpot sync and the payment adapter's HubSpot read path run against the developer
+  test portal, but the access and messaging bridges are tested against a fake HTTP transport rather than a real
+  provider bridge.
   There are no live Stripe, GA4, ad-platform, email-platform or link-shortener ingestion jobs (the data is
   generated). Server-side ad conversions are local queued intents only; no Meta, Google or LinkedIn delivery
   or attribution read-back exists. Domain DNS (SPF/DKIM/DMARC), SMS delivery and A2P registration are unverified.

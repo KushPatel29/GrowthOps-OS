@@ -1,15 +1,12 @@
 """The HubSpot portal build, run end to end against an in-memory fake of the HubSpot APIs it calls."""
 
-import csv
-import io
 import json
-import re
-from datetime import datetime, timezone
-from itertools import count
 
 import pytest
+from hubspot_fake import TOKEN, FakeHubSpot
 
 from growthops.adapters import ProviderError
+from growthops.hubspot_client import PortalRefused
 from growthops.hubspot_portal import (
     PIPELINE_STAGES,
     Portal,
@@ -19,186 +16,6 @@ from growthops.hubspot_portal import (
     portal_properties,
     records,
 )
-
-TOKEN = "pat-na2-secret-value"
-
-
-def _ms(day: str) -> int:
-    return int(datetime.fromisoformat(day[:10]).replace(tzinfo=timezone.utc).timestamp() * 1000)
-
-
-class FakeHubSpot:
-    """Just enough of the CRM, Imports, Lists and Automation APIs to exercise every step, with their quirks:
-    unique-property upserts, 207 multi-status batch reads, and a search API that pages and totals."""
-
-    def __init__(self, account_type="DEVELOPER_TEST"):
-        self.account = {"portalId": 4242, "accountType": account_type, "timeZone": "US/Eastern",
-                        "companyCurrency": "USD", "dataHostingLocation": "na2"}
-        self.groups = {"contacts": set(), "deals": set()}
-        self.props = {"contacts": {}, "deals": {}}
-        self.pipelines, self.lists, self.flows = [], [], []
-        self.owners = [{"id": "90001", "email": "owner@scalelab.test", "archived": False}]
-        self.objects = {"contacts": {}, "deals": {}}
-        self.archived = {"contacts": {}, "deals": {}}  # HubSpot's recycle bin
-        self.links = set()
-        self.ids = count(1000)
-        self.fail_next = []  # statuses to return before serving the next request
-        self.hide_flows = False
-
-    # -- helpers
-    def _find(self, obj, prop, value):
-        return next((hs for hs, p in self.objects[obj].items() if p.get(prop) == value), None)
-
-    def _write(self, obj, props, hs=None):
-        hs = hs or str(next(self.ids))
-        stored = self.objects[obj].setdefault(hs, {})
-        stored.update({k: ("" if v is None else str(v)) for k, v in props.items()})
-        return hs
-
-    def _match(self, props, f):
-        value = props.get(f["propertyName"]) or ""
-        op = f["operator"]
-        if op == "HAS_PROPERTY":
-            return value != ""
-        if op == "NOT_HAS_PROPERTY":
-            return value == ""
-        if op == "EQ":
-            return value == f["value"]
-        if op == "NEQ":
-            return value != f["value"]
-        if op == "IN":
-            return value in f["values"]
-        if not value:
-            return False
-        left = _ms(value) if f["propertyName"].endswith("_date") else float(value)
-        return left > float(f["value"]) if op == "GT" else left < float(f["value"])
-
-    def __call__(self, method, url, headers, body, timeout):
-        assert headers["Authorization"] == f"Bearer {TOKEN}"
-        if self.fail_next:
-            return self.fail_next.pop(0), b'{"message":"slow down"}'
-        path = url.split("api.hubapi.com", 1)[1]
-        route, _, query = path.partition("?")
-        is_json = headers["Content-Type"] == "application/json"
-        data = json.loads(body) if body and is_json else None
-        status, payload = self.route(method, route, query, data, body, headers)
-        return status, (b"" if payload is None else json.dumps(payload).encode())
-
-    def route(self, method, route, query, data, raw, headers):
-        if route == "/account-info/v3/details":
-            return 200, self.account
-        if m := re.fullmatch(r"/crm/v3/properties/(\w+)/groups", route):
-            if method == "POST":
-                self.groups[m[1]].add(data["name"])
-                return 201, data
-            return 200, {"results": [{"name": g} for g in self.groups[m[1]]]}
-        if m := re.fullmatch(r"/crm/v3/properties/(\w+)", route):
-            if method == "POST":
-                assert data["groupName"] in self.groups[m[1]]
-                self.props[m[1]][data["name"]] = data
-                return 201, data
-            return 200, {"results": list(self.props[m[1]].values())}
-        if m := re.fullmatch(r"/crm/v3/properties/(\w+)/(\w+)", route):
-            self.props[m[1]][m[2]].update(data)
-            return 200, self.props[m[1]][m[2]]
-        if route == "/crm/v3/pipelines/deals":
-            if method == "POST":
-                pipeline = {"id": str(next(self.ids)), "label": data["label"],
-                            "stages": [{**s, "id": str(next(self.ids))} for s in data["stages"]]}
-                self.pipelines.append(pipeline)
-                return 201, pipeline
-            return 200, {"results": self.pipelines}
-        if route == "/crm/v3/owners":
-            return 200, {"results": self.owners}
-        if route == "/crm/v3/imports":
-            boundary = headers["Content-Type"].split("boundary=")[1].encode()
-            parts = raw.split(b"--" + boundary)
-            request = json.loads(parts[1].split(b"\r\n\r\n", 1)[1].rsplit(b"\r\n", 1)[0])
-            assert request["importOperations"] == {"0-1": "UPSERT"}
-            text = parts[2].split(b"\r\n\r\n", 1)[1].rsplit(b"\r\n", 1)[0].decode()
-            rows = list(csv.DictReader(io.StringIO(text)))
-            for row in rows:
-                self._write("contacts", {k: v for k, v in row.items() if v != ""},
-                            self._find("contacts", "email", row["email"]))
-            self.imported = len(rows)
-            return 200, {"id": "imp-1", "state": "STARTED"}
-        if route == "/crm/v3/imports/imp-1":
-            return 200, {"id": "imp-1", "state": "DONE",
-                         "metadata": {"counters": {"TOTAL_ROWS": self.imported, "CREATED_OBJECTS": self.imported}}}
-        if route == "/crm/v3/imports/imp-1/errors":
-            return 200, {"results": []}
-        if m := re.fullmatch(r"/crm/v3/objects/(\w+)/batch/read", route):
-            results, errors = [], []
-            for item in data["inputs"]:
-                hs = self._find(m[1], data["idProperty"], item["id"])
-                if hs:
-                    props = self.objects[m[1]][hs]
-                    results.append({"id": hs, "properties": {k: props.get(k) for k in data["properties"]}
-                                    | {data["idProperty"]: item["id"]}})
-                else:
-                    errors.append({"status": "error", "category": "OBJECT_NOT_FOUND"})
-            return (207 if errors else 200), {"results": results, "errors": errors}
-        if m := re.fullmatch(r"/crm/v3/objects/(\w+)/batch/upsert", route):
-            results = []
-            for item in data["inputs"]:
-                known = self.props[m[1]]
-                bad = [k for k, v in item["properties"].items() if k in known and known[k].get("options")
-                       and v not in {o["value"] for o in known[k]["options"]} | {""}]
-                if bad:
-                    return 400, {"message": f"invalid option for {bad}"}
-                hs = self._write(m[1], item["properties"], self._find(m[1], item["idProperty"], item["id"]))
-                results.append({"id": hs, "properties": dict(self.objects[m[1]][hs])})
-            return 200, {"status": "COMPLETE", "results": results}
-        if m := re.fullmatch(r"/crm/v3/objects/(\w+)/batch/archive", route):
-            for item in data["inputs"]:
-                self.archived[m[1]][item["id"]] = self.objects[m[1]].pop(item["id"])
-            return 204, None
-        if m := re.fullmatch(r"/crm/v3/objects/(\w+)/batch/update", route):
-            for item in data["inputs"]:
-                self._write(m[1], item["properties"], item["id"])
-            return 200, {"status": "COMPLETE"}
-        if m := re.fullmatch(r"/crm/v3/objects/(\w+)/search", route):
-            filters = data["filterGroups"][0]["filters"] if data["filterGroups"] else []
-            hits = sorted((hs for hs, p in self.objects[m[1]].items() if all(self._match(p, f) for f in filters)),
-                          key=int)
-            start = int(data.get("after", 0))
-            page = hits[start:start + data["limit"]]
-            payload = {"total": len(hits), "results": [
-                {"id": hs, "properties": {k: self.objects[m[1]][hs].get(k) for k in data["properties"]}}
-                for hs in page]}
-            if start + data["limit"] < len(hits):
-                payload["paging"] = {"next": {"after": str(start + data["limit"])}}
-            return 200, payload
-        if route == "/crm/v4/associations/deals/contacts/batch/read":
-            return 200, {"results": [{"from": {"id": i["id"]}, "to": [{"toObjectId": int(c)}
-                                                                      for d, c in self.links if d == i["id"]]}
-                                     for i in data["inputs"]]}
-        if route == "/crm/v4/associations/deals/contacts/batch/associate/default":
-            self.links |= {(i["from"]["id"], i["to"]["id"]) for i in data["inputs"]}
-            # HubSpot's deal lifecycle sync: a deal lifts its contacts to Opportunity, a closed-won deal to Customer.
-            won = {s["id"] for p in self.pipelines for s in p["stages"] if s["label"] == "Closed won"}
-            rank = ["subscriber", "lead", "marketingqualifiedlead", "salesqualifiedlead", "opportunity", "customer"]
-            for item in data["inputs"]:
-                contact = self.objects["contacts"][item["to"]["id"]]
-                target = "customer" if self.objects["deals"][item["from"]["id"]].get("dealstage") in won else "opportunity"
-                if rank.index(contact.get("lifecyclestage") or "subscriber") < rank.index(target):
-                    contact["lifecyclestage"] = target
-            return 200, {"status": "COMPLETE"}
-        if route == "/crm/v3/lists/search":
-            return 200, {"lists": [x for x in self.lists if data["query"] in x["name"]]}
-        if route == "/crm/v3/lists":
-            assert data["filterBranch"]["filterBranchType"] == "OR"
-            item = {"listId": str(next(self.ids)), "name": data["name"], "filterBranch": data["filterBranch"]}
-            self.lists.append(item)
-            return 200, {"list": item}
-        if route == "/automation/v4/flows":
-            if method == "POST":
-                assert not any("email" in a["actionTypeId"] for a in data["actions"])
-                self.flows.append({**data, "id": str(next(self.ids))})
-                return 201, self.flows[-1]
-            # Live HubSpot lists API-created flows as an empty result; the fake can reproduce that.
-            return 200, {"results": [] if self.hide_flows else self.flows}
-        raise AssertionError(f"unhandled {method} {route}")
 
 
 def _portal(fake):
@@ -299,7 +116,7 @@ def test_workflows_are_created_once_even_when_hubspot_will_not_list_them(connect
 
 
 def test_refuses_a_standard_portal_unless_it_is_named(connection, tmp_path):
-    with pytest.raises(SystemExit, match="Refusing to write synthetic data to a STANDARD portal"):
+    with pytest.raises(PortalRefused, match="Refusing to write synthetic data to a STANDARD portal"):
         apply(_portal(FakeHubSpot("STANDARD")), connection, ["properties"], output=tmp_path)
     fake = FakeHubSpot("STANDARD")
     apply(_portal(fake), connection, ["properties"], allow_portal="4242", output=tmp_path)

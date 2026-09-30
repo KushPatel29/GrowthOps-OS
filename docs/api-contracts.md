@@ -137,7 +137,7 @@ as-of date. They are local demonstration contracts, not claims about the connect
 | `POST /v2/instrumentation/validate` | Dry-run event-name, source, required-parameter, purchase-truth and campaign-taxonomy validation; no event ingestion or conversion export |
 | `GET /v2/quality/issues` | Paginated queue with `limit`, `offset`, `rule`, `severity`, `entity_type`, `state` filters and counts by rule for navigation |
 | `POST /v2/quality/issues/{id}/propose-repair` | Read-only dry-run diagnosis and evidence; never guesses or writes a missing value |
-| `GET /v2/registries/{kind}/versions` | Versioned campaign, lifecycle, instrumentation, expected 33-property portal schema and three expected workflow definitions; definitions are local desired state, not a live drift read-back |
+| `GET /v2/registries/{kind}/versions` | Versioned campaign, lifecycle, instrumentation, expected 35-property portal schema (version 3.0, with the renewal fields) and three expected workflow definitions; definitions are local desired state, not a live drift read-back |
 | `GET /v2/people/{person_key}/journey` | Pseudonymous identity evidence, touches, lifecycle, deals and payments |
 | `GET /v2/ops/customers/{person_key}` | Journey plus payment-to-access trace and subscription-grain entitlement states |
 | `GET /v2/ops/incidents?limit=20` | Pseudonymous failed/dead-letter workflow queue, ordered for investigation; 1–100 results and total count |
@@ -164,9 +164,20 @@ also require the operator token.
 | `GET /v2/conversions/preview/{payment_id}` | Explains settled-net-cash, registered paid-campaign and explicit ads consent both at purchase and now, with rejection reasons |
 | `POST /v2/conversions/queue/{payment_id}` | Development-only, ops-token-gated idempotent local outbox insert for eligible payments; **no provider delivery** |
 | `GET /v2/conversions/health` | Local queued count and explicit zero verified provider deliveries |
-| `GET /v2/renewals/action-proposals` | Risk and consent-aware suggested CRM tasks; proposal only, no task or message sent |
+| `GET /v2/renewals/action-proposals` | Risk and consent-aware suggested CRM tasks; the API only proposes them. The HubSpot sync (`python -m growthops.hubspot_sync tasks --create`) turns proposals for contacts in HubSpot into owned, due-dated tasks, once each |
 | `POST /v2/engagement/events` | Development-only trusted normalized YouTube, Zoom or Vimeo event ingress with validated identity, UTC timestamp and source idempotency; not a direct provider webhook |
 | `GET /v2/engagement/health` | Local normalized event counts and explicit provider-connection state |
+
+## v3 HubSpot integration
+
+The sync itself runs in the worker and the `python -m growthops.hubspot_sync` CLI; these routes receive HubSpot's
+events and let an operator see and approve its work. See [HubSpot in production](hubspot-production.md).
+
+| Endpoint | Contract |
+|---|---|
+| `POST /v2/webhooks/hubspot` | HubSpot app webhooks. 404 unless `GROWTHOPS_HUBSPOT_APP_SECRET` is set; 401 unless the `X-HubSpot-Signature-v3` signature over method, public URI (`GROWTHOPS_PUBLIC_BASE_URL`), body and `X-HubSpot-Request-Timestamp` verifies within five minutes; 422 for anything but a JSON list of at most 1,000 events. Returns `{accepted, duplicates, ignored}`; each `eventId` is stored once, events for another portal or an unsynced object are ignored, and nothing is written from the event itself |
+| `GET /v2/hubspot/sync` | Watermarks and last errors per object, landed records (active and archived), webhook events by status, the ten latest change sets and the number of tasks created (operator role in production) |
+| `POST /v2/hubspot/changesets/{id}/approve` | Approve a planned change set for the worker to apply. Needs `X-GrowthOps-Ops-Token` and an `X-GrowthOps-Actor` naming the approver, and a JSON `reason`; 404 for an unknown change set, 409 unless it is `planned`. Audited in `operator_actions` |
 
 ## Target endpoints (not implemented)
 

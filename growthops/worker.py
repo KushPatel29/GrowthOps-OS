@@ -86,6 +86,33 @@ def _job(connection: sqlite3.Connection, job: str, run_key: str, now: datetime, 
     return "succeeded"
 
 
+def hubspot_pass(connection: sqlite3.Connection, settings: Settings, *, now: datetime,
+                 transport: Transport = urllib_transport) -> str:
+    """One HubSpot sync pass: webhook events, incremental pull, reconcile, plan, and apply what a person approved.
+
+    Planning never writes. A change set reaches HubSpot only after someone approves it (CLI or
+    POST /v2/hubspot/changesets/{id}/approve); the next pass applies it, re-checking every value first.
+    """
+    from growthops.hubspot_client import HubSpotClient, account
+    from growthops.hubspot_sync import apply, plan, pull_all, reconcile
+    from growthops.hubspot_webhooks import process
+
+    client = HubSpotClient(settings.hubspot_access_token, transport, daily_floor=settings.hubspot_daily_floor)
+    found = account(client, settings.hubspot_portal_id or None)
+    if settings.hubspot_portal_id and found["portal_id"] != settings.hubspot_portal_id:
+        raise RuntimeError(f"HubSpot token belongs to portal {found['portal_id']}, not {settings.hubspot_portal_id}")
+    events = process(client, connection, now)
+    pulled = pull_all(client, connection, now=now)
+    report = reconcile(connection)
+    planned = plan(connection, report, now)
+    applied = [apply(client, connection, row[0], now) for row in connection.execute(
+        "SELECT changeset_id FROM hubspot_changesets WHERE status='approved' ORDER BY approved_at").fetchall()]
+    return (f"events {events['events']} (refetched {events['refetched']}); pulled contacts "
+            f"{pulled['contacts']['records']}, deals {pulled['deals']['records']}; drift {len(report['drift'])}; "
+            f"planned {planned['changeset_id'] or 'nothing'}; applied {len(applied)}; calls {len(client.calls)}, "
+            f"writes {client.writes}")
+
+
 def run_once(settings: Settings, *, now: datetime | None = None, adapters: Adapters | None = None,
              transport: Transport = urllib_transport) -> dict:
     settings.require_safe()
@@ -105,6 +132,14 @@ def run_once(settings: Settings, *, now: datetime | None = None, adapters: Adapt
             return f"{len(sent)} alert(s): " + ", ".join(f"{item['key']}={item['status']}" for item in sent)
 
         summary["alerts"] = _job(connection, "alerts", now.strftime("%Y-%m-%dT%H"), now, alerts)
+        if settings.hubspot_sync_enabled:
+            def hubspot() -> str:
+                return hubspot_pass(connection, settings, now=now, transport=transport)
+
+            minutes = settings.hubspot_sync_minutes
+            slot = now.replace(minute=(now.minute // minutes) * minutes if minutes < 60 else 0, second=0,
+                               microsecond=0)
+            summary["hubspot_sync"] = _job(connection, "hubspot_sync", slot.isoformat(timespec="minutes"), now, hubspot)
         if now.time() >= settings.daily_update_time_utc:
             def daily() -> str:
                 from growthops.performance import daily_update

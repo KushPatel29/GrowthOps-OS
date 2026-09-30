@@ -113,8 +113,11 @@ def test_control_plane_routes_expose_distinct_values(db_path, monkeypatch):
         assert proposal.json()["proposed_value"] is None
         versions = client.get("/v2/registries/campaign/versions")
         assert versions.status_code == 200 and versions.json()["versions"][0]["version"] == "2.1"
-        properties = client.get("/v2/registries/property/versions").json()["versions"][0]["definition"]["objects"]
-        assert len(properties["contacts"]) + len(properties["deals"]) == 33
+        property_version = client.get("/v2/registries/property/versions").json()["versions"][0]
+        properties = property_version["definition"]["objects"]
+        # 33 from the portal build plus the two v3 renewal fields, so the property registry is version 3.0.
+        assert property_version["version"] == "3.0"
+        assert len(properties["contacts"]) + len(properties["deals"]) == 35
         workflows = client.get("/v2/registries/workflow/versions").json()["versions"][0]["definition"]
         assert len(workflows["workflows"]) == 3
 

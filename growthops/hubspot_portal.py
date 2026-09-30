@@ -4,7 +4,7 @@
 live portal as a sequence of idempotent steps; running a step twice writes nothing the second time.
 
 1. ``properties``  a ``growthops`` property group on contacts and deals: original and latest UTM, first and latest
-                   content, funnel dates, tracking status, owner, net cash and attribution fields. Enumerations are
+                   content, funnel dates, tracking status, owner, net cash, renewal and attribution fields. Enumerations are
                    limited to the campaign registry, so an off-taxonomy value cannot be written.
 2. ``pipeline``    a "GrowthOps sales" deal pipeline whose stages follow the funnel.
 3. ``prune``       GrowthOps contacts outside the portal sample archived (a soft delete HubSpot can restore).
@@ -38,22 +38,19 @@ import csv
 import hashlib
 import io
 import json
-import os
 import sqlite3
-import time
 import uuid
 from collections import defaultdict
-from collections.abc import Callable, Iterable
-from dataclasses import dataclass, field
+from collections.abc import Iterable
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
-from growthops.adapters import HUBSPOT_API, ProviderError, Transport, urllib_transport
+from growthops.adapters import ProviderError
 from growthops.hubspot import DEAL_STAGE, LIFECYCLE, STALE_DAYS
+from growthops.hubspot_client import HubSpotClient, account, load_token
 from growthops.scenario import AS_OF
 
 GROUP = "growthops"
-TEST_ACCOUNT_TYPES = frozenset({"DEVELOPER_TEST", "SANDBOX"})
 PIPELINE_LABEL = "GrowthOps sales"
 # (internal key, label, probability, closed)
 PIPELINE_STAGES = (
@@ -65,6 +62,7 @@ PIPELINE_STAGES = (
 )
 OPEN_LIFECYCLE = ("lead", "marketingqualifiedlead", "opportunity")
 TRACKING_STATUSES = ("complete", "missing_utm", "off_taxonomy", "direct", "no_lead_touch")
+RENEWAL_RISKS = ("high", "medium", "not_due")  # renewals.monitor severities, plus active and not yet due
 CREATE_ONLY = frozenset({"lifecyclestage", "hubspot_owner_id", "growthops_owner"})  # cleanup or a rep owns these after create
 BATCH = 100
 LIST_PREFIX = "GrowthOps: "
@@ -165,6 +163,8 @@ def portal_properties(connection: sqlite3.Connection) -> dict[str, list[dict]]:
             _prop("growthops_tracking_status", "Tracking status", "enumeration", TRACKING_STATUSES),
             _prop("growthops_has_closed_won", "Has a closed-won deal", "bool"),
             _prop("growthops_stale_lead", "Stale lead (non-marketing candidate)", "bool"),
+            _prop("growthops_renewal_due_date", "Community renewal due", "date"),
+            _prop("growthops_renewal_risk", "Renewal risk", "enumeration", RENEWAL_RISKS),
             *attribution,
         ],
         "deals": [
@@ -256,6 +256,16 @@ def records(connection: sqlite3.Connection, as_of: date = AS_OF,
         if customer in to_survivor:
             cash_by_customer[to_survivor[customer]] += cents
     cutoff = f"{as_of.isoformat()}T23:59:59+00:00"
+    # Renewal state for customer success: the next due date of an active subscription and the monitor's risk.
+    from growthops.renewals import monitor
+
+    risk = {item["subscription_id"]: item["severity"] for item in monitor(connection, as_of)["issues"]}
+    renewal: dict[str, tuple[str, str]] = {}
+    for row in connection.execute("""SELECT subscription_id, customer_id, renewal_due_at FROM subscriptions
+                                     WHERE status='active' ORDER BY renewal_due_at, subscription_id"""):
+        survivor_id = to_survivor.get(row["customer_id"])
+        if survivor_id and survivor_id not in renewal:
+            renewal[survivor_id] = (_day(row["renewal_due_at"]), risk.get(row["subscription_id"], "not_due"))
     registry_sources = {row[0] for row in connection.execute("SELECT source FROM campaigns WHERE registry_valid=1")}
 
     contacts = []
@@ -294,6 +304,8 @@ def records(connection: sqlite3.Connection, as_of: date = AS_OF,
             "growthops_last_activity_date": _day(max(last_touch, last_event.get(head, ""))),
             "growthops_tracking_status": _tracking_status(lead),
             "growthops_has_closed_won": "true" if head in won else "false",
+            "growthops_renewal_due_date": renewal.get(head, ("", ""))[0],
+            "growthops_renewal_risk": renewal.get(head, ("", ""))[1],
             "growthops_net_cash": _money(cash_by_customer.get(head, 0)),
             **_attribution(group, cutoff),
         })
@@ -391,109 +403,8 @@ def plan(connection: sqlite3.Connection) -> dict:
 
 # --------------------------------------------------------------------------- the API client
 
-@dataclass
-class Portal:
-    """A thin CRM API client: bearer auth, rate pacing, and retries on 429 and 5xx with backoff."""
-
-    token: str
-    transport: Transport = urllib_transport
-    base_url: str = HUBSPOT_API
-    timeout: float = 60
-    min_interval: float = 0.12  # under 100 requests per 10 seconds, the lowest private-app limit
-    search_interval: float = 0.3  # CRM search has its own, lower limit
-    sleep: Callable[[float], None] = time.sleep
-    clock: Callable[[], float] = time.monotonic
-    calls: list[tuple[str, str, int]] = field(default_factory=list)
-    _last: float = field(default=0.0, repr=False)
-
-    @property
-    def writes(self) -> int:
-        reads = ("/batch/read", "/search", "/lists/search")
-        return sum(1 for method, path, _ in self.calls
-                   if method in {"POST", "PATCH", "PUT", "DELETE"} and not path.endswith(reads))
-
-    def request(self, method: str, path: str, body: dict | None = None, *, raw: bytes | None = None,
-                content_type: str = "application/json", missing_ok: bool = False) -> dict | None:
-        headers = {"Authorization": f"Bearer {self.token}", "Content-Type": content_type, "Accept": "application/json"}
-        data = raw if raw is not None else (json.dumps(body).encode() if body is not None else None)
-        interval = self.search_interval if path.endswith("/search") else self.min_interval
-        for attempt in range(6):
-            wait = self._last + interval - self.clock()
-            if wait > 0:
-                self.sleep(wait)
-            status, payload = self.transport(method, self.base_url + path, headers, data, self.timeout)
-            self._last = self.clock()
-            self.calls.append((method, path.split("?")[0], status))
-            if status == 429 or status >= 500:
-                self.sleep(min(2 ** attempt, 20))
-                continue
-            if status == 404 and missing_ok:
-                return None
-            if not 200 <= status < 300:
-                kind = "permanent" if status < 500 else "transient"
-                raise ProviderError(f"hubspot: HTTP {status} ({kind}) {method} {path.split('?')[0]}: "
-                                    f"{payload[:500].decode('utf-8', 'replace')}")
-            return json.loads(payload) if payload else {}
-        raise ProviderError(f"hubspot: {method} {path.split('?')[0]} still failing after retries (last HTTP {status})")
-
-    def get(self, path: str, **kwargs) -> dict:
-        return self.request("GET", path, **kwargs) or {}
-
-    def post(self, path: str, body: dict) -> dict:
-        return self.request("POST", path, body) or {}
-
-    def paged(self, path: str, key: str = "results") -> list[dict]:
-        items, after = [], None
-        while True:
-            sep = "&" if "?" in path else "?"
-            page = self.get(path + (f"{sep}after={after}" if after else ""))
-            items += page.get(key, [])
-            after = page.get("paging", {}).get("next", {}).get("after")
-            if not after:
-                return items
-
-    def search(self, object_type: str, filters: list[dict], properties: list[str]) -> list[dict]:
-        """Every match of a CRM search. Search stops at 10,000 results, so callers keep filters narrow."""
-        results, after = [], None
-        while True:
-            body = {"filterGroups": [{"filters": filters}] if filters else [], "properties": properties,
-                    "limit": 100, "sorts": [{"propertyName": "hs_object_id", "direction": "ASCENDING"}]}
-            if after:
-                body["after"] = after
-            page = self.post(f"/crm/v3/objects/{object_type}/search", body)
-            results += page.get("results", [])
-            after = page.get("paging", {}).get("next", {}).get("after")
-            if not after:
-                return results
-
-    def count(self, object_type: str, filters: list[dict]) -> int:
-        body = {"filterGroups": [{"filters": filters}] if filters else [], "properties": ["hs_object_id"], "limit": 1}
-        return int(self.post(f"/crm/v3/objects/{object_type}/search", body).get("total", 0))
-
-
-def load_token(env_file: str | Path = ".env") -> str:
-    """HUBSPOT_ACCESS_TOKEN from the environment, else from a git-ignored .env file. Never logged."""
-    token = os.environ.get("HUBSPOT_ACCESS_TOKEN", "").strip()
-    path = Path(env_file)
-    if not token and path.exists():
-        for line in path.read_text(encoding="utf-8").splitlines():
-            key, _, value = line.partition("=")
-            if key.strip() == "HUBSPOT_ACCESS_TOKEN":
-                token = value.strip().strip('"').strip("'")
-    if not token:
-        raise SystemExit("HUBSPOT_ACCESS_TOKEN is not set (environment or .env). See docs/hubspot-portal.md.")
-    return token
-
-
-def account(portal: Portal, allow_portal: str | None = None) -> dict:
-    """Account details, refusing a portal that is not a developer test account or sandbox unless named."""
-    info = portal.get("/account-info/v3/details")
-    kind, portal_id = info.get("accountType", "UNKNOWN"), str(info.get("portalId", ""))
-    if kind not in TEST_ACCOUNT_TYPES and allow_portal != portal_id:
-        raise SystemExit(f"Refusing to write synthetic data to a {kind} portal. Use a developer test account, "
-                         f"or pass --allow-portal {portal_id} if this portal is meant for it.")
-    return {"account_type": kind, "portal_id": portal_id, "time_zone": info.get("timeZone"),
-            "currency": info.get("companyCurrency"), "data_hosting": info.get("dataHostingLocation")}
+# The client lives in hubspot_client; `Portal` stays the name the portal build and its tests use.
+Portal = HubSpotClient
 
 
 # --------------------------------------------------------------------------- steps
@@ -1107,7 +1018,7 @@ def render_doc(evidence: dict) -> str:
     if "properties" in steps:
         lines.append(f"| Custom properties | {len(steps['properties']['created'])} in a `growthops` group on contacts "
                      "and deals: original/latest UTM, first/latest content, funnel dates, tracking status, rep, "
-                     "net cash, first-touch/lead-creation/last-non-direct attribution |")
+                     "net cash, renewal due date and risk, first-touch/lead-creation/last-non-direct attribution |")
     lines.append(f"| Deal pipeline | {PIPELINE_LABEL}: " + " → ".join(steps["pipeline"]["stages"]) + " |")
     lines.append(f"| Owners | {steps['owners']['reps_mapped']} reps mapped onto {steps['owners']['portal_owners']} "
                  "portal user(s) through the Owners API; the rep stays in `growthops_owner` |")

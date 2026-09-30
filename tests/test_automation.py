@@ -38,15 +38,35 @@ def _event(suffix: str) -> PaymentEvent:
                         customer_id="c-000002", amount_cents=480000, paid_at=NOW, product_id="accelerator")
 
 
-def test_hubspot_adapter_upserts_lifecycle_and_classifies_errors():
-    transport = Recorder((200, b'{"status":"COMPLETE"}'))
+def _found(stage: str) -> tuple[int, bytes]:
+    return 200, json.dumps({"results": [{"id": "101", "properties": {"lifecyclestage": stage}}]}).encode()
+
+
+def test_hubspot_adapter_moves_lifecycle_forward_and_classifies_errors():
+    transport = Recorder(_found("opportunity"), (200, b'{"status":"COMPLETE","results":[{"id":"101"}]}'))
     HubSpotCRM("pat-token", 5, transport).mark_customer(_event("h1"))
-    call = transport.calls[0]
-    assert call["url"] == "https://api.hubapi.com/crm/v3/objects/contacts/batch/upsert"
-    assert call["headers"]["Authorization"] == "Bearer pat-token" and call["timeout"] == 5
-    assert call["body"]["inputs"][0] == {"idProperty": "growthops_contact_id", "id": "c-000002",
-                                         "properties": {"growthops_contact_id": "c-000002",
-                                                        "lifecyclestage": "customer"}}
+    read, update = transport.calls
+    assert read["url"] == "https://api.hubapi.com/crm/v3/objects/contacts/batch/read"
+    assert read["body"] == {"idProperty": "growthops_contact_id", "properties": ["lifecyclestage"],
+                            "inputs": [{"id": "c-000002"}]}
+    assert update["url"] == "https://api.hubapi.com/crm/v3/objects/contacts/batch/update"
+    assert update["headers"]["Authorization"] == "Bearer pat-token" and update["timeout"] == 5
+    assert update["body"]["inputs"][0] == {"idProperty": "growthops_contact_id", "id": "c-000002",
+                                           "properties": {"lifecyclestage": "customer"}}
+    # Already a customer (or beyond): read only, nothing written, never moved backwards.
+    for stage in ("customer", "evangelist"):
+        already = Recorder(_found(stage))
+        HubSpotCRM("t", 5, already).mark_customer(_event("h4"))
+        assert [call["url"].rsplit("/", 1)[1] for call in already.calls] == ["read"]
+    # Unknown to the CRM: a permanent failure, not a blank contact.
+    missing = Recorder((207, b'{"results":[],"errors":[{"category":"OBJECT_NOT_FOUND"}]}'))
+    with pytest.raises(ProviderError, match="not in the CRM \\(permanent\\)"):
+        HubSpotCRM("t", 5, missing).mark_customer(_event("h5"))
+    assert len(missing.calls) == 1
+    # A 207 on the write is a failure even though it is a 2xx.
+    partial = Recorder(_found("lead"), (207, b'{"results":[],"errors":[{"category":"VALIDATION_ERROR"}]}'))
+    with pytest.raises(ProviderError, match="VALIDATION_ERROR"):
+        HubSpotCRM("t", 5, partial).mark_customer(_event("h6"))
     with pytest.raises(ProviderError, match="HTTP 429 \\(transient\\)"):
         HubSpotCRM("t", 5, Recorder((429, b"rate limited"))).mark_customer(_event("h2"))
     with pytest.raises(ProviderError, match="HTTP 400 \\(permanent\\)"):
