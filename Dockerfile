@@ -1,14 +1,14 @@
 # syntax=docker/dockerfile:1.7
 # One image for the API, the worker and the dashboard; compose picks the command.
 
-FROM python:3.12-slim AS build
+FROM python:3.14-slim AS build
 WORKDIR /src
 ENV PIP_NO_CACHE_DIR=1 PIP_DISABLE_PIP_VERSION_CHECK=1
 COPY pyproject.toml README.md requirements.txt ./
 COPY growthops ./growthops
 RUN python -m pip wheel --wheel-dir /wheels ".[rag]" "streamlit>=1.49,<2" "pandas>=2.2,<3"
 
-FROM python:3.12-slim
+FROM python:3.14-slim
 ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 PIP_NO_CACHE_DIR=1 \
     GROWTHOPS_DATABASE=/data/growthops.db \
     GROWTHOPS_EMBEDDING_CACHE_DIR=/opt/growthops/models \
