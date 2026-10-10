@@ -4,7 +4,7 @@
 # growthops/ask_data.py stayed stale, so a release that changes growthops modules also bumps this marker:
 # growthops release 3.0 (HubSpot two-way sync)
 -e .
-streamlit>=1.64.0,<2
+streamlit>=1.65.0,<2
 pandas>=3.0.6,<4
 onnxruntime>=1.29,<2
 tokenizers>=0.23.1,<1
