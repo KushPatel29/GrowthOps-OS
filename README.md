@@ -8,6 +8,15 @@
 
 [**Live dashboard**](https://growthops-os.streamlit.app/) · [Reviewer walkthrough](docs/demo-walkthrough.md) · [Final target audit](docs/final-target-audit.md) · [Power BI and Excel](docs/power-bi-handoff.md) · [Case study](docs/case-study.md) · [Metric catalog](docs/metric-catalog.md) · [API](docs/api-contracts.md) · [v2.1 specification](docs/growthops-os-v2.1-engineering-spec.md) · [HubSpot in production](docs/hubspot-production.md) · [HubSpot marketing audit](docs/hubspot-marketing-audit.md) · [HubSpot v2.1 schema record](docs/hubspot-v21-change-plan.md)
 
+> **At a glance**
+>
+> - **The question.** Which revenue number is right, what changed, and what should the growth team do this morning?
+> - **What I built.** dbt marts over ad-platform, CRM and payment data; a seven-page Power BI report with 215 documented DAX measures, generated from a specification; a formula-driven Excel workbook; a Streamlit app and FastAPI service.
+> - **What I found.** Platforms claimed $3.72M; $3.06M was collected, and two bridges explain every dollar. Meta's 7.3× return on ad spend is 3.3× on collected cash. One new broad campaign explains 92% of a fall in MQL rate from 29.8% to 20.4%, and nine launch-day buyers paid but never got access.
+> - **Check it yourself.** [Download the workbook](dashboards/GrowthOps_OS_Excel_Dashboard.xlsx) and compare it with the [Power BI hand-off](docs/power-bi-handoff.md): they agree to the cent. The business is fictional and its problems were planted, so detection can be scored.
+>
+> One of three case studies in [Kush Patel's portfolio](https://kushpatel29.github.io/#p-growthops). Built with AI coding assistants; the questions, metric definitions, tests and findings are mine.
+
 The live dashboard includes a read-only **Operations console** with a decision center, synthetic Customer 360,
 incident traces, quality queue and sales copilot, plus a **Growth lab** for cohorts, customer economics,
 scenario arithmetic and trust evidence. It does not read or change the connected HubSpot developer test portal.
