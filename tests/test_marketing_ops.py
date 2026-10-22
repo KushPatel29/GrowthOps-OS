@@ -1,6 +1,6 @@
 import csv
 import json
-from datetime import date, datetime, timezone
+from datetime import UTC, date, datetime
 from pathlib import Path
 
 from fastapi.testclient import TestClient
@@ -131,7 +131,7 @@ def test_hubspot_mapping_exports_valid_import_files(connection, tmp_path):
 
 
 def test_hubspot_search_round_trip_and_source_mismatch(connection):
-    body = search_request(datetime(2026, 9, 1, tzinfo=timezone.utc), after="100")
+    body = search_request(datetime(2026, 9, 1, tzinfo=UTC), after="100")
     assert body["filterGroups"][0]["filters"][0] == {
         "propertyName": "lastmodifieddate", "operator": "GTE", "value": "1788220800000"}
     assert body["limit"] == 100 and body["after"] == "100"

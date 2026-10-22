@@ -8,14 +8,14 @@ recover them.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import date, datetime, time, timezone
+from datetime import UTC, date, datetime, time
 
 START = date(2025, 7, 1)
 AS_OF = date(2026, 9, 25)  # Last complete day of data; "this morning" is the next day.
 MIGRATION_DATE = date(2026, 3, 15)  # Legacy CRM -> HubSpot-style CRM cut-over.
 ACCESS_OUTAGE = (
-    datetime.combine(date(2026, 9, 18), time(10, 0), timezone.utc),
-    datetime.combine(date(2026, 9, 18), time(16, 0), timezone.utc),
+    datetime.combine(date(2026, 9, 18), time(10, 0), UTC),
+    datetime.combine(date(2026, 9, 18), time(16, 0), UTC),
 )
 UTM_BREAK = (date(2026, 9, 3), date(2026, 9, 14))  # Landing-page release dropped UTMs.
 UTM_BREAK_PAGE = "/webinar"
@@ -146,4 +146,4 @@ INCIDENTS = (
 
 
 def as_of_datetime() -> datetime:
-    return datetime.combine(AS_OF, time(23, 59, 59), timezone.utc)
+    return datetime.combine(AS_OF, time(23, 59, 59), UTC)

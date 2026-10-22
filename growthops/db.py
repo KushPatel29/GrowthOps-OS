@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import sqlite3
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 SCHEMA = """
@@ -767,7 +767,7 @@ def initialize(connection: sqlite3.Connection) -> None:
     connection.executescript(SCHEMA)
     connection.execute(
         "CREATE TABLE IF NOT EXISTS schema_migrations (version INTEGER PRIMARY KEY, applied_at TEXT NOT NULL)")
-    now = datetime.now(timezone.utc).isoformat()
+    now = datetime.now(UTC).isoformat()
     connection.execute("INSERT OR IGNORE INTO schema_migrations VALUES (1, ?)", (now,))
     applied = {row[0] for row in connection.execute("SELECT version FROM schema_migrations")}
     for version, sql in MIGRATIONS:

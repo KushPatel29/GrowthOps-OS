@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import sqlite3
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from growthops.config import Settings, get_settings
 
@@ -20,9 +20,9 @@ SOURCES = {
 
 def _parse(value: str) -> datetime:
     if len(value) == 10:  # a date: the day is complete at its end
-        return datetime.fromisoformat(value).replace(hour=23, minute=59, second=59, tzinfo=timezone.utc)
+        return datetime.fromisoformat(value).replace(hour=23, minute=59, second=59, tzinfo=UTC)
     parsed = datetime.fromisoformat(value)
-    return parsed if parsed.tzinfo else parsed.replace(tzinfo=timezone.utc)
+    return parsed if parsed.tzinfo else parsed.replace(tzinfo=UTC)
 
 
 def check(connection: sqlite3.Connection, settings: Settings | None = None) -> list[dict]:

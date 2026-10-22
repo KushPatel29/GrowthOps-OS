@@ -26,7 +26,7 @@ import signal
 import sqlite3
 import threading
 import time
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 from growthops.adapters import Adapters, Transport, build_adapters, urllib_transport
@@ -70,7 +70,7 @@ def _claim(connection: sqlite3.Connection, job: str, run_key: str, now: datetime
 
 def _finish(connection: sqlite3.Connection, job: str, run_key: str, status: str, detail: str) -> None:
     connection.execute("UPDATE job_runs SET status=?, finished_at=?, detail=? WHERE job=? AND run_key=?",
-                       (status, datetime.now(timezone.utc).isoformat(), detail[:2000], job, run_key))
+                       (status, datetime.now(UTC).isoformat(), detail[:2000], job, run_key))
 
 
 def _job(connection: sqlite3.Connection, job: str, run_key: str, now: datetime, work) -> str | None:
@@ -116,7 +116,7 @@ def hubspot_pass(connection: sqlite3.Connection, settings: Settings, *, now: dat
 def run_once(settings: Settings, *, now: datetime | None = None, adapters: Adapters | None = None,
              transport: Transport = urllib_transport) -> dict:
     settings.require_safe()
-    now = now or datetime.now(timezone.utc)
+    now = now or datetime.now(UTC)
     adapters = adapters or build_adapters(settings, transport)
     connection = connect(settings.database)
     try:

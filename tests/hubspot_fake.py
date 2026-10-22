@@ -13,14 +13,14 @@ import csv
 import io
 import json
 import re
-from datetime import UTC, datetime, timezone
+from datetime import UTC, datetime
 
 TOKEN = "pat-na2-secret-value"
 MODIFIED = {"contacts": "lastmodifieddate", "deals": "hs_lastmodifieddate", "tasks": "hs_lastmodifieddate"}
 
 
 def _ms(day: str) -> int:
-    return int(datetime.fromisoformat(day[:10]).replace(tzinfo=timezone.utc).timestamp() * 1000)
+    return int(datetime.fromisoformat(day[:10]).replace(tzinfo=UTC).timestamp() * 1000)
 
 
 def _iso(ms: int) -> str:

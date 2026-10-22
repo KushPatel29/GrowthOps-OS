@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 import pytest
 
@@ -15,7 +15,7 @@ from growthops.workflow import (
     utcnow,
 )
 
-T0 = datetime(2026, 9, 26, 9, 0, tzinfo=timezone.utc)
+T0 = datetime(2026, 9, 26, 9, 0, tzinfo=UTC)
 
 
 def _event(**overrides) -> PaymentEvent:

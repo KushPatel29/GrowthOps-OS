@@ -15,7 +15,7 @@ import random
 import sqlite3
 from bisect import bisect_left
 from collections import defaultdict
-from datetime import date, datetime, time, timedelta, timezone
+from datetime import UTC, date, datetime, time, timedelta
 from pathlib import Path
 from typing import Literal
 
@@ -23,7 +23,6 @@ from growthops import scenario as sc
 from growthops.db import connect, initialize
 from growthops.workflow import PaymentEvent, process_payment, run_due
 
-UTC = timezone.utc
 END = sc.as_of_datetime()
 STAGE_RANK = {"lead": 0, "mql": 1, "opportunity": 2, "customer": 3}
 TABLES = (

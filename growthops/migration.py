@@ -5,7 +5,7 @@ from __future__ import annotations
 import argparse
 import json
 import sqlite3
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from growthops.db import connect, initialize
 
@@ -98,7 +98,7 @@ def apply_safe_repairs(connection: sqlite3.Connection) -> int:
                     connection.execute(
                         "INSERT INTO migration_repairs VALUES (?, ?, ?, ?, ?, ?, ?)",
                         (f"{row['contact_id']}:{field}", row["contact_id"], row["legacy_id"],
-                         field, current, legacy, datetime.now(timezone.utc).isoformat()),
+                         field, current, legacy, datetime.now(UTC).isoformat()),
                     )
                     count += 1
         connection.commit()

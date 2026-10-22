@@ -1228,7 +1228,7 @@ def build(output: Path = OUTPUT) -> Path:
     book.wb.properties.creator = "GrowthOps OS"
     book.wb.properties.title = "ScaleLab GrowthOps workbook (synthetic)"
     # A fixed, naive stamp: the file must rebuild byte for byte, and OOXML core properties are UTC by definition.
-    book.wb.properties.created = book.wb.properties.modified = datetime(2026, 1, 1)  # noqa: DTZ001
+    book.wb.properties.created = book.wb.properties.modified = datetime(2026, 1, 1)
     book.wb.calculation.fullCalcOnLoad = True
     book.wb.save(output)
     _normalize_zip(output)

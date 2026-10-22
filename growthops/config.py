@@ -12,7 +12,7 @@ change the environment without restarting a Python process.
 from __future__ import annotations
 
 import os
-from datetime import datetime, time, timedelta, timezone
+from datetime import UTC, datetime, time, timedelta
 from typing import Literal
 from urllib.parse import urlsplit
 
@@ -86,8 +86,8 @@ class Settings(BaseModel):
         if self.data_mode == "synthetic":
             from growthops.scenario import AS_OF
 
-            return datetime.combine(AS_OF + timedelta(days=1), time(7), timezone.utc)
-        return datetime.now(timezone.utc)
+            return datetime.combine(AS_OF + timedelta(days=1), time(7), UTC)
+        return datetime.now(UTC)
 
     def problems(self) -> list[str]:
         """Everything that would make this configuration unsafe in production."""

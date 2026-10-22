@@ -40,7 +40,7 @@ import time
 import uuid
 from collections.abc import Callable
 from dataclasses import dataclass, field
-from datetime import date, datetime, timedelta, timezone
+from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
@@ -939,7 +939,7 @@ def _log(connection: sqlite3.Connection, question: str, decision: dict, latency_
         stored_question = ("sha256:" + hashlib.sha256(question.encode()).hexdigest()
                            if get_settings().production else question[:300])
         connection.execute("INSERT INTO ask_log VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-                           (uuid.uuid4().hex, datetime.now(timezone.utc).isoformat(), stored_question,
+                           (uuid.uuid4().hex, datetime.now(UTC).isoformat(), stored_question,
                             decision["route"], decision.get("target"), decision.get("score"),
                             decision.get("mode") or "none", latency_ms))
     except sqlite3.OperationalError:
@@ -1037,7 +1037,7 @@ def run_eval(mode: str | None = None, path: Path = EVAL_PATH) -> dict:
 
 
 def usage(connection: sqlite3.Connection, days: int = 7) -> dict:
-    since = (datetime.now(timezone.utc) - timedelta(days=days)).isoformat()
+    since = (datetime.now(UTC) - timedelta(days=days)).isoformat()
     rows = connection.execute("SELECT route, COUNT(*) questions, ROUND(AVG(latency_ms)) avg_ms FROM ask_log "
                               "WHERE asked_at>=? GROUP BY route ORDER BY route", (since,)).fetchall()
     return {"days": days, "retrieval_mode": resolve_mode(), "by_route": [dict(row) for row in rows]}

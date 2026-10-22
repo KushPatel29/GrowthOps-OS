@@ -90,7 +90,7 @@ def _now(now: datetime | None) -> datetime:
 
 
 def _ms(moment: str | datetime) -> int:
-    value = datetime.fromisoformat(moment.replace("Z", "+00:00")) if isinstance(moment, str) else moment
+    value = datetime.fromisoformat(moment) if isinstance(moment, str) else moment
     return int(value.timestamp() * 1000)
 
 

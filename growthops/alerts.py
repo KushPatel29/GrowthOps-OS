@@ -12,7 +12,7 @@ import hashlib
 import json
 import logging
 import sqlite3
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 from growthops.adapters import ProviderError, Transport, urllib_transport
 from growthops.config import Settings
@@ -63,7 +63,7 @@ def post_message(settings: Settings, text: str, transport: Transport = urllib_tr
 def deliver(connection: sqlite3.Connection, settings: Settings, alerts: list[dict], *,
             now: datetime | None = None, transport: Transport = urllib_transport) -> list[dict]:
     """Send new or changed alerts; returns what was attempted."""
-    now = now or datetime.now(timezone.utc)
+    now = now or datetime.now(UTC)
     attempted = []
     for alert in alerts:
         digest = hashlib.sha256(_text(alert).encode()).hexdigest()[:12]

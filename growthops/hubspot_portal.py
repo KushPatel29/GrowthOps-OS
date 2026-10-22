@@ -42,7 +42,7 @@ import sqlite3
 import uuid
 from collections import defaultdict
 from collections.abc import Iterable
-from datetime import date, datetime, timedelta, timezone
+from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
 
 from growthops.adapters import ProviderError
@@ -552,7 +552,7 @@ def import_contacts(portal: Portal, contacts: list[dict], owner_map: dict, outpu
     writer.writerows(rows)
     path.write_text(buffer.getvalue(), encoding="utf-8")
     request_body = {
-        "name": f"GrowthOps contacts {datetime.now(timezone.utc):%Y-%m-%d %H:%M}",
+        "name": f"GrowthOps contacts {datetime.now(UTC):%Y-%m-%d %H:%M}",
         "importOperations": {"0-1": "UPSERT"},
         "dateFormat": "YEAR_MONTH_DAY",
         "files": [{"fileName": path.name, "fileFormat": "CSV", "fileImportPage": {"hasHeader": True, "columnMappings": [
@@ -667,7 +667,7 @@ def cleanup(portal: Portal, connection: sqlite3.Connection, owner_map: dict, as_
     """Find CRM hygiene problems in the portal itself, fix them in bulk, and report before and after counts."""
     reps = sorted(owner_map["map"])
     # Search compares date properties as epoch milliseconds at midnight UTC.
-    stale_cutoff = datetime.combine(as_of - timedelta(days=STALE_DAYS), datetime.min.time(), timezone.utc)
+    stale_cutoff = datetime.combine(as_of - timedelta(days=STALE_DAYS), datetime.min.time(), UTC)
     rules = {**CLEANUP_RULES, "stale_leads_unflagged": [
         GOPS, _f("lifecyclestage", "EQ", "lead"),
         _f("growthops_last_activity_date", "LT", str(int(stale_cutoff.timestamp() * 1000))),
@@ -892,7 +892,7 @@ STEPS = ("properties", "pipeline", "prune", "import", "sync", "cleanup", "lists"
 def apply(portal: Portal, connection: sqlite3.Connection, steps: Iterable[str] = STEPS,
           allow_portal: str | None = None, output: Path = Path("build/hubspot")) -> dict:
     steps = list(steps)
-    evidence: dict = {"run_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+    evidence: dict = {"run_at": datetime.now(UTC).isoformat(timespec="seconds"),
                       "account": account(portal, allow_portal), "steps": {}}
     desired = records(connection)
     if "properties" in steps:

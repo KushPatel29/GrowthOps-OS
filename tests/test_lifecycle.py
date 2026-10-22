@@ -3,7 +3,7 @@
 import hashlib
 import hmac
 import json
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 import pytest
 from fastapi.testclient import TestClient
@@ -27,7 +27,7 @@ from growthops.workflow import (
     trace,
 )
 
-T0 = datetime(2026, 9, 29, 12, 0, tzinfo=timezone.utc)
+T0 = datetime(2026, 9, 29, 12, 0, tzinfo=UTC)
 CUSTOMER = "c-000001"
 
 

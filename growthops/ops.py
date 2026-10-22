@@ -18,7 +18,7 @@ import json
 import shutil
 import sqlite3
 import sys
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 from growthops.config import get_settings
@@ -28,7 +28,7 @@ from growthops.db import SCHEMA_VERSION, connect, schema_version
 def backup(database: str, output_dir: str, keep: int = 14) -> Path:
     destination = Path(output_dir)
     destination.mkdir(parents=True, exist_ok=True)
-    stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    stamp = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
     target = destination / f"growthops-{stamp}.db"
     source = connect(database)
     copy = sqlite3.connect(target)

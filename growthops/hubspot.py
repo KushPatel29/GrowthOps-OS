@@ -18,7 +18,7 @@ import argparse
 import csv
 import json
 import sqlite3
-from datetime import date, datetime, timedelta, timezone
+from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
 
 from growthops.scenario import AS_OF
@@ -154,7 +154,7 @@ def search_request(modified_since: datetime, after: str | None = None) -> dict:
     body = {
         "filterGroups": [{"filters": [{
             "propertyName": "lastmodifieddate", "operator": "GTE",
-            "value": str(int(modified_since.astimezone(timezone.utc).timestamp() * 1000)),
+            "value": str(int(modified_since.astimezone(UTC).timestamp() * 1000)),
         }]}],
         "sorts": [{"propertyName": "lastmodifieddate", "direction": "ASCENDING"}],
         "properties": list(SEARCH_PROPERTIES),

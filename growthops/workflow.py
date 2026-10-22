@@ -17,7 +17,7 @@ import time
 import uuid
 from collections import Counter
 from collections.abc import Callable
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
@@ -40,7 +40,7 @@ LatencyModel = Callable[[str, "PaymentEvent", int, bool], int]
 
 
 def utcnow() -> str:
-    return datetime.now(timezone.utc).isoformat()
+    return datetime.now(UTC).isoformat()
 
 
 class PaymentEvent(BaseModel):
@@ -62,7 +62,7 @@ class PaymentEvent(BaseModel):
     def require_aware_time(cls, value: datetime) -> datetime:
         if value.tzinfo is None or value.utcoffset() is None:
             raise ValueError("paid_at must include a time zone")
-        return value.astimezone(timezone.utc)
+        return value.astimezone(UTC)
 
 
 class EventConflict(Exception):
@@ -173,7 +173,7 @@ def process_payment(
     write lock, and every adapter call is idempotent so a retried step is safe.
     """
     live = adapters is not None and not adapters.simulated
-    clock = now or datetime.now(timezone.utc)
+    clock = now or datetime.now(UTC)
     latency = latency or default_latency
     digest = _payload_digest(event)
     connection.execute("BEGIN IMMEDIATE")

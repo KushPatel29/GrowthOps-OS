@@ -1,7 +1,7 @@
 import hashlib
 import hmac
 import json
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 import pytest
 
@@ -17,7 +17,7 @@ from growthops.config import ConfigError, get_settings
 from growthops.worker import run_once
 from growthops.workflow import MAX_ATTEMPTS, PaymentEvent, process_payment, run_due
 
-NOW = datetime(2026, 9, 26, 15, 0, tzinfo=timezone.utc)
+NOW = datetime(2026, 9, 26, 15, 0, tzinfo=UTC)
 
 
 class Recorder:
