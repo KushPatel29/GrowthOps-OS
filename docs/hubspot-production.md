@@ -1,9 +1,11 @@
-# HubSpot in production
+# HubSpot integration controls
 
 How GrowthOps and HubSpot stay in step once a portal is live: who owns which field, how changes move each way,
 what happens when something fails, and how an operator runs it. The evidence from the live developer test account
 is in [the sync record](hubspot-sync.md), [the portal build](hubspot-portal.md) and
 [the product and support build-out](hubspot-buildout.md); every field rule is in [the field contract](hubspot-contract.md).
+
+**Execution boundary:** the integration has been exercised with synthetic records in a developer test account. The controls below demonstrate implementation and test coverage; they do not establish sustained operation in a customer production portal or an absolute delivery guarantee. The final section distinguishes live API checks from simulated webhook deliveries.
 
 ## The shape of it
 
@@ -49,7 +51,7 @@ overwritten. Every write is read back and marked verified.
 A HubSpot-owned field that differs from the warehouse is **divergence**: reported, never pushed. On the live portal
 that is the 29 rep assignments the portal's own lead routing made after the load.
 
-## Production guarantees, and the test that holds each
+## Tested integration controls
 
 | Concern | What the integration does | Test |
 |---|---|---|

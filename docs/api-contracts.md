@@ -171,7 +171,7 @@ also require the operator token.
 ## v3 HubSpot integration
 
 The sync itself runs in the worker and the `python -m growthops.hubspot_sync` CLI; these routes receive HubSpot's
-events and let an operator see and approve its work. See [HubSpot in production](hubspot-production.md).
+events and let an operator see and approve its work. See [HubSpot integration controls](hubspot-production.md).
 
 | Endpoint | Contract |
 |---|---|

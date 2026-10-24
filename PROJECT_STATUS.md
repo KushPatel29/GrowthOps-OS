@@ -125,7 +125,7 @@ Live synthetic dashboard: https://growthops-os.streamlit.app/ · GitHub: https:/
   and production ask-data logs retain a question digest rather than raw text. Adapter and alert errors omit
   provider response bodies and dry-run message content. These gates do not create real source ingestion or
   an identity-backed operator gateway.
-- **HubSpot production integration (v3)** (`hubspot_client.py`, `hubspot_contract.py`, `hubspot_sync.py`,
+- **HubSpot integration controls (v3; developer-account execution)** (`hubspot_client.py`, `hubspot_contract.py`, `hubspot_sync.py`,
   `hubspot_webhooks.py`): a paced, budgeted client with `Retry-After`, a circuit breaker and redacted errors; a field
   contract (HubSpot owns the CRM record, GrowthOps the analytics it computes, lifecycle forward only); key-set
   incremental pulls into hashed landing tables; reconcile, content-addressed change sets, named approval, re-check
@@ -135,8 +135,8 @@ Live synthetic dashboard: https://growthops-os.streamlit.app/ · GitHub: https:/
   missed two records that changed mid-scan, which is why pages are now key-set), reconciled with zero drift except
   the two new renewal fields on 18 contacts, a 36-value change set approved, applied in one batch and verified, a
   re-plan with nothing to write, and two renewal tasks created once. The product catalog, 130 line items (HubSpot
-  ARR $27,000) and a support pipeline with eight real support cases were added through HubSpot's connector without
-  changing a deal amount. See [HubSpot in production](docs/hubspot-production.md) and the
+  ARR $27,000) and a support pipeline with eight synthetic support cases were added through HubSpot's connector without
+  changing a deal amount. See [HubSpot integration controls](docs/hubspot-production.md) and the
   [live sync record](docs/hubspot-sync.md).
 
 ## Not implemented yet

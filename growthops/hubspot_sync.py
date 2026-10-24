@@ -621,7 +621,7 @@ def render_doc(evidence: dict) -> str:
         "live runs write with `--evidence`; do not edit. The portal is the HubSpot developer test account that "
         "holds the synthetic ScaleLab sample ([portal build](hubspot-portal.md)); the rules for who owns each field "
         "are in the [field contract](hubspot-contract.md) and the design in "
-        "[HubSpot in production](hubspot-production.md)."),
+        "[HubSpot integration controls](hubspot-production.md)."),
         "",
         (f"Last run {evidence['last_run_at']} · account type `{account_info['account_type']}` · "
         f"{evidence['runs']} recorded runs."),

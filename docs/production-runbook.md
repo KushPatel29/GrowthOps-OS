@@ -76,7 +76,7 @@ Scrape `GET /metrics` (Prometheus text format, needs an API key) and alert on:
 | Verify a backup | `python -m growthops.ops verify --database /data/backups/growthops-<stamp>.db` |
 | Restore | Stop `api` and `worker`, then `python -m growthops.ops restore --from <backup> --force` (keeps `*.pre-restore.db`), start them again |
 | Schema upgrade | Automatic: `initialize()` applies pending migrations in order at startup and records them in `schema_migrations` |
-| HubSpot sync | `GET /v2/hubspot/sync` (operator role); approve a planned change set with `POST /v2/hubspot/changesets/{id}/approve` or `python -m growthops.hubspot_sync approve <id> --by <name>`; the next worker pass applies it. Full procedures: [HubSpot in production](hubspot-production.md) |
+| HubSpot sync | `GET /v2/hubspot/sync` (operator role); approve a planned change set with `POST /v2/hubspot/changesets/{id}/approve` or `python -m growthops.hubspot_sync approve <id> --by <name>`; the next worker pass applies it. Full procedures: [HubSpot integration controls](hubspot-production.md) |
 | Rotate the HubSpot key | Create the new key in HubSpot, store it in the secret manager, restart `api` and `worker`, run `python -m growthops.hubspot_sync preflight`, then revoke the old key |
 | See what users ask | `GET /ops/ask-usage` with the operator token; production stores a SHA-256 digest of each question, plus route/target, rather than raw text |
 
