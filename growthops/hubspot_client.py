@@ -70,6 +70,10 @@ class CircuitOpen(ProviderError):
     """Recent calls kept failing after retries; the client is cooling down before trying HubSpot again."""
 
 
+class PaginationError(ProviderError):
+    """The provider repeated a continuation cursor; stop before replaying records."""
+
+
 def header_transport(method: str, url: str, headers: dict, body: bytes | None, timeout: float) -> tuple:
     """urllib, returning the response headers too (rate-limit counters, Retry-After)."""
     http_request = request.Request(url, data=body, headers=headers, method=method)
@@ -212,6 +216,7 @@ class HubSpotClient:
 
     def paged(self, path: str, key: str = "results") -> list[dict]:
         items, after = [], None
+        seen_cursors: set[str] = set()
         while True:
             sep = "&" if "?" in path else "?"
             page = self.get(path + (f"{sep}after={after}" if after else ""))
@@ -219,12 +224,17 @@ class HubSpotClient:
             after = page.get("paging", {}).get("next", {}).get("after")
             if not after:
                 return items
+            cursor = str(after)
+            if cursor in seen_cursors:
+                raise PaginationError("hubspot: repeated pagination cursor; load stopped before replaying records")
+            seen_cursors.add(cursor)
 
     def search(self, object_type: str, filters: list[dict], properties: list[str], *,
                sorts: list[dict] | None = None, limit: int | None = None) -> list[dict]:
         """Every match of a CRM search, or the first ``limit``. HubSpot stops a search at 10,000 results, so a
         caller that may pass that keeps its filters narrow (the sync advances a watermark instead)."""
         results, after = [], None
+        seen_cursors: set[str] = set()
         while True:
             body: dict = {"filterGroups": [{"filters": filters}] if filters else [], "properties": properties,
                           "limit": 100,
@@ -236,6 +246,10 @@ class HubSpotClient:
             after = page.get("paging", {}).get("next", {}).get("after")
             if not after or (limit is not None and len(results) >= limit):
                 return results[:limit] if limit is not None else results
+            cursor = str(after)
+            if cursor in seen_cursors:
+                raise PaginationError("hubspot: repeated pagination cursor; search stopped before replaying records")
+            seen_cursors.add(cursor)
 
     def count(self, object_type: str, filters: list[dict]) -> int:
         body = {"filterGroups": [{"filters": filters}] if filters else [], "properties": ["hs_object_id"], "limit": 1}
