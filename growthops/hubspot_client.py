@@ -162,21 +162,25 @@ class HubSpotClient:
             if value is not None:
                 self.rate_limit[key] = value
 
+    def _check_daily_budget(self, method: str, route: str) -> None:
+        remaining = self.rate_limit.get("daily_remaining")
+        if self.daily_floor and remaining is not None and remaining <= self.daily_floor:
+            raise BudgetExhausted(f"hubspot: {remaining} daily calls left, at the floor of {self.daily_floor}; "
+                                  f"{method} {route} not sent")
+
     def request(self, method: str, path: str, body: dict | None = None, *, raw: bytes | None = None,
                 content_type: str = "application/json", missing_ok: bool = False) -> dict | None:
         route = path.split("?")[0]
         if self._open_until > self.clock():
             raise CircuitOpen(f"hubspot: circuit open after {self._failures} failing calls; {method} {route} "
                               "not sent")
-        remaining = self.rate_limit.get("daily_remaining")
-        if self.daily_floor and remaining is not None and remaining <= self.daily_floor:
-            raise BudgetExhausted(f"hubspot: {remaining} daily calls left, at the floor of {self.daily_floor}; "
-                                  f"{method} {route} not sent")
+        self._check_daily_budget(method, route)
         headers = {"Authorization": f"Bearer {self.token}", "Content-Type": content_type, "Accept": "application/json"}
         data = raw if raw is not None else (json.dumps(body).encode() if body is not None else None)
         interval = self.search_interval if route.endswith("/search") else self.min_interval
         status = 0
         for attempt in range(self.max_attempts):
+            self._check_daily_budget(method, route)
             wait = self._last + interval - self.clock()
             if wait > 0:
                 self.sleep(wait)
@@ -193,6 +197,7 @@ class HubSpotClient:
             self.calls.append((method, route, status))
             self._track(response_headers)
             if status == 429 or status >= 500:
+                self._check_daily_budget(method, route)
                 self.sleep(self._backoff(attempt, response_headers))
                 continue
             self._failures = 0
@@ -233,6 +238,11 @@ class HubSpotClient:
                sorts: list[dict] | None = None, limit: int | None = None) -> list[dict]:
         """Every match of a CRM search, or the first ``limit``. HubSpot stops a search at 10,000 results, so a
         caller that may pass that keeps its filters narrow (the sync advances a watermark instead)."""
+        if limit is not None:
+            if isinstance(limit, bool) or not isinstance(limit, int) or limit < 0:
+                raise ValueError("limit must be a non-negative integer or None")
+            if limit == 0:
+                return []
         results, after = [], None
         seen_cursors: set[str] = set()
         while True:
