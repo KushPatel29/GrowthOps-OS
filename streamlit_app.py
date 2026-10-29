@@ -78,6 +78,15 @@ st.set_page_config(page_title="GrowthOps OS · ScaleLab", page_icon="📈", layo
 st.markdown("""<style>
   .block-container {max-width: 1280px; padding-top: 1.6rem}
   div[data-testid="stMetric"] {border: 1px solid rgba(137,135,129,.35); border-radius: 8px; padding: 12px 14px}
+  /* KPI tiles wrap instead of ending in an ellipsis: at laptop width a five-tile row
+     cut "$1,929,600" to "$1,929,...". */
+  [data-testid="stMetricValue"] {font-size: clamp(1.3rem, 2.2vw, 2.25rem)}
+  :is([data-testid="stMetricLabel"], [data-testid="stMetricValue"], [data-testid="stMetricDelta"]),
+  :is([data-testid="stMetricLabel"], [data-testid="stMetricValue"], [data-testid="stMetricDelta"])
+    :is(div, p, span, label) {white-space: normal !important; overflow: visible !important;
+    text-overflow: clip !important; overflow-wrap: anywhere; height: auto !important;
+    max-height: none !important; -webkit-line-clamp: unset !important; line-height: 1.25}
+  div[data-testid="stMetric"] div:has(> [data-testid="stMetricDelta"]) {overflow: visible; height: auto}
 </style>""", unsafe_allow_html=True)
 
 
