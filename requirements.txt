@@ -4,7 +4,7 @@
 # growthops/ask_data.py stayed stale, so a release that changes growthops modules also bumps this marker:
 # growthops release 3.0 (HubSpot two-way sync)
 -e .
-streamlit>=1.66.1,<2
+streamlit>=1.67.0,<2
 # Pillow 13 fixes the image decoder advisories affecting earlier releases.
 pillow>=13,<14
 pandas>=3.0.6,<4
